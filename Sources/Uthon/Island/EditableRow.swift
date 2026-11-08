@@ -12,6 +12,10 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
     let canAdd: (Item) -> Bool
     let setEnabled: (Item, Bool) -> Void
     let place: (Item, Item) -> Void
+    /// When set, edit mode shows a big "+ Add Widget" button (opens a full gallery)
+    /// instead of the small chip list.
+    var onAdd: (() -> Void)? = nil
+    var addTitle = "Add Widget"
     @ViewBuilder let tile: (Item) -> Tile
 
     @State private var dragging: Item?
@@ -54,18 +58,51 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
                             .modifier(ReorderModifier(enabled: editing, item: item, dragging: $dragging, place: place))
                     }
                     if editing && usedSlots < maxSlots {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
-                            .overlay(Text("Add from below").font(.system(size: 10, weight: .medium)).foregroundStyle(Color.secondary))
-                            .frame(width: unit)
-                            .transition(.opacity)
+                        Button {
+                            onAdd?()
+                        } label: {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+                                .overlay(
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "plus.circle.fill").font(.system(size: 22))
+                                        Text(onAdd == nil ? "Add from below" : addTitle).font(.system(size: 10, weight: .semibold))
+                                    }
+                                    .foregroundStyle(Color.secondary)
+                                )
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: unit)
+                        .transition(.opacity)
                     }
                 }
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: items)
             }
             if editing {
-                gallery
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                Group {
+                    if let onAdd {
+                        HStack(spacing: 10) {
+                            Button(action: onAdd) {
+                                Label(addTitle, systemImage: "plus")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 6)
+                                    .background(Capsule().fill(Theme.accent))
+                                    .foregroundStyle(Color.white)
+                            }
+                            .buttonStyle(.plain)
+                            Text("Drag to reorder · tap − to remove · \(usedSlots) of \(maxSlots) slots used")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.secondary)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(height: 30)
+                    } else {
+                        gallery
+                    }
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: editing)

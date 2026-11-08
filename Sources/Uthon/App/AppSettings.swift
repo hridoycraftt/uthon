@@ -52,6 +52,43 @@ protocol CustomizableItem: RawRepresentable, CaseIterable, Identifiable, Hashabl
     var slots: Int { get }
 }
 
+/// Anything on the Home row: a built-in widget, or an app from this Mac ("app:<path>").
+struct HomeItem: CustomizableItem {
+    let rawValue: String
+
+    init?(rawValue: String) {
+        if HomeWidget(rawValue: rawValue) != nil {
+            self.rawValue = rawValue
+        } else if rawValue.hasPrefix("app:"), FileManager.default.fileExists(atPath: String(rawValue.dropFirst(4))) {
+            self.rawValue = rawValue
+        } else {
+            return nil
+        }
+    }
+
+    init(_ widget: HomeWidget) { rawValue = widget.rawValue }
+    init(app url: URL) { rawValue = "app:" + url.path }
+
+    var id: String { rawValue }
+    var widget: HomeWidget? { HomeWidget(rawValue: rawValue) }
+    var appURL: URL? { rawValue.hasPrefix("app:") ? URL(fileURLWithPath: String(rawValue.dropFirst(4))) : nil }
+
+    var title: String {
+        if let widget { return widget.title }
+        return appURL.map { FileManager.default.displayName(atPath: $0.path).replacingOccurrences(of: ".app", with: "") } ?? "App"
+    }
+
+    var symbol: String { widget?.symbol ?? "app.fill" }
+    var slots: Int { widget?.slots ?? 1 }
+
+    /// Built-in widgets plus every app the user has placed.
+    static var allCases: [HomeItem] {
+        let builtIns = HomeWidget.allCases.map(HomeItem.init)
+        let apps = AppSettings.shared.homeWidgetOrder.filter { $0.hasPrefix("app:") }.compactMap(HomeItem.init(rawValue:))
+        return builtIns + apps
+    }
+}
+
 /// Widgets that can be placed on the island's Home tab.
 enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
     case music, calendar, weather, shortcuts, system, batteries, todo, controls, notes
@@ -280,14 +317,14 @@ final class AppSettings: ObservableObject {
         if visible { hiddenIslandTabs.remove(tab.rawValue) } else { hiddenIslandTabs.insert(tab.rawValue) }
     }
 
-    var orderedHomeWidgets: [HomeWidget] {
-        Self.ordered(HomeWidget.allCases, by: homeWidgetOrder)
+    var orderedHomeWidgets: [HomeItem] {
+        Self.ordered(HomeItem.allCases, by: homeWidgetOrder)
     }
 
     /// Enabled Home widgets in order, trimmed to what fits in 5 slots.
-    var homeWidgets: [HomeWidget] {
+    var homeWidgets: [HomeItem] {
         var used = 0
-        var result: [HomeWidget] = []
+        var result: [HomeItem] = []
         for widget in orderedHomeWidgets where enabledHomeWidgets.contains(widget.rawValue) {
             guard used + widget.slots <= HomeWidget.maxSlots else { continue }
             used += widget.slots
@@ -298,27 +335,43 @@ final class AppSettings: ObservableObject {
 
     var homeSlotsUsed: Int { homeWidgets.reduce(0) { $0 + $1.slots } }
 
-    func canEnable(_ widget: HomeWidget) -> Bool {
+    func canEnable(_ widget: HomeItem) -> Bool {
         enabledHomeWidgets.contains(widget.rawValue) || homeSlotsUsed + widget.slots <= HomeWidget.maxSlots
     }
 
-    func setHomeWidget(_ widget: HomeWidget, _ on: Bool) {
+    func canEnable(_ widget: HomeWidget) -> Bool { canEnable(HomeItem(widget)) }
+
+    func setHomeWidget(_ widget: HomeItem, _ on: Bool) {
         if on {
             guard canEnable(widget) else { return }
+            if !homeWidgetOrder.contains(widget.rawValue) { homeWidgetOrder.append(widget.rawValue) }
             enabledHomeWidgets.insert(widget.rawValue)
         } else {
             enabledHomeWidgets.remove(widget.rawValue)
+            // Apps leave the list completely when removed; built-ins stay available.
+            if widget.appURL != nil { homeWidgetOrder.removeAll { $0 == widget.rawValue } }
         }
     }
 
-    func moveHomeWidget(_ widget: HomeWidget, by offset: Int) {
+    func setHomeWidget(_ widget: HomeWidget, _ on: Bool) { setHomeWidget(HomeItem(widget), on) }
+
+    /// Adds an app from this Mac as a Home tile.
+    @discardableResult
+    func addHomeApp(_ url: URL) -> Bool {
+        let item = HomeItem(app: url)
+        guard canEnable(item) else { return false }
+        setHomeWidget(item, true)
+        return true
+    }
+
+    func moveHomeWidget(_ widget: HomeItem, by offset: Int) {
         var order = orderedHomeWidgets.map(\.rawValue)
         Self.move(&order, widget.rawValue, by: offset)
         homeWidgetOrder = order
     }
 
     /// Drag-and-drop: put `item` where `target` is.
-    func placeHomeWidget(_ item: HomeWidget, at target: HomeWidget) {
+    func placeHomeWidget(_ item: HomeItem, at target: HomeItem) {
         var order = orderedHomeWidgets.map(\.rawValue)
         Self.place(&order, item.rawValue, at: target.rawValue)
         homeWidgetOrder = order

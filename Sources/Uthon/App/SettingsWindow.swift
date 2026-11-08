@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import ServiceManagement
+import UniformTypeIdentifiers
 
 enum SettingsTab: Hashable {
     case general, island, alerts, dock, care
@@ -154,6 +155,14 @@ private struct IslandSettings: View {
                         move: { settings.moveHomeWidget(widget, by: $0) }
                     )
                 }
+                Button("Add an App to Home…") {
+                    let panel = NSOpenPanel()
+                    panel.allowedContentTypes = [.application]
+                    panel.directoryURL = URL(fileURLWithPath: "/Applications")
+                    panel.prompt = "Add"
+                    if panel.runModal() == .OK, let url = panel.url { settings.addHomeApp(url) }
+                }
+                .disabled(settings.homeSlotsUsed >= HomeWidget.maxSlots)
             } header: {
                 Text("Home widgets · \(settings.homeSlotsUsed) of \(HomeWidget.maxSlots) slots used")
             } footer: {

@@ -56,6 +56,22 @@ enum SnapshotTour {
             render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-controls-editing")
             model.editing = false
         }
+        add("gallery") {
+            model.tab = .home
+            model.editing = true
+            model.pickerOpen = true
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-gallery")
+        }
+        add("live-gallery") {
+            IslandController.shared.expand(tab: .home, sticky: true)
+            model.editing = true
+            model.pickerOpen = true
+        }
+        add("capture-gallery") {
+            capture("screen-island-gallery")
+            model.pickerOpen = false
+            model.editing = false
+        }
         add("live-edit") {
             IslandController.shared.expand(tab: .home, sticky: true)
             model.editing = true

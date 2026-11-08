@@ -87,6 +87,12 @@ final class AppSearch {
     private var apps: [Result] = []
     private var loadedAt = Date.distantPast
 
+    /// Every app on this Mac, sorted by name.
+    var allApps: [Result] {
+        if Date().timeIntervalSince(loadedAt) > 600 { reload() }
+        return apps
+    }
+
     func search(_ query: String) -> [Result] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return [] }

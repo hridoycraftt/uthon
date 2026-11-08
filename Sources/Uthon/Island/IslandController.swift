@@ -78,6 +78,11 @@ final class IslandController {
             .sink { [weak self] _ in self?.layout() }
             .store(in: &cancellables)
 
+        model.$pickerOpen
+            .dropFirst()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.layout() } }
+            .store(in: &cancellables)
+
         AppSettings.shared.$islandScale
             .dropFirst()
             .sink { [weak self] _ in DispatchQueue.main.async { self?.layout() } }
@@ -158,6 +163,7 @@ final class IslandController {
             model.expanded = false
             model.dropTargeted = false
             model.editing = false
+            model.pickerOpen = false
         }
         panel?.ignoresMouseEvents = true
         if panel?.isKeyWindow == true { panel?.resignKey() }

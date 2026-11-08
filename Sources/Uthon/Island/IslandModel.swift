@@ -96,6 +96,8 @@ final class IslandModel: ObservableObject {
     @Published var peek: Peek?
     /// Control Center style editing of the Home and Controls rows.
     @Published var editing = false
+    /// The "+ Add Widget" gallery is open (the island grows to show it).
+    @Published var pickerOpen = false
 
     static let compactFlare: CGFloat = 6
     static let expandedFlare: CGFloat = 14
@@ -104,7 +106,7 @@ final class IslandModel: ObservableObject {
 
     /// Layout size of the open island before the user's size setting is applied.
     var baseExpandedSize: CGSize {
-        CGSize(width: max(740, notchSize.width + 520), height: max(notchSize.height, 40) + 176)
+        CGSize(width: max(740, notchSize.width + 520), height: max(notchSize.height, 40) + 176 + (pickerOpen ? 210 : 0))
     }
 
     static var scale: CGFloat { CGFloat(min(max(AppSettings.shared.islandScale, 0.8), 1.5)) }

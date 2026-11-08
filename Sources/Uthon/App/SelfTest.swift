@@ -88,7 +88,7 @@ enum SelfTest {
         settings.setHomeWidget(.weather, false)
         check("Removing frees a slot", settings.canEnable(.system))
         settings.setHomeWidget(.system, true)
-        check("Widget added after freeing room", settings.homeWidgets.contains(.system))
+        check("Widget added after freeing room", settings.homeWidgets.contains(HomeItem(.system)))
         let firstTwo = Array(settings.orderedHomeWidgets.prefix(2))
         if firstTwo.count == 2 {
             settings.placeHomeWidget(firstTwo[1], at: firstTwo[0])
@@ -96,7 +96,21 @@ enum SelfTest {
             settings.placeHomeWidget(firstTwo[0], at: firstTwo[1])
         }
         settings.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
-        check("Home order lists every widget", Set(settings.orderedHomeWidgets) == Set(HomeWidget.allCases))
+        check("Home order lists every widget", Set(settings.orderedHomeWidgets.compactMap(\.widget)) == Set(HomeWidget.allCases))
+
+        // Apps on Home
+        settings.setHomeWidget(.weather, false)
+        let calcApp = URL(fileURLWithPath: "/System/Applications/Calculator.app")
+        check("An app can be added to Home", settings.addHomeApp(calcApp))
+        check("App tile shows on Home", settings.homeWidgets.contains { $0.appURL?.path == calcApp.path })
+        check("App tile title", settings.homeWidgets.first { $0.appURL != nil }?.title == "Calculator",
+              settings.homeWidgets.first { $0.appURL != nil }?.title ?? "nil")
+        check("Full Home refuses another app", !settings.addHomeApp(URL(fileURLWithPath: "/System/Applications/Notes.app")))
+        settings.setHomeWidget(HomeItem(app: calcApp), false)
+        check("Removing an app takes it off Home", !settings.homeWidgetOrder.contains("app:" + calcApp.path))
+        check("A missing app is ignored", HomeItem(rawValue: "app:/Applications/Does Not Exist.app") == nil)
+        check("Apps on this Mac are listed", AppSearch.shared.allApps.count > 10, "\(AppSearch.shared.allApps.count) apps")
+        settings.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
 
         // Controls
         settings.enabledControls = Set(ControlKind.allCases.prefix(8).map(\.rawValue))

@@ -10,45 +10,253 @@ struct IslandHome: View {
     @ObservedObject private var model = IslandModel.shared
 
     var body: some View {
-        EditableRow(
-            items: settings.homeWidgets,
-            allItems: settings.orderedHomeWidgets,
-            maxSlots: HomeWidget.maxSlots,
-            editing: model.editing,
-            canAdd: { settings.canEnable($0) },
-            setEnabled: { settings.setHomeWidget($0, $1) },
-            place: { settings.placeHomeWidget($0, at: $1) }
-        ) { widget in
-            HomeWidgetView(widget: widget)
+        VStack(spacing: 10) {
+            EditableRow(
+                items: settings.homeWidgets,
+                allItems: settings.orderedHomeWidgets,
+                maxSlots: HomeWidget.maxSlots,
+                editing: model.editing,
+                canAdd: { settings.canEnable($0) },
+                setEnabled: { settings.setHomeWidget($0, $1) },
+                place: { settings.placeHomeWidget($0, at: $1) },
+                onAdd: openGallery
+            ) { item in
+                HomeWidgetView(item: item)
+            }
+            .frame(height: model.pickerOpen ? 158 : nil)
+            if model.pickerOpen {
+                WidgetGallery()
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .overlay {
             if settings.homeWidgets.isEmpty && !model.editing {
-                Button("Add widgets") { withAnimation { model.editing = true } }
+                Button("Add widgets") { openGallery() }
                     .buttonStyle(AccentButtonStyle())
             }
         }
         .contextMenu {
             Button(model.editing ? "Done Editing" : "Edit Home") { withAnimation { model.editing.toggle() } }
+            Button("Add Widget…") { openGallery() }
             Button("More Settings…") { SettingsWindowController.shared.show(tab: .island) }
+        }
+        .onChange(of: model.editing) { _, editing in
+            if !editing { withAnimation(IslandModel.spring) { model.pickerOpen = false } }
+        }
+    }
+
+    private func openGallery() {
+        withAnimation(IslandModel.spring) {
+            model.editing = true
+            model.pickerOpen = true
         }
     }
 }
 
 struct HomeWidgetView: View {
-    let widget: HomeWidget
+    let item: HomeItem
 
     var body: some View {
-        switch widget {
-        case .music: IslandMusicTile()
-        case .calendar: IslandCalendarTile()
-        case .weather: WeatherTile()
-        case .shortcuts: IslandShortcutsTile()
-        case .system: SystemTile()
-        case .batteries: BatteriesTile()
-        case .todo: TodoTile()
-        case .controls: MiniControlsTile()
-        case .notes: NoteTile()
+        if let widget = item.widget {
+            switch widget {
+            case .music: IslandMusicTile()
+            case .calendar: IslandCalendarTile()
+            case .weather: WeatherTile()
+            case .shortcuts: IslandShortcutsTile()
+            case .system: SystemTile()
+            case .batteries: BatteriesTile()
+            case .todo: TodoTile()
+            case .controls: MiniControlsTile()
+            case .notes: NoteTile()
+            }
+        } else if let url = item.appURL {
+            AppTile(url: url)
         }
+    }
+}
+
+/// An app from this Mac placed on Home: tap to open it.
+struct AppTile: View {
+    let url: URL
+    @State private var hover = false
+
+    private var isRunning: Bool {
+        NSWorkspace.shared.runningApplications.contains { $0.bundleURL?.standardizedFileURL == url.standardizedFileURL }
+    }
+
+    var body: some View {
+        Button {
+            NSWorkspace.shared.open(url)
+            IslandController.shared.collapse()
+        } label: {
+            WidgetTile {
+                VStack(spacing: 6) {
+                    Spacer(minLength: 0)
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 56, height: 56)
+                        .scaleEffect(hover ? 1.06 : 1)
+                    Text(FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: ""))
+                        .font(.system(size: 11, weight: .semibold))
+                        .lineLimit(1)
+                    Circle()
+                        .fill(isRunning ? Theme.accent : Color.clear)
+                        .frame(width: 4, height: 4)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { h in withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { hover = h } }
+        .help("Open \(url.lastPathComponent)")
+    }
+}
+
+/// "+ Add Widget": a gallery of Uthon widgets and every app on this Mac.
+struct WidgetGallery: View {
+    @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var model = IslandModel.shared
+    @State private var section = 0
+    @State private var query = ""
+    @State private var message: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Picker("", selection: $section) {
+                    Text("Uthon Widgets").tag(0)
+                    Text("Apps on this Mac").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 260)
+                if section == 1 {
+                    HStack(spacing: 5) {
+                        Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(Color.secondary)
+                        TextField("Search apps", text: $query)
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 12))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
+                    .frame(width: 180)
+                }
+                Spacer()
+                if let message {
+                    Text(message)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.orange)
+                        .transition(.opacity)
+                }
+                Button {
+                    withAnimation(IslandModel.spring) { model.pickerOpen = false }
+                } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 16)).foregroundStyle(Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Close the gallery")
+            }
+            ScrollView(.vertical, showsIndicators: true) {
+                if section == 0 {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
+                        ForEach(HomeWidget.allCases) { widget in
+                            let item = HomeItem(widget)
+                            GalleryCell(title: widget.title,
+                                        subtitle: widget.slots > 1 ? "2 slots" : "1 slot",
+                                        added: settings.enabledHomeWidgets.contains(widget.rawValue)) {
+                                Image(systemName: widget.symbol)
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(Theme.accent)
+                                    .frame(width: 40, height: 40)
+                                    .background(Circle().fill(Theme.accent.opacity(0.15)))
+                            } action: {
+                                toggle(item)
+                            }
+                        }
+                    }
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], spacing: 8) {
+                        ForEach(apps) { app in
+                            let item = HomeItem(app: app.url)
+                            GalleryCell(title: app.name, subtitle: nil,
+                                        added: settings.enabledHomeWidgets.contains(item.rawValue)) {
+                                Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
+                                    .resizable()
+                                    .interpolation(.high)
+                                    .frame(width: 40, height: 40)
+                            } action: {
+                                toggle(item)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .glassChip(radius: 20)
+        .animation(.easeOut(duration: 0.2), value: message)
+    }
+
+    private var apps: [AppSearch.Result] {
+        let all = AppSearch.shared.allApps
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        return q.isEmpty ? all : all.filter { $0.name.lowercased().contains(q) }
+    }
+
+    private func toggle(_ item: HomeItem) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) {
+            if settings.enabledHomeWidgets.contains(item.rawValue) {
+                settings.setHomeWidget(item, false)
+                message = nil
+            } else if settings.canEnable(item) {
+                settings.setHomeWidget(item, true)
+                message = nil
+            } else {
+                message = "No room: remove a widget first (\(settings.homeSlotsUsed) of \(HomeWidget.maxSlots) slots used)"
+            }
+        }
+    }
+}
+
+private struct GalleryCell<Icon: View>: View {
+    let title: String
+    let subtitle: String?
+    let added: Bool
+    @ViewBuilder let icon: () -> Icon
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                icon()
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+                Text(added ? "Added ✓" : (subtitle ?? "Tap to add"))
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(added ? Theme.accent : Color.secondary)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.primary.opacity(added ? 0.12 : (hover ? 0.08 : 0.04)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(added ? Theme.accent.opacity(0.7) : Color.clear, lineWidth: 1.2)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help(added ? "Tap to remove from Home" : "Tap to add to Home")
     }
 }
 
