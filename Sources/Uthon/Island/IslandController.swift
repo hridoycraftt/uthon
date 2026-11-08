@@ -83,15 +83,6 @@ final class IslandController {
             .sink { [weak self] _ in self?.layout() }
             .store(in: &cancellables)
 
-        model.$pickerOpen
-            .dropFirst()
-            .sink { [weak self] _ in DispatchQueue.main.async { self?.layout() } }
-            .store(in: &cancellables)
-
-        AppSettings.shared.$islandScale
-            .dropFirst()
-            .sink { [weak self] _ in DispatchQueue.main.async { self?.layout() } }
-            .store(in: &cancellables)
     }
 
     private func apply(enabled: Bool) {
@@ -125,11 +116,20 @@ final class IslandController {
         if model.hasNotch != hasNotch { model.hasNotch = hasNotch }
         if model.notchSize != notch { model.notchSize = notch }
 
-        let expanded = model.expandedSize
-        let width = expanded.width + 80
-        let height = expanded.height + 40
-        panel.setFrame(NSRect(x: s.frame.midX - width / 2, y: s.frame.maxY - height, width: width, height: height),
-                       display: true)
+        // The window never changes size while in use: it is made big enough for the largest
+        // island (biggest size setting, widget gallery open) once. Resizing it while the
+        // island animated (e.g. opening + Add Widget while tiles wiggle) sent macOS 26 into
+        // an endless layout loop and crashed. Clicks outside the island still pass through
+        // (see tick: the window only takes the mouse while it is over the island).
+        let base = model.baseExpandedSize
+        let galleryExtra: CGFloat = model.pickerOpen ? 0 : 210
+        let maxScale: CGFloat = 1.5
+        let width = base.width * maxScale + 80
+        let height = (base.height + galleryExtra) * maxScale + 40
+        let frame = NSRect(x: s.frame.midX - width / 2, y: s.frame.maxY - height, width: width, height: height)
+        if panel.frame != frame {
+            panel.setFrame(frame, display: true)
+        }
     }
 
     private func rect(for size: CGSize, on s: NSScreen) -> NSRect {
@@ -230,6 +230,10 @@ final class IslandController {
         if model.expanded {
             let zone = rect(for: model.expandedSize, on: s).insetBy(dx: -18, dy: -18)
             let inside = Self.contains(zone, mouse)
+            // Take the mouse only over the island itself; elsewhere clicks go to the app below.
+            let overIsland = Self.contains(rect(for: model.expandedSize, on: s).insetBy(dx: -4, dy: -4), mouse)
+            let wantsMouse = overIsland || pressed || MenuTracker.shared.isTracking
+            if panel.ignoresMouseEvents == wantsMouse { panel.ignoresMouseEvents = !wantsMouse }
             if inside { stickyOpen = false }
             let typing = panel.isKeyWindow
             let busy = holdOpen || stickyOpen || pressed || typing || MenuTracker.shared.isTracking
