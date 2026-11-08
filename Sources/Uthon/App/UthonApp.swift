@@ -36,7 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if SnapshotTour.isActive {
             DockController.shared.start()
             IslandController.shared.start()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { SnapshotTour.run() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { MainActor.assumeIsolated { SnapshotTour.run() } }
             return
         }
 

@@ -18,8 +18,9 @@ enum SnapshotTour {
         return URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("uthon-shots")
     }
 
-    private static var steps: [(String, () -> Void)] = []
+    private static var steps: [(String, @MainActor () -> Void)] = []
 
+    @MainActor
     static func run() {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let s = AppSettings.shared
@@ -96,17 +97,18 @@ enum SnapshotTour {
         next(0)
     }
 
-    private static func add(_ name: String, _ action: @escaping () -> Void) {
+    private static func add(_ name: String, _ action: @escaping @MainActor () -> Void) {
         steps.append((name, action))
     }
 
+    @MainActor
     private static func next(_ index: Int) {
         guard index < steps.count else { exit(0) }
         let (name, action) = steps[index]
         print("snapshot step: \(name)")
         action()
         let delay: Double = name.hasPrefix("live") || name == "glass-lab" ? 1.6 : 0.4
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { next(index + 1) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { MainActor.assumeIsolated { next(index + 1) } }
     }
 
     private static func seed() {
@@ -128,6 +130,7 @@ enum SnapshotTour {
         TimerStore.shared.toggleStopwatch()
     }
 
+    @MainActor
     private static func render<V: View>(_ view: V, size: CGSize, shape: Bool, name: String) {
         let background = dark ? Color(white: 0.12) : Color(white: 0.9)
         let content = ZStack(alignment: .top) {
