@@ -105,10 +105,13 @@ private struct ClockRow: View {
             Text(WorldClockTile.cityName(zone))
                 .font(.system(size: 11))
                 .lineLimit(1)
+                .truncationMode(.tail)
             Spacer(minLength: 4)
             Text(Self.time(now, zone))
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
         }
     }
 
@@ -168,9 +171,13 @@ struct PrayerTile: View {
                 Text(L(next.name))
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.accent)
-                Text(Self.clock(next.time, place.timeZone) + " · " + Self.countdown(to: next.time, from: now))
-                    .font(.system(size: 11, weight: .medium))
+                Text(Self.clock(next.time, place.timeZone))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                Text(Self.countdown(to: next.time, from: now))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 2)
             if settings.slots(of: HomeItem(.prayer)) > 1 {
