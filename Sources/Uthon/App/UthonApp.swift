@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // No Dock icon: Uthon lives in the menu bar, the notch and the screen edge.
         NSApp.setActivationPolicy(.accessory)
+        MenuTracker.shared.start()
 
         AppSettings.shared.$appearance
             .sink { appearance in NSApp.appearance = appearance.nsAppearance }
@@ -41,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if SnapshotTour.isActive {
             DockController.shared.start()
             IslandController.shared.start()
+            WeatherStore.shared.start()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { MainActor.assumeIsolated { SnapshotTour.run() } }
             return
         }
@@ -57,6 +59,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ScreenshotWatcher.shared.start()
         DownloadsStore.shared.startWatching()
         MediaKeyTap.shared.update()
+        Updater.shared.start()
+        WallpaperChanger.shared.start()
+        if !AppSettings.shared.onboardingDone {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { OnboardingWindowController.shared.show() }
+        }
 
         AppSettings.shared.$hotkeyEnabled
             .sink { _ in DispatchQueue.main.async { HotKey.shared.update() } }
@@ -76,30 +83,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct MenuContent: View {
     @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var library = UserLibrary.shared
 
     var body: some View {
-        Toggle("Top island", isOn: $settings.islandEnabled)
-        Toggle("Side dock", isOn: $settings.sideDockEnabled)
+        Toggle(L("Top island"), isOn: $settings.islandEnabled)
+        Toggle(L("Side dock"), isOn: $settings.sideDockEnabled)
         if settings.sideDockEnabled {
-            Button("Show side dock") { DockController.shared.show(sticky: true) }
-            Toggle("Keep side dock visible", isOn: $settings.pinned)
-            Picker("Side dock edge", selection: $settings.edge) {
+            Button(L("Show side dock")) { DockController.shared.show(sticky: true) }
+            Toggle(L("Keep side dock visible"), isOn: $settings.pinned)
+            Picker(L("Side dock edge"), selection: $settings.edge) {
                 ForEach(DockEdge.allCases) { edge in
-                    Text(edge.title).tag(edge)
+                    Text(L(edge.title)).tag(edge)
                 }
             }
         }
-        Picker("Appearance", selection: $settings.appearance) {
+        Picker(L("Appearance"), selection: $settings.appearance) {
             ForEach(AppAppearance.allCases) { appearance in
-                Text(appearance.title).tag(appearance)
+                Text(L(appearance.title)).tag(appearance)
             }
         }
         Divider()
-        Button("Open island") { IslandController.shared.expand(sticky: true) }
+        Button(L("Open island")) { IslandController.shared.expand(sticky: true) }
             .disabled(!settings.islandEnabled)
-        Button("Customize…") { SettingsWindowController.shared.show() }
+        Menu(L("Layout")) {
+            ForEach(Profiles.all) { profile in
+                Button((library.activeProfile == profile.id ? "✓ " : "") + L(profile.name)) { Profiles.apply(profile) }
+            }
+            Divider()
+            Button(L("Manage profiles…")) { SettingsWindowController.shared.show(tab: .profiles) }
+        }
+        Menu(L("Theme")) {
+            ForEach(ThemeColor.allCases.filter { $0 != .custom }) { theme in
+                Button((settings.themeColor == theme ? "✓ " : "") + L(theme.title)) { settings.themeColor = theme }
+            }
+        }
+        if UserLibrary.shared.wallpaperSource != .off {
+            Button(L("Next wallpaper")) { WallpaperChanger.shared.next() }
+        }
+        Button(L("Welcome guide")) { OnboardingWindowController.shared.show() }
+        Button(L("Customize…")) { SettingsWindowController.shared.show() }
             .keyboardShortcut(",")
-        Button("Quit \(AppInfo.name)") { NSApp.terminate(nil) }
+        Button(L("Quit") + " \(AppInfo.name)") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 }

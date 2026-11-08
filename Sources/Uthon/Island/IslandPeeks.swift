@@ -52,7 +52,7 @@ struct PeekView: View {
         case .timerDone:
             PeekRow(symbol: "timer", tint: Theme.accent, title: "Time's up!", subtitle: "Your timer has finished") {
                 HStack(spacing: 8) {
-                    Button("+1 min") {
+                    Button(L("+1 min")) {
                         TimerStore.shared.stopAlarm()
                         TimerStore.shared.startTimer(minutes: 1)
                         IslandController.shared.dismissPeek()
@@ -60,12 +60,39 @@ struct PeekView: View {
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.secondary)
-                    Button("Stop") {
+                    Button(L("Stop")) {
                         TimerStore.shared.stopAlarm()
                         IslandController.shared.dismissPeek()
                     }
                     .buttonStyle(AccentButtonStyle())
                 }
+            }
+        case .update(let version):
+            PeekRow(symbol: "arrow.down.app.fill", tint: Theme.accent, title: L("Uthon") + " \(version) " + L("is available"),
+                    subtitle: L("New features and fixes")) {
+                HStack(spacing: 8) {
+                    Button(L("Later")) { IslandController.shared.dismissPeek() }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.secondary)
+                    Button(L("Update")) {
+                        IslandController.shared.dismissPeek()
+                        Updater.shared.install()
+                    }
+                    .buttonStyle(AccentButtonStyle())
+                }
+            }
+        case .prayer(let name, let time):
+            PeekRow(symbol: "moon.stars.fill", tint: Theme.accent, title: L("Time for") + " " + L(name),
+                    subtitle: time.formatted(date: .omitted, time: .shortened)) {
+                Button(L("OK")) { IslandController.shared.dismissPeek() }
+                    .buttonStyle(AccentButtonStyle())
+            }
+        case .specialDay(let name, let symbol):
+            PeekRow(symbol: symbol, tint: Theme.accent, title: L("Today is") + " " + name + " 🎉",
+                    subtitle: L("Don't forget to celebrate!")) {
+                Button(L("OK")) { IslandController.shared.dismissPeek() }
+                    .buttonStyle(AccentButtonStyle())
             }
         default:
             EmptyView()
@@ -113,7 +140,7 @@ struct PeekHUDContent: View {
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color.green)
                 .symbolEffect(.pulse)
-            Text("Charging")
+            Text(L("Charging"))
                 .font(.system(size: 12, weight: .semibold))
             Spacer(minLength: 0)
             Text("\(percent)%")
@@ -192,7 +219,7 @@ struct BatteryRing: View {
                     .trim(from: 0, to: shown ? CGFloat(percent) / 100 : 0)
                     .stroke(percent <= 20 ? Color.red : Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                Text(label).font(.system(size: 9, weight: .bold))
+                Text(L(label)).font(.system(size: 9, weight: .bold))
             }
             .frame(width: 28, height: 28)
             Text("\(percent)%").font(.system(size: 9, weight: .semibold)).monospacedDigit()
@@ -218,8 +245,8 @@ private struct PeekRow<Accessory: View>: View {
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(tint.opacity(0.16)))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                Text(subtitle).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(1)
+                Text(L(title)).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Text(L(subtitle)).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(1)
             }
             Spacer(minLength: 0)
             accessory()
@@ -241,7 +268,7 @@ private struct HeadphonesPeek: View {
                 .frame(width: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                Text("Connected").font(.system(size: 11)).foregroundStyle(Color.secondary)
+                Text(L("Connected")).font(.system(size: 11)).foregroundStyle(Color.secondary)
             }
             Spacer(minLength: 0)
             if let levels {
@@ -301,7 +328,7 @@ private struct FilePeek: View {
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
             .onDrag { NSItemProvider(object: url as NSURL) }
             VStack(alignment: .leading, spacing: 2) {
-                Label(title, systemImage: symbol)
+                Label(L(title), systemImage: symbol)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                 Text(url.lastPathComponent)
@@ -319,7 +346,7 @@ private struct FilePeek: View {
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                     IslandController.shared.dismissPeek()
                 }
-                Button("Open") {
+                Button(L("Open")) {
                     NSWorkspace.shared.open(url)
                     IslandController.shared.dismissPeek()
                 }
@@ -337,12 +364,12 @@ private struct MeetingPeek: View {
     var body: some View {
         PeekRow(symbol: "video.fill", tint: Theme.accent, title: title, subtitle: subtitle) {
             HStack(spacing: 8) {
-                Button("Dismiss") { IslandController.shared.dismissPeek() }
+                Button(L("Dismiss")) { IslandController.shared.dismissPeek() }
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.secondary)
                 if let link {
-                    Button("Join") {
+                    Button(L("Join")) {
                         NSWorkspace.shared.open(link)
                         IslandController.shared.dismissPeek()
                     }

@@ -29,7 +29,9 @@ enum SnapshotTour {
         s.sideDockEnabled = true
         s.pinned = false
         s.hotkeyEnabled = false
-        s.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
+        s.homePages = [HomeWidget.defaults.map(\.rawValue), ["bookmarks", "worldClock", "prayer", "countdown", "todo"]]
+        s.weatherCity = "Dhaka"
+        UserLibrary.shared.specialDays = [SpecialDay(name: "Ammu's birthday", date: Calendar.current.date(byAdding: .day, value: 12, to: Date())!)]
         seed()
 
         let model = IslandModel.shared
@@ -41,12 +43,19 @@ enum SnapshotTour {
                 render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-\(tab.rawValue)")
             }
         }
-        add("home-all-widgets") {
+        add("home-page-2") {
             model.tab = .home
-            s.enabledHomeWidgets = [HomeWidget.system.rawValue, HomeWidget.batteries.rawValue, HomeWidget.todo.rawValue,
-                                    HomeWidget.controls.rawValue, HomeWidget.notes.rawValue]
-            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-alt")
-            s.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
+            model.homePage = 1
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-page2")
+            model.homePage = 0
+        }
+        add("bangla") {
+            s.language = .bangla
+            s.themeColor = .ocean
+            model.tab = .home
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-bangla")
+            s.language = .system
+            s.themeColor = .terracotta
         }
         add("edit-mode") {
             model.tab = .home
@@ -104,7 +113,22 @@ enum SnapshotTour {
         }
 
         // 2. Live captures of the real windows (shows the actual glass on this macOS).
-        add("live-home") { IslandController.shared.expand(tab: .home, sticky: true) }
+        add("live-page2") {
+            IslandController.shared.expand(tab: .home, sticky: true)
+            model.homePage = 1
+        }
+        add("capture-page2") { capture("screen-island-page2") }
+        add("live-bangla") {
+            model.homePage = 0
+            s.language = .bangla
+            s.themeColor = .ocean
+        }
+        add("capture-bangla") { capture("screen-island-bangla") }
+        add("live-home") {
+            s.language = .system
+            s.themeColor = .terracotta
+            IslandController.shared.expand(tab: .home, sticky: true)
+        }
         add("capture-home") { capture("screen-island-home") }
         add("live-controls") { model.tab = .controls }
         add("capture-controls") { capture("screen-island-controls") }
@@ -123,8 +147,14 @@ enum SnapshotTour {
             SettingsWindowController.shared.show(tab: .island)
         }
         add("capture-settings") { capture("screen-settings") }
-        add("glass-lab") { GlassLab.show() }
-        add("capture-glass-lab") { capture("screen-glass-lab") }
+        add("live-settings-home") { SettingsWindowController.shared.show(tab: .home) }
+        add("capture-settings-home") { capture("screen-settings-home") }
+        add("live-settings-look") { SettingsWindowController.shared.show(tab: .look) }
+        add("capture-settings-look") { capture("screen-settings-look") }
+        add("live-settings-widgets") { SettingsWindowController.shared.show(tab: .widgets) }
+        add("capture-settings-widgets") { capture("screen-settings-widgets") }
+        add("live-onboarding") { OnboardingWindowController.shared.show() }
+        add("capture-onboarding") { capture("screen-onboarding") }
         add("quit") { exit(0) }
 
         next(0)

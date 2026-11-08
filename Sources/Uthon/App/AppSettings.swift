@@ -61,6 +61,8 @@ struct HomeItem: CustomizableItem {
             self.rawValue = rawValue
         } else if rawValue.hasPrefix("app:"), FileManager.default.fileExists(atPath: String(rawValue.dropFirst(4))) {
             self.rawValue = rawValue
+        } else if rawValue.hasPrefix("folder:") {
+            self.rawValue = rawValue
         } else {
             return nil
         }
@@ -68,6 +70,10 @@ struct HomeItem: CustomizableItem {
 
     init(_ widget: HomeWidget) { rawValue = widget.rawValue }
     init(app url: URL) { rawValue = "app:" + url.path }
+    init(folder: AppFolder) { rawValue = "folder:" + folder.id.uuidString }
+
+    var folderID: UUID? { rawValue.hasPrefix("folder:") ? UUID(uuidString: String(rawValue.dropFirst(7))) : nil }
+    var folder: AppFolder? { folderID.flatMap { id in AppSettings.shared.appFolders.first { $0.id == id } } }
 
     var id: String { rawValue }
     var widget: HomeWidget? { HomeWidget(rawValue: rawValue) }
@@ -75,28 +81,44 @@ struct HomeItem: CustomizableItem {
 
     var title: String {
         if let widget { return widget.title }
+        if let folder { return folder.name }
         return appURL.map { FileManager.default.displayName(atPath: $0.path).replacingOccurrences(of: ".app", with: "") } ?? "App"
     }
 
-    var symbol: String { widget?.symbol ?? "app.fill" }
-    var slots: Int { widget?.slots ?? 1 }
+    var symbol: String {
+        if let widget { return widget.symbol }
+        return folderID != nil ? "folder.fill" : "app.fill"
+    }
 
-    /// Built-in widgets plus every app the user has placed.
+    /// Width in slots: the user's chosen size (small/medium/large), within what the widget allows.
+    var slots: Int { AppSettings.shared.slots(of: self) }
+
+    var defaultSlots: Int { widget?.defaultSlots ?? 1 }
+    var minSlots: Int { widget?.minSlots ?? 1 }
+
+    /// Built-in widgets plus every app and folder the user has placed.
     static var allCases: [HomeItem] {
         let builtIns = HomeWidget.allCases.map(HomeItem.init)
-        let apps = AppSettings.shared.homeWidgetOrder.filter { $0.hasPrefix("app:") }.compactMap(HomeItem.init(rawValue:))
-        return builtIns + apps
+        let placed = AppSettings.shared.homePages.flatMap { $0 }
+            .filter { !$0.hasPrefix("app:") || true }
+            .filter { HomeWidget(rawValue: $0) == nil }
+            .compactMap(HomeItem.init(rawValue:))
+        return builtIns + placed
     }
 }
 
 /// Widgets that can be placed on the island's Home tab.
 enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
     case music, calendar, weather, shortcuts, system, batteries, todo, controls, notes
+    case bookmarks, worldClock, prayer, countdown
 
     var id: String { rawValue }
 
-    /// Width in slots; the Home row holds 5 slots.
-    var slots: Int { self == .music ? 2 : 1 }
+    /// Default width in slots; the Home row holds 5 slots.
+    var defaultSlots: Int { self == .music ? 2 : 1 }
+    /// Smallest width that still looks right.
+    var minSlots: Int { self == .music ? 2 : 1 }
+    var slots: Int { defaultSlots }
 
     var title: String {
         switch self {
@@ -109,6 +131,10 @@ enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
         case .todo: return "To-do"
         case .controls: return "Quick Controls"
         case .notes: return "Note"
+        case .bookmarks: return "Bookmarks"
+        case .worldClock: return "World Clock"
+        case .prayer: return "Prayer Times"
+        case .countdown: return "Special Days"
         }
     }
 
@@ -123,10 +149,15 @@ enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
         case .todo: return "checklist"
         case .controls: return "switch.2"
         case .notes: return "note.text"
+        case .bookmarks: return "bookmark.fill"
+        case .worldClock: return "globe.asia.australia.fill"
+        case .prayer: return "moon.stars.fill"
+        case .countdown: return "gift.fill"
         }
     }
 
     static let maxSlots = 5
+    static let maxPages = 3
     static let defaults: [HomeWidget] = [.music, .calendar, .weather, .shortcuts]
 }
 
@@ -205,6 +236,15 @@ final class AppSettings: ObservableObject {
         static let peekScreenshots = "peekScreenshots"
         static let homeOrder = "homeWidgetOrder"
         static let homeEnabled = "homeWidgetsEnabled"
+        static let homePages = "homePages"
+        static let widgetSizes = "widgetSizes"
+        static let widgetColors = "widgetColors"
+        static let theme = "themeColor"
+        static let customAccent = "customAccentHex"
+        static let tintGlass = "tintGlass"
+        static let language = "language"
+        static let swipe = "homeSwipe"
+        static let onboarded = "onboardingDone"
         static let islandScale = "islandScale"
         static let tabIconSize = "tabIconSize"
         static let dockScale = "dockScale"
@@ -252,8 +292,19 @@ final class AppSettings: ObservableObject {
     @Published var dockScale: Double { didSet { defaults.set(dockScale, forKey: Keys.dockScale) } }
     @Published var controlOrder: [String] { didSet { defaults.set(controlOrder, forKey: Keys.controlOrder) } }
     @Published var enabledControls: Set<String> { didSet { defaults.set(Array(enabledControls), forKey: Keys.controlsEnabled) } }
-    @Published var homeWidgetOrder: [String] { didSet { defaults.set(homeWidgetOrder, forKey: Keys.homeOrder) } }
-    @Published var enabledHomeWidgets: Set<String> { didSet { defaults.set(Array(enabledHomeWidgets), forKey: Keys.homeEnabled) } }
+    /// The Home tab: up to 3 pages, each an ordered list of items (5 slots per page).
+    @Published var homePages: [[String]] { didSet { defaults.set(homePages, forKey: Keys.homePages) } }
+    /// Widget size in slots (1 small, 2 medium, 3 large), by item.
+    @Published var widgetSizes: [String: Int] { didSet { defaults.set(widgetSizes, forKey: Keys.widgetSizes) } }
+    /// Widget color (ThemeColor raw value), by item.
+    @Published var widgetColors: [String: String] { didSet { defaults.set(widgetColors, forKey: Keys.widgetColors) } }
+    @Published var themeColor: ThemeColor { didSet { defaults.set(themeColor.rawValue, forKey: Keys.theme) } }
+    @Published var customAccentHex: String { didSet { defaults.set(customAccentHex, forKey: Keys.customAccent) } }
+    @Published var tintGlass: Bool { didSet { defaults.set(tintGlass, forKey: Keys.tintGlass) } }
+    @Published var language: AppLanguage { didSet { defaults.set(language.rawValue, forKey: Keys.language) } }
+    @Published var homeSwipe: HomeSwipe { didSet { defaults.set(homeSwipe.rawValue, forKey: Keys.swipe) } }
+    @Published var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: Keys.onboarded) } }
+    @Published var appFolders: [AppFolder] { didSet { Persist.save(appFolders, key: "appFolders") } }
 
     private init() {
         edge = DockEdge(rawValue: defaults.string(forKey: Keys.edge) ?? "") ?? .right
@@ -291,8 +342,26 @@ final class AppSettings: ObservableObject {
         dockScale = defaults.object(forKey: Keys.dockScale) as? Double ?? 1.0
         controlOrder = defaults.stringArray(forKey: Keys.controlOrder) ?? ControlKind.allCases.map(\.rawValue)
         enabledControls = Set(defaults.stringArray(forKey: Keys.controlsEnabled) ?? ControlKind.defaults.map(\.rawValue))
-        homeWidgetOrder = defaults.stringArray(forKey: Keys.homeOrder) ?? HomeWidget.allCases.map(\.rawValue)
-        enabledHomeWidgets = Set(defaults.stringArray(forKey: Keys.homeEnabled) ?? HomeWidget.defaults.map(\.rawValue))
+        if let pages = defaults.array(forKey: Keys.homePages) as? [[String]], !pages.isEmpty {
+            homePages = pages
+        } else {
+            // Move people from v0.4's single row (order + enabled set) to pages.
+            let order = defaults.stringArray(forKey: Keys.homeOrder) ?? HomeWidget.allCases.map(\.rawValue)
+            if let enabled = defaults.stringArray(forKey: Keys.homeEnabled) {
+                homePages = [order.filter { enabled.contains($0) }]
+            } else {
+                homePages = [HomeWidget.defaults.map(\.rawValue)]
+            }
+        }
+        widgetSizes = defaults.dictionary(forKey: Keys.widgetSizes) as? [String: Int] ?? [:]
+        widgetColors = defaults.dictionary(forKey: Keys.widgetColors) as? [String: String] ?? [:]
+        themeColor = ThemeColor(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .terracotta
+        customAccentHex = defaults.string(forKey: Keys.customAccent) ?? "#E37A5C"
+        tintGlass = defaults.bool(forKey: Keys.tintGlass)
+        language = AppLanguage(rawValue: defaults.string(forKey: Keys.language) ?? "") ?? .system
+        homeSwipe = HomeSwipe(rawValue: defaults.string(forKey: Keys.swipe) ?? "") ?? .pages
+        onboardingDone = defaults.bool(forKey: Keys.onboarded)
+        appFolders = Persist.load([AppFolder].self, key: "appFolders") ?? []
     }
 
     /// Widgets in the user's order (new widgets from updates go at the end).
@@ -315,66 +384,6 @@ final class AppSettings: ObservableObject {
 
     func setTabVisible(_ tab: IslandTab, _ visible: Bool) {
         if visible { hiddenIslandTabs.remove(tab.rawValue) } else { hiddenIslandTabs.insert(tab.rawValue) }
-    }
-
-    var orderedHomeWidgets: [HomeItem] {
-        Self.ordered(HomeItem.allCases, by: homeWidgetOrder)
-    }
-
-    /// Enabled Home widgets in order, trimmed to what fits in 5 slots.
-    var homeWidgets: [HomeItem] {
-        var used = 0
-        var result: [HomeItem] = []
-        for widget in orderedHomeWidgets where enabledHomeWidgets.contains(widget.rawValue) {
-            guard used + widget.slots <= HomeWidget.maxSlots else { continue }
-            used += widget.slots
-            result.append(widget)
-        }
-        return result
-    }
-
-    var homeSlotsUsed: Int { homeWidgets.reduce(0) { $0 + $1.slots } }
-
-    func canEnable(_ widget: HomeItem) -> Bool {
-        enabledHomeWidgets.contains(widget.rawValue) || homeSlotsUsed + widget.slots <= HomeWidget.maxSlots
-    }
-
-    func canEnable(_ widget: HomeWidget) -> Bool { canEnable(HomeItem(widget)) }
-
-    func setHomeWidget(_ widget: HomeItem, _ on: Bool) {
-        if on {
-            guard canEnable(widget) else { return }
-            if !homeWidgetOrder.contains(widget.rawValue) { homeWidgetOrder.append(widget.rawValue) }
-            enabledHomeWidgets.insert(widget.rawValue)
-        } else {
-            enabledHomeWidgets.remove(widget.rawValue)
-            // Apps leave the list completely when removed; built-ins stay available.
-            if widget.appURL != nil { homeWidgetOrder.removeAll { $0 == widget.rawValue } }
-        }
-    }
-
-    func setHomeWidget(_ widget: HomeWidget, _ on: Bool) { setHomeWidget(HomeItem(widget), on) }
-
-    /// Adds an app from this Mac as a Home tile.
-    @discardableResult
-    func addHomeApp(_ url: URL) -> Bool {
-        let item = HomeItem(app: url)
-        guard canEnable(item) else { return false }
-        setHomeWidget(item, true)
-        return true
-    }
-
-    func moveHomeWidget(_ widget: HomeItem, by offset: Int) {
-        var order = orderedHomeWidgets.map(\.rawValue)
-        Self.move(&order, widget.rawValue, by: offset)
-        homeWidgetOrder = order
-    }
-
-    /// Drag-and-drop: put `item` where `target` is.
-    func placeHomeWidget(_ item: HomeItem, at target: HomeItem) {
-        var order = orderedHomeWidgets.map(\.rawValue)
-        Self.place(&order, item.rawValue, at: target.rawValue)
-        homeWidgetOrder = order
     }
 
     // MARK: Controls tab

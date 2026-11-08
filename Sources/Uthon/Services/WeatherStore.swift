@@ -16,7 +16,16 @@ final class WeatherStore: ObservableObject {
         var symbol: String { WeatherStore.symbol(code: code, isDay: isDay) }
     }
 
+    struct Place: Equatable {
+        let city: String
+        let latitude: Double
+        let longitude: Double
+        let timeZone: TimeZone
+    }
+
     @Published private(set) var current: Current?
+    /// The city's location, also used for prayer times.
+    @Published private(set) var place: Place?
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
@@ -40,6 +49,7 @@ final class WeatherStore: ObservableObject {
         let city = AppSettings.shared.weatherCity.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !city.isEmpty else {
             current = nil
+            place = nil
             return
         }
         var geo = URLComponents(string: "https://geocoding-api.open-meteo.com/v1/search")
@@ -53,6 +63,8 @@ final class WeatherStore: ObservableObject {
             guard let results = json?["results"] as? [[String: Any]], let first = results.first,
                   let lat = first["latitude"] as? Double, let lon = first["longitude"] as? Double else { return }
             let name = first["name"] as? String ?? city
+            let zone = (first["timezone"] as? String).flatMap(TimeZone.init(identifier:)) ?? .current
+            self?.place = Place(city: name, latitude: lat, longitude: lon, timeZone: zone)
             self?.fetchForecast(lat: lat, lon: lon, city: name)
         }
     }

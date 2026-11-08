@@ -1,0 +1,176 @@
+import Foundation
+
+/// Translate an English UI string into the chosen language (English or বাংলা).
+/// Strings without a translation (names, file names...) are shown as they are.
+func L(_ english: String) -> String {
+    guard Localization.isBangla else { return english }
+    return Localization.bangla[english] ?? english
+}
+
+enum Localization {
+    static var isBangla: Bool {
+        switch AppSettings.shared.language {
+        case .bangla: return true
+        case .english: return false
+        case .system: return Locale.preferredLanguages.first?.hasPrefix("bn") ?? false
+        }
+    }
+
+    static let bangla: [String: String] = [
+        // Common
+        "Add": "যোগ করো", "Add Widget": "উইজেট যোগ করো", "Add Widget…": "উইজেট যোগ করো…", "Add widget": "উইজেট যোগ করো",
+        "Add widgets": "উইজেট যোগ করো", "Add a page": "পেজ যোগ করো", "Add a task": "কাজ যোগ করো", "Add a task…": "কাজ যোগ করো…",
+        "Add an app…": "অ্যাপ যোগ করো…", "Add apps, folders or files": "অ্যাপ, ফোল্ডার বা ফাইল যোগ করো",
+        "Add birthdays and special days": "জন্মদিন আর বিশেষ দিন যোগ করো", "Add bookmark": "বুকমার্ক যোগ করো",
+        "Add bookmarks": "বুকমার্ক যোগ করো", "Add from below": "নিচ থেকে যোগ করো", "Add a city": "শহর যোগ করো",
+        "Add, remove or reorder": "যোগ, সরানো বা সাজানো", "Added on page": "যোগ আছে পেজে", "Added ✓": "যোগ হয়েছে ✓",
+        "Back": "পেছনে", "Cancel": "বাতিল", "Close the gallery": "গ্যালারি বন্ধ করো", "Copy": "কপি", "Copied": "কপি হয়েছে",
+        "Delete": "মুছে ফেলো", "Done": "হয়েছে", "Done Editing": "এডিট শেষ", "Edit": "এডিট", "Edit Home": "হোম এডিট করো",
+        "Edit Controls": "কন্ট্রোল এডিট করো", "Finish editing": "এডিট শেষ করো", "Later": "পরে", "Later (5 min)": "পরে (৫ মিনিট)",
+        "Name": "নাম", "New": "নতুন", "Next": "পরের", "OK": "ঠিক আছে", "Off": "বন্ধ", "On": "চালু", "Open": "খোলো",
+        "Remove": "সরাও", "Removed": "সরানো হয়েছে", "Reset": "রিসেট", "Resume": "আবার চালু", "Pause": "থামাও",
+        "Settings": "সেটিংস", "Show": "দেখাও", "Show in Finder": "Finder-এ দেখাও", "Start": "শুরু", "Stop": "বন্ধ করো",
+        "Undo": "ফিরিয়ে আনো", "Update": "আপডেট", "Use": "ব্যবহার করো", "Install": "ইনস্টল", "Try again": "আবার চেষ্টা করো",
+        "Choose…": "বেছে নাও…", "More": "বেশি", "Less": "কম", "Page": "পেজ", "Size": "সাইজ", "Color": "রং",
+        "Default": "ডিফল্ট", "Small": "ছোট", "Medium": "মাঝারি", "Large": "বড়", "Pin": "পিন করো", "Unpin": "পিন সরাও",
+        "Pinned": "পিন করা", "Customize": "কাস্টমাইজ", "Customize…": "কাস্টমাইজ…", "More Settings…": "আরও সেটিংস…",
+        "Move to page": "অন্য পেজে নাও", "Delete Folder": "ফোল্ডার মুছে ফেলো", "Tap to add": "যোগ করতে চাপো",
+        "Tap to add to Home": "হোমে যোগ করতে চাপো", "Tap to remove from Home": "হোম থেকে সরাতে চাপো", "Tap to pick": "বাছতে চাপো",
+        "In folder ✓": "ফোল্ডারে আছে ✓", "slots": "জায়গা", "slot": "জায়গা", "apps": "অ্যাপ", "pages": "পেজ",
+        "controls": "কন্ট্রোল", "items": "আইটেম", "days": "দিন", "in": "আরও", "Every": "প্রতি", "minutes": "মিনিটে",
+        "Every year": "প্রতি বছর", "Keep the last": "সর্বশেষ রাখো",
+
+        // Tabs and areas
+        "Home": "হোম", "Controls": "কন্ট্রোল", "Search": "সার্চ", "Shelf": "শেলফ", "Timer": "টাইমার", "Clipboard": "ক্লিপবোর্ড",
+        "Notes": "নোট", "Mirror": "আয়না", "General": "সাধারণ", "Look": "চেহারা", "Island": "আইল্যান্ড", "Widgets": "উইজেট",
+        "Alerts": "সতর্কবার্তা", "Profiles": "প্রোফাইল", "Side Dock": "সাইড ডক", "Side dock": "সাইড ডক", "Care": "যত্ন",
+        "Tabs": "ট্যাব", "Layout": "লেআউট", "Theme": "থিম", "Top island": "উপরের আইল্যান্ড", "Open island": "আইল্যান্ড খোলো",
+        "Show side dock": "সাইড ডক দেখাও", "Keep side dock visible": "সাইড ডক সবসময় দেখাও", "Side dock edge": "সাইড ডকের দিক",
+        "Manage profiles…": "প্রোফাইল সাজাও…", "Next wallpaper": "পরের ওয়ালপেপার", "Welcome guide": "স্বাগত গাইড",
+        "Quit": "বন্ধ করো",
+
+        // Widgets
+        "Music": "গান", "Calendar": "ক্যালেন্ডার", "Weather": "আবহাওয়া", "Shortcuts": "শর্টকাট", "System": "সিস্টেম",
+        "Batteries": "ব্যাটারি", "To-do": "করণীয়", "Quick Controls": "কুইক কন্ট্রোল", "Note": "নোট", "Bookmarks": "বুকমার্ক",
+        "World Clock": "বিশ্ব ঘড়ি", "World clock": "বিশ্ব ঘড়ি", "Prayer Times": "নামাজের সময়", "Prayer times": "নামাজের সময়",
+        "Special Days": "বিশেষ দিন", "Today": "আজ", "Today & Calendar": "আজ ও ক্যালেন্ডার", "Now Playing": "এখন বাজছে",
+        "File Shelf": "ফাইল শেলফ", "Downloads": "ডাউনলোড", "Care Reminders": "যত্নের রিমাইন্ডার", "Stopwatch": "স্টপওয়াচ",
+        "Nothing playing": "কিছু বাজছে না", "Open Music": "Music খোলো", "Connect calendar": "ক্যালেন্ডার যুক্ত করো",
+        "No more events": "আর কোনো ইভেন্ট নেই", "Calendar off": "ক্যালেন্ডার বন্ধ", "Set your city": "তোমার শহর দাও",
+        "No wireless devices": "কোনো ওয়্যারলেস ডিভাইস নেই", "Tap to write a note": "নোট লিখতে চাপো", "Mac": "Mac",
+        "Memory": "মেমরি", "Disk free": "খালি জায়গা", "Battery": "ব্যাটারি", "Battery · charging": "ব্যাটারি · চার্জ হচ্ছে",
+        "Show my calendar events": "আমার ক্যালেন্ডারের ইভেন্ট দেখাও", "Calendar access is off.": "ক্যালেন্ডারের অনুমতি বন্ধ।",
+        "Open Privacy Settings": "প্রাইভেসি সেটিংস খোলো", "Nothing else on the calendar today": "আজ ক্যালেন্ডারে আর কিছু নেই",
+        "All day": "সারাদিন", "Untitled": "নামহীন", "Event": "ইভেন্ট", "Today!": "আজ!", "Today is": "আজ",
+        "Set your city in Settings to see prayer times": "নামাজের সময় দেখতে সেটিংসে শহর দাও",
+        "Set your city in General to see prayer times": "নামাজের সময় দেখতে General-এ শহর দাও",
+        "Fajr": "ফজর", "Sunrise": "সূর্যোদয়", "Dhuhr": "যোহর", "Asr": "আসর", "Maghrib": "মাগরিব", "Isha": "এশা",
+        "Time for": "সময় হয়েছে", "Drag apps or folders here, or press +": "অ্যাপ বা ফোল্ডার এখানে টেনে আনো, বা + চাপো",
+        "Drop files here to keep them handy": "ফাইল এখানে রাখো, হাতের কাছে থাকবে", "Nothing downloaded yet": "এখনও কিছু ডাউনলোড হয়নি",
+        "Clear done": "শেষগুলো সরাও", "Water": "পানি", "Posture": "বসার ভঙ্গি", "Due now": "এখনই",
+        "Glasses of water today, tap to add one": "আজ কত গ্লাস পানি খেয়েছ, চাপলে একটা যোগ হয়",
+        "Time for a glass of water": "এক গ্লাস পানি খাওয়ার সময়", "A small sip keeps the headache away.": "একটু পানি মাথাব্যথা দূরে রাখে।",
+        "Sit up straight and stretch": "সোজা হয়ে বসো, একটু শরীর টানো", "Roll your shoulders, look away from the screen.": "কাঁধ ঘোরাও, স্ক্রিন থেকে একটু চোখ সরাও।",
+        "Open the Downloads folder": "ডাউনলোড ফোল্ডার খোলো", "Clear the shelf (files stay on disk)": "শেলফ খালি করো (ফাইল মুছবে না)",
+        "Double-click to open, or drag it where you need it": "খুলতে দুবার চাপো, বা যেখানে দরকার টেনে নাও",
+        "Double-click to open, or drag it out": "খুলতে দুবার চাপো, বা টেনে বের করো", "Remove from Shelf": "শেলফ থেকে সরাও",
+        "Remove from Shortcuts": "শর্টকাট থেকে সরাও", "Choose apps, folders or files to pin": "যোগ করার জন্য অ্যাপ, ফোল্ডার বা ফাইল বাছো",
+        "All widgets are hidden. Turn them on in Settings.": "সব উইজেট লুকানো। সেটিংসে চালু করো।",
+        "Pin (keep visible)": "পিন করো (সবসময় দেখাও)", "Unpin (auto-hide)": "পিন সরাও (নিজে লুকাবে)",
+
+        // Island tabs content
+        "This page is empty": "এই পেজ খালি", "Page full: remove one to add more": "পেজ ভর্তি: আরও যোগ করতে একটা সরাও",
+        "Everything is already added": "সব আগেই যোগ করা আছে", "Open the full widget gallery": "পুরো উইজেট গ্যালারি খোলো",
+        "Uthon Widgets": "উঠোন উইজেট", "Apps on this Mac": "এই Mac-এর অ্যাপ", "Search apps": "অ্যাপ খোঁজো",
+        "New Folder": "নতুন ফোল্ডার", "Folder name": "ফোল্ডারের নাম", "Create Folder": "ফোল্ডার বানাও",
+        "Tap apps to put them in the folder": "ফোল্ডারে রাখতে অ্যাপে চাপো", "Slots used on this page": "এই পেজে ব্যবহৃত জায়গা",
+        "No room: remove a widget first": "জায়গা নেই: আগে একটা উইজেট সরাও", "No room: remove something first": "জায়গা নেই: আগে কিছু সরাও",
+        "Not enough room on this page for a bigger widget": "বড় উইজেটের জন্য এই পেজে জায়গা নেই",
+        "Keep Awake": "জেগে থাকো", "Keep awake": "জেগে থাকো", "Appearance": "চেহারা", "Sound": "শব্দ", "Screenshot": "স্ক্রিনশট",
+        "Sleep Display": "স্ক্রিন বন্ধ", "Empty Trash": "ট্র্যাশ খালি", "Focus 25 min": "মনোযোগ ২৫ মিনিট", "Desktop Icons": "ডেস্কটপ আইকন",
+        "Hidden Files": "লুকানো ফাইল", "Mission Control": "মিশন কন্ট্রোল", "Color Picker": "রং বাছাই", "Calculator": "ক্যালকুলেটর",
+        "Activity Monitor": "অ্যাক্টিভিটি মনিটর", "Record Screen": "স্ক্রিন রেকর্ড", "Dark": "ডার্ক", "Light": "লাইট", "Muted": "মিউট",
+        "Mute": "মিউট", "Select area": "জায়গা বাছো", "Turn off screen": "স্ক্রিন বন্ধ করো", "Running": "চলছে", "Hidden": "লুকানো",
+        "Shown": "দেখানো", "Screenshot app": "স্ক্রিনশট অ্যাপ", "Dark mode": "ডার্ক মোড", "Finder": "Finder",
+        "Search apps, files or the web…": "অ্যাপ, ফাইল বা ওয়েবে খোঁজো…", "Files": "ফাইল", "Web": "ওয়েব",
+        "Type an app name and press Return. Tip: ⌃⌥Space opens the island from anywhere.": "অ্যাপের নাম লিখে Return চাপো। টিপ: ⌃⌥Space চাপলে যেকোনো জায়গা থেকে আইল্যান্ড খোলে।",
+        "Lap": "ল্যাপ", "Drop files on the island to keep them here": "ফাইল আইল্যান্ডে ছাড়ো, এখানে জমা থাকবে", "AirDrop": "AirDrop",
+        "Clear": "খালি করো", "Keep on the shelf": "শেলফে রাখো", "Things you copy will appear here": "যা কপি করবে তা এখানে দেখাবে",
+        "Clipboard history is off in Settings": "সেটিংসে ক্লিপবোর্ড হিস্টরি বন্ধ", "Click to copy again": "আবার কপি করতে চাপো",
+        "Clear history": "হিস্টরি মুছে ফেলো", "Jot something down… it is saved automatically.": "কিছু লিখে রাখো… নিজে থেকেই সেভ হয়।",
+        "Check your look before a call.": "কলের আগে নিজেকে দেখে নাও।",
+        "The camera only runs while this tab is open. Nothing is recorded.": "এই ট্যাব খোলা থাকলেই শুধু ক্যামেরা চলে। কিছুই রেকর্ড হয় না।",
+        "Allow camera in Settings": "সেটিংসে ক্যামেরার অনুমতি দাও", "Open the side dock": "সাইড ডক খোলো",
+
+        // Peeks
+        "Caps Lock on": "ক্যাপস লক চালু", "Caps Lock off": "ক্যাপস লক বন্ধ", "Charging": "চার্জ হচ্ছে", "Connected": "যুক্ত হয়েছে",
+        "Downloaded": "ডাউনলোড হয়েছে", "Join": "যোগ দাও", "Dismiss": "বাদ দাও", "Time's up!": "সময় শেষ!",
+        "Your timer has finished": "তোমার টাইমার শেষ হয়েছে", "+1 min": "+১ মিনিট", "is available": "এসেছে",
+        "New features and fixes": "নতুন ফিচার আর সমাধান", "Don't forget to celebrate!": "উদযাপন করতে ভুলো না!", "Uthon": "উঠোন",
+
+        // Settings
+        "Startup & shortcut": "চালু হওয়া ও শর্টকাট", "Open at login": "লগইনে চালু হবে",
+        "⌃⌥Space opens the island from anywhere": "⌃⌥Space চাপলে যেকোনো জায়গা থেকে আইল্যান্ড খুলবে",
+        "Show the welcome guide again": "স্বাগত গাইড আবার দেখাও", "City (weather and prayer times)": "শহর (আবহাওয়া ও নামাজের সময়)",
+        "City": "শহর", "e.g. Dhaka": "যেমন ঢাকা", "Unit": "একক",
+        "Uses the free Open-Meteo service. Only the city name is sent.": "বিনামূল্যের Open-Meteo ব্যবহার করে। শুধু শহরের নাম পাঠানো হয়।",
+        "Updates": "আপডেট", "Check for updates automatically": "নিজে থেকে আপডেট খোঁজো", "This version": "এই ভার্সন",
+        "Installing…": "ইনস্টল হচ্ছে…", "Up to date ✓": "সর্বশেষ ভার্সন ✓", "Check now": "এখন খোঁজো", "Wallpaper": "ওয়ালপেপার",
+        "Change wallpaper": "ওয়ালপেপার বদলাও", "No folder chosen": "কোনো ফোল্ডার বাছা হয়নি", "A new wallpaper every day": "প্রতিদিন নতুন ওয়ালপেপার",
+        "Change wallpaper now": "এখনই ওয়ালপেপার বদলাও", "Uthon gradients": "উঠোনের রঙিন ওয়ালপেপার", "My folder": "আমার ফোল্ডার",
+        "Privacy": "গোপনীয়তা",
+        "Everything stays on this Mac: no account, no tracking, no cloud. Clipboard history skips passwords, and only pinned text is saved.": "সবকিছু এই Mac-এই থাকে: কোনো অ্যাকাউন্ট, ট্র্যাকিং বা ক্লাউড নেই। ক্লিপবোর্ড পাসওয়ার্ড রাখে না, শুধু পিন করা লেখা সেভ হয়।",
+        "Theme color": "থিমের রং", "Custom color": "নিজের রং", "Tint the glass with the theme color": "গ্লাসে থিমের রঙের আভা দাও",
+        "Mode": "মোড", "Glass": "গ্লাস", "Language": "ভাষা", "Island size": "আইল্যান্ডের সাইজ", "Tab icon size": "ট্যাব আইকনের সাইজ",
+        "Dock size": "ডকের সাইজ", "Auto": "অটো", "Automatic": "অটোমেটিক", "Frosted": "ঘষা কাঁচ", "Black": "কালো",
+        "Automatic uses Apple's Liquid Glass, exactly like macOS 26 itself. Clear and Frosted are manual overrides.": "অটোমেটিক মানে macOS 26-এর মতোই Apple-এর Liquid Glass। Clear আর Frosted নিজে বেছে নেওয়ার জন্য।",
+        "Automatic uses the same frosted material as macOS Control Center on this Mac. Clear and Frosted are manual overrides.": "অটোমেটিক মানে এই Mac-এর Control Center-এর মতো একই ঘষা কাঁচ। Clear আর Frosted নিজে বেছে নেওয়ার জন্য।",
+        "Terracotta": "টেরাকোটা", "Ocean": "সমুদ্র", "Forest": "বন", "Lavender": "ল্যাভেন্ডার", "Rose": "গোলাপি", "Sunset": "সূর্যাস্ত",
+        "Graphite": "গ্রাফাইট", "Mint": "মিন্ট", "Gold": "সোনালি", "Custom": "নিজের",
+        "Home pages": "হোম পেজ", "Sideways swipe on Home": "হোমে পাশে সোয়াইপ", "Change page": "পেজ বদলাও", "Change song": "গান বদলাও",
+        "Tip: press Edit on the open island to add, remove and drag widgets right there.": "টিপ: খোলা আইল্যান্ডে এডিট চাপলে সেখানেই উইজেট যোগ, সরানো আর সাজানো যায়।",
+        "New folder…": "নতুন ফোল্ডার…", "Pick the apps for the folder": "ফোল্ডারের অ্যাপগুলো বাছো", "Folder": "ফোল্ডার", "Folders": "ফোল্ডার",
+        "Show the island at the top of the screen": "স্ক্রিনের উপরে আইল্যান্ড দেখাও",
+        "Turn tabs on or off and use the arrows to change their order, like customizing Control Center on iPhone.": "iPhone-এর Control Center-এর মতো ট্যাব চালু/বন্ধ করো আর তীর দিয়ে ক্রম বদলাও।",
+        "Live activities (closed island)": "লাইভ অ্যাক্টিভিটি (বন্ধ আইল্যান্ডে)", "Music: artwork and equalizer": "গান: ছবি আর ইকুয়ালাইজার",
+        "Timer and stopwatch countdown": "টাইমার আর স্টপওয়াচ", "Location": "অবস্থান", "Calculation method": "হিসাবের পদ্ধতি",
+        "Hanafi Asr (later Asr time)": "হানাফি আসর (একটু পরের সময়)", "Show an alert on the island at each prayer time": "প্রতি নামাজের সময় আইল্যান্ডে জানাও",
+        "Birthdays & special days": "জন্মদিন ও বিশেষ দিন", "e.g. Ammu's birthday": "যেমন আম্মুর জন্মদিন",
+        "Show it on the island on the day": "সেদিন আইল্যান্ডে দেখাও", "To-do list": "করণীয় তালিকা", "Keep to-dos in": "করণীয় রাখো",
+        "Uthon (this Mac only)": "উঠোন (শুধু এই Mac)", "Apple Reminders (syncs with iPhone)": "Apple Reminders (iPhone-এর সাথে মিলবে)",
+        "Reminders list": "Reminders লিস্ট", "Default list": "ডিফল্ট লিস্ট",
+        "Tip: share this list with your family in the Reminders app, and everyone sees the same to-dos.": "টিপ: Reminders অ্যাপে এই লিস্ট ফ্যামিলির সাথে শেয়ার করো, সবাই একই করণীয় দেখবে।",
+        "Allow access to Reminders": "Reminders-এর অনুমতি দাও",
+        "Reminders access is off. Turn it on in System Settings → Privacy & Security → Reminders.": "Reminders-এর অনুমতি বন্ধ। System Settings → Privacy & Security → Reminders থেকে চালু করো।",
+        "Also keep copied images": "কপি করা ছবিও রাখো",
+        "Right-click an item in the Clipboard tab to pin it. Pinned text is kept even after restarting.": "ক্লিপবোর্ড ট্যাবে ডান-ক্লিক করে পিন করো। পিন করা লেখা রিস্টার্টের পরেও থাকে।",
+        "Volume and brightness": "ভলিউম আর ব্রাইটনেস", "Replace the macOS volume/brightness popup": "macOS-এর ভলিউম/ব্রাইটনেস পপআপের বদলে",
+        "Needs Accessibility permission": "Accessibility অনুমতি লাগবে", "Open Settings": "সেটিংস খোলো", "Island pop-ups": "আইল্যান্ডের পপ-আপ",
+        "Scroll on the open island to change volume; swipe sideways to change page or song.": "খোলা আইল্যান্ডে স্ক্রল করলে ভলিউম বদলায়; পাশে সোয়াইপ করলে পেজ বা গান বদলায়।",
+        "New song": "নতুন গান", "AirPods and headphones connect (with battery)": "AirPods বা হেডফোন যুক্ত হলে (ব্যাটারিসহ)",
+        "Upcoming meeting (5 minutes before, with Join)": "আসন্ন মিটিং (৫ মিনিট আগে, Join সহ)", "Finished downloads": "ডাউনলোড শেষ হলে",
+        "New screenshots": "নতুন স্ক্রিনশট", "Caps Lock": "ক্যাপস লক", "Charging animation": "চার্জিং অ্যানিমেশন",
+        "Clipboard history": "ক্লিপবোর্ড হিস্টরি", "Ready-made layouts": "তৈরি লেআউট",
+        "One tap changes Home pages, controls, tabs and the theme color.": "এক চাপে হোম পেজ, কন্ট্রোল, ট্যাব আর থিমের রং বদলে যায়।",
+        "My profiles": "আমার প্রোফাইল", "Save the current layout into this profile": "বর্তমান লেআউট এই প্রোফাইলে সেভ করো",
+        "Profile name, e.g. Abbu's Mac": "প্রোফাইলের নাম, যেমন আব্বুর Mac", "Save current layout": "বর্তমান লেআউট সেভ করো",
+        "Profiles are also in the menu bar, so anyone in the family can switch in one click.": "প্রোফাইল মেনু বারেও আছে, ফ্যামিলির যে কেউ এক চাপে বদলাতে পারবে।",
+        "In use ✓": "ব্যবহার হচ্ছে ✓", "Study": "পড়াশোনা", "Office": "অফিস", "Family": "ফ্যামিলি", "My layout": "আমার লেআউট",
+        "Show the side dock": "সাইড ডক দেখাও", "Screen edge": "স্ক্রিনের দিক", "Left": "বাম", "Right": "ডান",
+        "Keep visible (pinned)": "সবসময় দেখাও (পিন করা)", "Turn widgets on or off and change their order.": "উইজেট চালু/বন্ধ করো আর ক্রম বদলাও।",
+        "Care reminders": "যত্নের রিমাইন্ডার", "Drink water": "পানি খাও", "Posture & stretch": "বসার ভঙ্গি ও শরীর টানা",
+
+        // Onboarding
+        "Welcome to Uthon": "উঠোনে স্বাগতম",
+        "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির ছোট্ট উঠোন: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",
+        "The island at the top": "উপরের আইল্যান্ড",
+        "Move the mouse to the top centre of the screen (or press ⌃⌥Space) to open the island. Songs, timers and alerts appear there on their own.": "আইল্যান্ড খুলতে মাউস স্ক্রিনের উপরের মাঝখানে নাও (বা ⌃⌥Space চাপো)। গান, টাইমার আর সতর্কবার্তা নিজে থেকেই সেখানে আসে।",
+        "Make it yours": "নিজের মতো সাজাও",
+        "Press Edit on the island: tiles wiggle. Tap − to remove, + Add Widget to add, drag to reorder. Right-click any tile to change its size or color.": "আইল্যান্ডে এডিট চাপো: টাইলগুলো নড়বে। − চাপলে সরে, + Add Widget দিয়ে যোগ হয়, টেনে সাজানো যায়। ডান-ক্লিক করে সাইজ বা রং বদলাও।",
+        "The side dock": "সাইড ডক",
+        "Move the mouse to the right edge of the screen for the side dock with more widgets. You can switch it to the left or turn it off.": "আরও উইজেটসহ সাইড ডকের জন্য মাউস স্ক্রিনের ডান কিনারায় নাও। চাইলে বাম দিকে নিতে বা বন্ধ করতে পারো।",
+        "Themes, pages and profiles": "থিম, পেজ আর প্রোফাইল",
+        "Pick a color theme, add up to 3 Home pages, and switch between layouts like Study, Office, Music or Family from the menu bar.": "রঙের থিম বাছো, ৩টা পর্যন্ত হোম পেজ বানাও, আর মেনু বার থেকে পড়াশোনা, অফিস, গান বা ফ্যামিলি লেআউটে যাও।",
+        "Start using Uthon": "উঠোন ব্যবহার শুরু করো",
+    ]
+}

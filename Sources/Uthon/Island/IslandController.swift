@@ -158,12 +158,18 @@ final class IslandController {
 
     func collapse() {
         guard model.expanded else { return }
+        // Never close under an open menu: the menu's items belong to this window.
+        if MenuTracker.shared.isTracking {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.collapse() }
+            return
+        }
         stickyOpen = false
         withAnimation(IslandModel.spring) {
             model.expanded = false
             model.dropTargeted = false
             model.editing = false
             model.pickerOpen = false
+            model.openFolder = nil
         }
         panel?.ignoresMouseEvents = true
         if panel?.isKeyWindow == true { panel?.resignKey() }
@@ -221,7 +227,7 @@ final class IslandController {
             let inside = Self.contains(zone, mouse)
             if inside { stickyOpen = false }
             let typing = panel.isKeyWindow
-            let busy = holdOpen || stickyOpen || pressed || typing
+            let busy = holdOpen || stickyOpen || pressed || typing || MenuTracker.shared.isTracking
                 || CareReminders.shared.active != nil || TimerStore.shared.alarmRinging
             if inside || busy {
                 outsideSince = nil
@@ -265,8 +271,13 @@ final class IslandController {
     }
 
     /// Every 30 seconds: meeting reminders and the media key tap (after permission is granted).
+    private var notifiedPrayers: Set<String> = []
+    private var announcedDay: String?
+
     private func slowTick() {
         MediaKeyTap.shared.update()
+        checkPrayer()
+        checkSpecialDays()
         guard AppSettings.shared.peekMeetings, AppSettings.shared.islandEnabled else { return }
         let calendar = CalendarStore.shared
         calendar.refresh()
@@ -281,6 +292,35 @@ final class IslandController {
                 NSSound(named: "Tink")?.play()
                 break
             }
+        }
+    }
+
+    private func checkPrayer() {
+        let library = UserLibrary.shared
+        guard library.prayerAlerts, AppSettings.shared.islandEnabled, let place = WeatherStore.shared.place,
+              let times = PrayerTimes.compute(for: Date(), latitude: place.latitude, longitude: place.longitude,
+                                              timeZone: place.timeZone, method: library.prayerMethod,
+                                              hanafi: library.prayerHanafi) else { return }
+        let now = Date()
+        for prayer in times.prayers {
+            let since = now.timeIntervalSince(prayer.time)
+            let key = "\(prayer.name)-\(Int(prayer.time.timeIntervalSince1970))"
+            if since >= 0, since < 120, !notifiedPrayers.contains(key) {
+                notifiedPrayers.insert(key)
+                showPeek(.prayer(name: prayer.name, time: prayer.time), duration: 20)
+                NSSound(named: "Glass")?.play()
+            }
+        }
+    }
+
+    private func checkSpecialDays() {
+        let library = UserLibrary.shared
+        guard library.specialDayAlerts, AppSettings.shared.islandEnabled else { return }
+        let today = Calendar.current.startOfDay(for: Date()).description
+        guard announcedDay != today else { return }
+        if let day = library.specialDays.first(where: { $0.daysLeft() == 0 }) {
+            announcedDay = today
+            showPeek(.specialDay(name: day.name, symbol: day.symbol), duration: 15)
         }
     }
 
@@ -312,7 +352,15 @@ final class IslandController {
         }
 
         if abs(dx) > abs(dy) * 1.5 {
-            if abs(dx) > 14, Date().timeIntervalSince(lastSwipe) > 0.7, NowPlayingStore.shared.track != nil {
+            guard abs(dx) > 14, Date().timeIntervalSince(lastSwipe) > 0.7 else { return true }
+            let settings = AppSettings.shared
+            if model.expanded, settings.homeSwipe == .pages, settings.pageCount > 1 {
+                lastSwipe = Date()
+                let next = model.homePage + (dx < 0 ? 1 : -1)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    model.homePage = min(settings.pageCount - 1, max(0, next))
+                }
+            } else if NowPlayingStore.shared.track != nil {
                 lastSwipe = Date()
                 NowPlayingStore.shared.command(dx < 0 ? "next track" : "previous track")
             }

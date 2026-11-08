@@ -12,6 +12,7 @@ struct DockRootView: View {
                 .scaleEffect(scale, anchor: .topLeading)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
+        .id(settings.lookKey)
         // The glass stays outside the scaled content so the blur keeps its real size.
         .background(LiquidGlass(shape: RoundedRectangle(cornerRadius: Theme.panelRadius * DockController.scale, style: .continuous)))
     }
@@ -33,7 +34,7 @@ struct DockContentView: View {
                         WidgetHost(kind: kind)
                     }
                     if settings.visibleWidgets.isEmpty {
-                        Text("All widgets are hidden. Turn them on in Settings.")
+                        Text(L("All widgets are hidden. Turn them on in Settings."))
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .padding(.top, 20)

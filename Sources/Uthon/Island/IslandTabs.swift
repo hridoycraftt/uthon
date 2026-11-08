@@ -9,36 +9,63 @@ struct IslandHome: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var model = IslandModel.shared
 
+    private var page: Int { min(model.homePage, settings.pageCount - 1) }
+
     var body: some View {
-        VStack(spacing: 10) {
-            EditableRow(
-                items: settings.homeWidgets,
-                allItems: settings.orderedHomeWidgets,
-                maxSlots: HomeWidget.maxSlots,
-                editing: model.editing,
-                canAdd: { settings.canEnable($0) },
-                setEnabled: { settings.setHomeWidget($0, $1) },
-                place: { settings.placeHomeWidget($0, at: $1) },
-                onAdd: openGallery
-            ) { item in
-                HomeWidgetView(item: item)
+        VStack(spacing: 8) {
+            if let id = model.openFolder, let folder = settings.appFolders.first(where: { $0.id == id }) {
+                FolderGrid(folder: folder)
+                    .transition(.scale(scale: 0.95).combined(with: .opacity))
+            } else {
+                EditableRow(
+                    items: settings.homeItems(page: page),
+                    allItems: HomeItem.allCases.filter { !settings.isOnHome($0) || settings.pageOf($0) == page },
+                    maxSlots: HomeWidget.maxSlots,
+                    editing: model.editing,
+                    canAdd: { settings.canAdd($0, page: page) },
+                    setEnabled: { item, on in
+                        if on {
+                            settings.addToHome(item, page: page)
+                        } else {
+                            model.registerUndo(L("Removed") + " " + L(item.title))
+                            settings.removeFromHome(item)
+                        }
+                    },
+                    place: { settings.placeHomeItem($0, at: $1) },
+                    onAdd: openGallery
+                ) { item in
+                    HomeWidgetView(item: item)
+                        .contextMenu { TileMenu(item: item) }
+                }
+                .frame(height: model.pickerOpen ? 158 : nil)
+                .id("page-\(page)")
+                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .opacity))
             }
-            .frame(height: model.pickerOpen ? 158 : nil)
             if model.pickerOpen {
-                WidgetGallery()
+                WidgetGallery(page: page)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        .overlay(alignment: .bottom) {
+            if settings.pageCount > 1 || model.editing {
+                PageDots(page: page)
+                    .offset(y: 12)
+            }
+        }
         .overlay {
-            if settings.homeWidgets.isEmpty && !model.editing {
-                Button("Add widgets") { openGallery() }
-                    .buttonStyle(AccentButtonStyle())
+            if settings.homeItems(page: page).isEmpty && !model.editing && model.openFolder == nil {
+                VStack(spacing: 8) {
+                    Text(L("This page is empty")).font(.system(size: 12)).foregroundStyle(Color.secondary)
+                    Button(L("Add widgets")) { openGallery() }
+                        .buttonStyle(AccentButtonStyle())
+                }
             }
         }
         .contextMenu {
-            Button(model.editing ? "Done Editing" : "Edit Home") { withAnimation { model.editing.toggle() } }
-            Button("Add Widget…") { openGallery() }
-            Button("More Settings…") { SettingsWindowController.shared.show(tab: .island) }
+            MenuButton(model.editing ? "Done Editing" : "Edit Home") { withAnimation { model.editing.toggle() } }
+            MenuButton("Add Widget…") { openGallery() }
+            MenuButton("More Settings…") { SettingsWindowController.shared.show(tab: .home) }
         }
         .onChange(of: model.editing) { _, editing in
             if !editing { withAnimation(IslandModel.spring) { model.pickerOpen = false } }
@@ -53,10 +80,109 @@ struct IslandHome: View {
     }
 }
 
-struct HomeWidgetView: View {
-    let item: HomeItem
+/// Little page dots under Home (and "+" to add a page while editing).
+private struct PageDots: View {
+    let page: Int
+    @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var model = IslandModel.shared
 
     var body: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<settings.pageCount, id: \.self) { index in
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.homePage = index }
+                } label: {
+                    Capsule()
+                        .fill(index == page ? Theme.accent : Color.secondary.opacity(0.35))
+                        .frame(width: index == page ? 16 : 6, height: 6)
+                        .contentShape(Rectangle().inset(by: -4))
+                }
+                .buttonStyle(.plain)
+                .help(L("Page") + " \(index + 1)")
+            }
+            if model.editing && settings.pageCount < HomeWidget.maxPages {
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        settings.setPageCount(settings.pageCount + 1)
+                        model.homePage = settings.pageCount - 1
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill").font(.system(size: 11)).foregroundStyle(Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(L("Add a page"))
+            }
+        }
+    }
+}
+
+/// Right-click menu on any Home tile: remove, size, color, move to another page.
+struct TileMenu: View {
+    let item: HomeItem
+    @ObservedObject private var settings = AppSettings.shared
+
+    var body: some View {
+        Menu(L("Size")) {
+            ForEach([(1, "Small"), (2, "Medium"), (3, "Large")], id: \.0) { size, name in
+                if size >= item.minSlots {
+                    MenuButton((settings.slots(of: item) == size ? "✓ " : "") + L(name)) {
+                        if !settings.setSize(item, slots: size) {
+                            IslandModel.shared.notify(L("Not enough room on this page for a bigger widget"))
+                        }
+                    }
+                }
+            }
+        }
+        Menu(L("Color")) {
+            MenuButton((settings.color(of: item) == nil ? "✓ " : "") + L("Default")) { settings.setColor(nil, for: item) }
+            ForEach(ThemeColor.widgetChoices) { color in
+                MenuButton((settings.color(of: item) == color ? "✓ " : "") + L(color.title)) { settings.setColor(color, for: item) }
+            }
+        }
+        if settings.pageCount > 1 {
+            Menu(L("Move to page")) {
+                ForEach(0..<settings.pageCount, id: \.self) { index in
+                    MenuButton(L("Page") + " \(index + 1)") {
+                        guard settings.pageOf(item) != index else { return }
+                        let snapshot = settings.homePages
+                        settings.removeFromHome(item)
+                        if !settings.addToHome(item, page: index) { settings.homePages = snapshot }
+                    }
+                }
+            }
+        }
+        if let folder = item.folder {
+            MenuButton("Delete Folder") {
+                IslandModel.shared.registerUndo(L("Removed") + " " + folder.name)
+                settings.deleteFolder(folder)
+            }
+        }
+        Divider()
+        MenuButton("Remove", role: .destructive) {
+            IslandModel.shared.registerUndo(L("Removed") + " " + L(item.title))
+            settings.removeFromHome(item)
+        }
+        MenuButton("Edit Home") { withAnimation { IslandModel.shared.editing = true } }
+    }
+}
+
+struct HomeWidgetView: View {
+    let item: HomeItem
+    @ObservedObject private var settings = AppSettings.shared
+
+    var body: some View {
+        content
+            .overlay {
+                if let color = settings.color(of: item) {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(color.color.opacity(0.18))
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(color.color.opacity(0.55), lineWidth: 1))
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    @ViewBuilder private var content: some View {
         if let widget = item.widget {
             switch widget {
             case .music: IslandMusicTile()
@@ -68,7 +194,13 @@ struct HomeWidgetView: View {
             case .todo: TodoTile()
             case .controls: MiniControlsTile()
             case .notes: NoteTile()
+            case .bookmarks: BookmarksTile()
+            case .worldClock: WorldClockTile()
+            case .prayer: PrayerTile()
+            case .countdown: CountdownTile()
             }
+        } else if let folder = item.folder {
+            FolderTile(folder: folder)
         } else if let url = item.appURL {
             AppTile(url: url)
         }
@@ -114,59 +246,98 @@ struct AppTile: View {
     }
 }
 
-/// "+ Add Widget": a gallery of Uthon widgets and every app on this Mac.
+/// "+ Add Widget": a gallery of Uthon widgets and every app on this Mac (and folders of apps).
 struct WidgetGallery: View {
+    let page: Int
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var model = IslandModel.shared
     @State private var section = 0
     @State private var query = ""
     @State private var message: String?
+    @State private var makingFolder = false
+    @State private var folderName = ""
+    @State private var folderApps: [URL] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Picker("", selection: $section) {
-                    Text("Uthon Widgets").tag(0)
-                    Text("Apps on this Mac").tag(1)
+                    Text(L("Uthon Widgets")).tag(0)
+                    Text(L("Apps on this Mac")).tag(1)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(width: 260)
+                .frame(width: 270)
                 if section == 1 {
                     HStack(spacing: 5) {
                         Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(Color.secondary)
-                        TextField("Search apps", text: $query)
+                        TextField(L("Search apps"), text: $query)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Color.primary.opacity(0.08)))
-                    .frame(width: 180)
+                    .frame(width: 160)
+                    Button {
+                        withAnimation { makingFolder.toggle(); folderApps = [] }
+                    } label: {
+                        Label(makingFolder ? L("Cancel") : L("New Folder"), systemImage: makingFolder ? "xmark" : "folder.badge.plus")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.accent)
                 }
                 Spacer()
                 if let message {
-                    Text(message)
+                    Text(L(message))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.orange)
+                        .lineLimit(1)
                         .transition(.opacity)
                 }
+                Text("\(settings.slotsUsed(page: page))/\(HomeWidget.maxSlots)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.secondary)
+                    .help(L("Slots used on this page"))
                 Button {
                     withAnimation(IslandModel.spring) { model.pickerOpen = false }
                 } label: {
                     Image(systemName: "xmark.circle.fill").font(.system(size: 16)).foregroundStyle(Color.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Close the gallery")
+                .help(L("Close the gallery"))
+            }
+            if makingFolder && section == 1 {
+                HStack(spacing: 8) {
+                    TextField(L("Folder name"), text: $folderName)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 180)
+                    Text(L("Tap apps to put them in the folder") + " (\(folderApps.count))")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.secondary)
+                    Spacer()
+                    Button(L("Create Folder")) {
+                        if settings.slotsUsed(page: page) < HomeWidget.maxSlots {
+                            settings.createFolder(name: folderName, apps: folderApps, page: page)
+                            withAnimation { makingFolder = false; folderApps = []; folderName = ""; message = nil }
+                        } else {
+                            message = L("No room: remove a widget first")
+                        }
+                    }
+                    .buttonStyle(AccentButtonStyle())
+                    .disabled(folderApps.count < 2)
+                }
             }
             ScrollView(.vertical, showsIndicators: true) {
                 if section == 0 {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
                         ForEach(HomeWidget.allCases) { widget in
                             let item = HomeItem(widget)
-                            GalleryCell(title: widget.title,
-                                        subtitle: widget.slots > 1 ? "2 slots" : "1 slot",
-                                        added: settings.enabledHomeWidgets.contains(widget.rawValue)) {
+                            GalleryCell(title: L(widget.title),
+                                        subtitle: subtitle(for: item),
+                                        added: settings.isOnHome(item)) {
                                 Image(systemName: widget.symbol)
                                     .font(.system(size: 18, weight: .medium))
                                     .foregroundStyle(Theme.accent)
@@ -181,14 +352,19 @@ struct WidgetGallery: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], spacing: 8) {
                         ForEach(apps) { app in
                             let item = HomeItem(app: app.url)
-                            GalleryCell(title: app.name, subtitle: nil,
-                                        added: settings.enabledHomeWidgets.contains(item.rawValue)) {
+                            let picked = folderApps.contains(app.url)
+                            GalleryCell(title: app.name, subtitle: makingFolder ? (picked ? L("In folder ✓") : L("Tap to pick")) : nil,
+                                        added: makingFolder ? picked : settings.isOnHome(item)) {
                                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
                                     .resizable()
                                     .interpolation(.high)
                                     .frame(width: 40, height: 40)
                             } action: {
-                                toggle(item)
+                                if makingFolder {
+                                    if picked { folderApps.removeAll { $0 == app.url } } else { folderApps.append(app.url) }
+                                } else {
+                                    toggle(item)
+                                }
                             }
                         }
                     }
@@ -201,6 +377,11 @@ struct WidgetGallery: View {
         .animation(.easeOut(duration: 0.2), value: message)
     }
 
+    private func subtitle(for item: HomeItem) -> String {
+        if let p = settings.pageOf(item), settings.pageCount > 1 { return L("Added on page") + " \(p + 1)" }
+        return item.slots > 1 ? "\(item.slots) " + L("slots") : "1 " + L("slot")
+    }
+
     private var apps: [AppSearch.Result] {
         let all = AppSearch.shared.allApps
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
@@ -209,14 +390,15 @@ struct WidgetGallery: View {
 
     private func toggle(_ item: HomeItem) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) {
-            if settings.enabledHomeWidgets.contains(item.rawValue) {
-                settings.setHomeWidget(item, false)
+            if settings.isOnHome(item) {
+                model.registerUndo(L("Removed") + " " + L(item.title))
+                settings.removeFromHome(item)
                 message = nil
-            } else if settings.canEnable(item) {
-                settings.setHomeWidget(item, true)
+            } else if settings.canAdd(item, page: page) {
+                settings.addToHome(item, page: page)
                 message = nil
             } else {
-                message = "No room: remove a widget first (\(settings.homeSlotsUsed) of \(HomeWidget.maxSlots) slots used)"
+                message = L("No room: remove a widget first") + " (\(settings.slotsUsed(page: page))/\(HomeWidget.maxSlots))"
             }
         }
     }
@@ -234,10 +416,10 @@ private struct GalleryCell<Icon: View>: View {
         Button(action: action) {
             VStack(spacing: 5) {
                 icon()
-                Text(title)
+                Text(L(title))
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
-                Text(added ? "Added ✓" : (subtitle ?? "Tap to add"))
+                Text(added && subtitle == nil ? L("Added ✓") : (subtitle ?? L("Tap to add")))
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(added ? Theme.accent : Color.secondary)
             }
@@ -302,7 +484,7 @@ struct WeatherTile: View {
                     SectionLabel("Weather")
                     Spacer(minLength: 0)
                     Image(systemName: "cloud.sun.fill").symbolRenderingMode(.multicolor).font(.system(size: 22))
-                    Button("Set your city") { SettingsWindowController.shared.show(tab: .general) }
+                    Button(L("Set your city")) { SettingsWindowController.shared.show(tab: .general) }
                         .buttonStyle(.plain)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Theme.accent)
@@ -344,7 +526,7 @@ extension SystemTile {
                     .monospacedDigit()
             }
             .frame(width: 54, height: 54)
-            Text(label)
+            Text(L(label))
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Color.secondary)
         }
@@ -367,7 +549,7 @@ struct BatteriesTile: View {
                     row(symbol: device.symbol, name: device.name, percent: device.percent)
                 }
                 if store.devices.isEmpty && !store.hasInternalBattery {
-                    Text("No wireless devices")
+                    Text(L("No wireless devices"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
                 }
@@ -408,7 +590,7 @@ struct TodoTile: View {
                     }
                 }
                 Spacer(minLength: 0)
-                TextField("Add a task", text: $draft)
+                TextField(L("Add a task"), text: $draft)
                     .textFieldStyle(.plain)
                     .font(.system(size: 11))
                     .onSubmit {
@@ -458,7 +640,7 @@ struct MiniControlsTile: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(help)
+        .help(L(help))
     }
 }
 
@@ -523,10 +705,10 @@ struct IslandMusicTile: View {
                     Image(systemName: "music.note")
                         .font(.system(size: 20, weight: .light))
                         .foregroundStyle(Color.secondary)
-                    Text("Nothing playing")
+                    Text(L("Nothing playing"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
-                    Button("Open Music") { player.openMusic() }
+                    Button(L("Open Music")) { player.openMusic() }
                         .buttonStyle(.plain)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Theme.accent)
@@ -616,17 +798,17 @@ struct IslandCalendarTile: View {
                         .foregroundStyle(Color.secondary)
                         .lineLimit(1)
                 } else {
-                    Text("No more events")
+                    Text(L("No more events"))
                         .font(.system(size: 10))
                         .foregroundStyle(Color.secondary)
                 }
             case .notDetermined:
-                Button("Connect calendar") { calendar.requestAccess() }
+                Button(L("Connect calendar")) { calendar.requestAccess() }
                     .buttonStyle(.plain)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Theme.accent)
             case .denied:
-                Text("Calendar off")
+                Text(L("Calendar off"))
                     .font(.system(size: 10))
                     .foregroundStyle(Color.secondary)
             }
@@ -675,7 +857,7 @@ struct IslandShelf: View {
                 VStack(spacing: 6) {
                     Image(systemName: "tray.and.arrow.down")
                         .font(.system(size: 22, weight: .light))
-                    Text("Drop files on the island to keep them here")
+                    Text(L("Drop files on the island to keep them here"))
                         .font(.system(size: 11))
                 }
                 .foregroundStyle(model.dropTargeted ? Theme.accent : Color.secondary)
@@ -741,12 +923,12 @@ struct ShelfTile: View {
         .onTapGesture(count: 2) { NSWorkspace.shared.open(url) }
         .onDrag { NSItemProvider(object: url as NSURL) }
         .contextMenu {
-            Button("Open") { NSWorkspace.shared.open(url) }
-            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            MenuButton("Open") { NSWorkspace.shared.open(url) }
+            MenuButton("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             Divider()
-            Button("Remove from Shelf", action: onRemove)
+            MenuButton("Remove from Shelf", action: onRemove)
         }
-        .help("Double-click to open, or drag it out")
+        .help(L("Double-click to open, or drag it out"))
     }
 }
 
@@ -759,7 +941,7 @@ struct ShelfAction: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: symbol).font(.system(size: 14, weight: .medium))
-                Text(title).font(.system(size: 10, weight: .semibold))
+                Text(L(title)).font(.system(size: 10, weight: .semibold))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
@@ -782,16 +964,16 @@ struct IslandReminder: View {
                 .frame(width: 52, height: 52)
                 .background(Circle().fill(Theme.accent))
             VStack(alignment: .leading, spacing: 3) {
-                Text(kind.title).font(.system(size: 15, weight: .semibold))
-                Text(kind.subtitle)
+                Text(L(kind.title)).font(.system(size: 15, weight: .semibold))
+                Text(L(kind.subtitle))
                     .font(.system(size: 12))
                     .foregroundStyle(Color.secondary)
             }
             Spacer(minLength: 0)
             VStack(spacing: 8) {
-                Button("Done") { CareReminders.shared.complete() }
+                Button(L("Done")) { CareReminders.shared.complete() }
                     .buttonStyle(AccentButtonStyle())
-                Button("Later") { CareReminders.shared.snooze() }
+                Button(L("Later")) { CareReminders.shared.snooze() }
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.secondary)
@@ -856,7 +1038,7 @@ struct IslandControls: View {
             }
         }
         .contextMenu {
-            Button(model.editing ? "Done Editing" : "Edit Controls") { withAnimation { model.editing.toggle() } }
+            MenuButton(model.editing ? "Done Editing" : "Edit Controls") { withAnimation { model.editing.toggle() } }
         }
         .onAppear { actions.refresh() }
     }
@@ -887,11 +1069,11 @@ private struct ControlTile: View {
                     .symbolEffect(.bounce, value: tapped)
                     .contentTransition(.symbolEffect(.replace))
                 Spacer(minLength: 8)
-                Text(title)
+                Text(L(title))
                     .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                Text(subtitle)
+                Text(L(subtitle))
                     .font(.system(size: 10))
                     .foregroundStyle(Color.secondary)
                     .lineLimit(1)
@@ -920,7 +1102,7 @@ struct IslandSearch: View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Color.secondary)
-                TextField("Search apps, files or the web…", text: $query)
+                TextField(L("Search apps, files or the web…"), text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 15, weight: .medium))
                     .focused($focused)
@@ -938,7 +1120,7 @@ struct IslandSearch: View {
             .glassChip(radius: 14)
 
             if query.isEmpty {
-                Text("Type an app name and press Return. Tip: ⌃⌥Space opens the island from anywhere.")
+                Text(L("Type an app name and press Return. Tip: ⌃⌥Space opens the island from anywhere."))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -999,7 +1181,7 @@ private struct SearchResultTile: View {
                         .font(.system(size: 20))
                         .frame(width: 40, height: 40)
                 }
-                Text(title)
+                Text(L(title))
                     .font(.system(size: 10, weight: .medium))
                     .lineLimit(1)
             }
@@ -1055,7 +1237,7 @@ struct IslandTimerTab: View {
                             .contentTransition(.numericText(countsDown: true))
                         HStack(spacing: 8) {
                             if timers.alarmRinging {
-                                Button("Stop") { timers.stopAlarm() }.buttonStyle(AccentButtonStyle())
+                                Button(L("Stop")) { timers.stopAlarm() }.buttonStyle(AccentButtonStyle())
                             } else {
                                 Button(timers.timerPaused ? "Resume" : "Pause") {
                                     timers.timerPaused ? timers.resumeTimer() : timers.pauseTimer()
@@ -1087,7 +1269,7 @@ struct IslandTimerTab: View {
                         .contentTransition(.numericText())
                     IconButton(symbol: "plus", help: "More") { customMinutes = min(180, customMinutes + 5) }
                     Spacer()
-                    Button("Start") { timers.startTimer(minutes: Double(customMinutes)) }
+                    Button(L("Start")) { timers.startTimer(minutes: Double(customMinutes)) }
                         .buttonStyle(AccentButtonStyle())
                 }
             }
@@ -1131,7 +1313,7 @@ struct SectionLabel: View {
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
+        Text(L(text).uppercased())
             .font(.system(size: 10, weight: .bold))
             .tracking(0.8)
             .foregroundStyle(Color.secondary)
@@ -1146,7 +1328,7 @@ struct SmallPill: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            Text(L(title))
                 .font(.system(size: 11, weight: .semibold))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -1187,17 +1369,28 @@ struct IslandClipboard: View {
                                 }
                             } label: {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text(item.text)
-                                        .font(.system(size: 11))
-                                        .lineLimit(5)
-                                        .multilineTextAlignment(.leading)
-                                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                                    if let image = item.image {
+                                        Image(nsImage: image)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(maxWidth: .infinity, maxHeight: 70)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    } else {
+                                        Text(item.text)
+                                            .font(.system(size: 11))
+                                            .lineLimit(5)
+                                            .multilineTextAlignment(.leading)
+                                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                                    }
                                     Spacer(minLength: 0)
                                     HStack {
-                                        Text(item.date.formatted(.relative(presentation: .named)))
+                                        if item.pinned {
+                                            Image(systemName: "pin.fill").foregroundStyle(Theme.accent)
+                                        }
+                                        Text(item.pinned ? L("Pinned") : item.date.formatted(.relative(presentation: .named)))
                                         Spacer()
                                         if copiedID == item.id {
-                                            Label("Copied", systemImage: "checkmark").foregroundStyle(Theme.accent)
+                                            Label(L("Copied"), systemImage: "checkmark").foregroundStyle(Theme.accent)
                                         }
                                     }
                                     .font(.system(size: 9, weight: .medium))
@@ -1211,10 +1404,13 @@ struct IslandClipboard: View {
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
-                                Button("Copy") { store.copy(item) }
-                                Button("Remove") { store.remove(item) }
+                                MenuButton("Copy") { store.copy(item) }
+                                if !item.isImage {
+                                    MenuButton(item.pinned ? "Unpin" : "Pin") { store.togglePin(item) }
+                                }
+                                MenuButton("Remove") { store.remove(item) }
                             }
-                            .help("Click to copy again")
+                            .help(L("Click to copy again"))
                         }
                     }
                 }
@@ -1239,7 +1435,7 @@ struct IslandNotes: View {
                 .scrollContentBackground(.hidden)
                 .padding(8)
             if notes.text.isEmpty {
-                Text("Jot something down… it is saved automatically.")
+                Text(L("Jot something down… it is saved automatically."))
                     .font(.system(size: 13))
                     .foregroundStyle(Color.secondary)
                     .padding(.horizontal, 13)
@@ -1262,7 +1458,7 @@ struct IslandMirror: View {
                 if status == .denied || status == .restricted {
                     VStack(spacing: 6) {
                         Image(systemName: "video.slash").font(.system(size: 22, weight: .light))
-                        Button("Allow camera in Settings") {
+                        Button(L("Allow camera in Settings")) {
                             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
                                 NSWorkspace.shared.open(url)
                             }
@@ -1282,9 +1478,9 @@ struct IslandMirror: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.white.opacity(0.15)))
             VStack(alignment: .leading, spacing: 4) {
                 SectionLabel("Mirror")
-                Text("Check your look before a call.")
+                Text(L("Check your look before a call."))
                     .font(.system(size: 13, weight: .medium))
-                Text("The camera only runs while this tab is open. Nothing is recorded.")
+                Text(L("The camera only runs while this tab is open. Nothing is recorded."))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.secondary)
             }

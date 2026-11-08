@@ -17,7 +17,7 @@ struct SystemStatsWidget: View {
                 }
                 if let free = stats.diskFree {
                     HStack {
-                        Text("Disk free").font(.system(size: 11, weight: .medium))
+                        Text(L("Disk free")).font(.system(size: 11, weight: .medium))
                         Spacer()
                         Text(bytes(free))
                             .font(.system(size: 11))
@@ -43,7 +43,7 @@ struct MeterRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(label).font(.system(size: 11, weight: .medium))
+                Text(L(label)).font(.system(size: 11, weight: .medium))
                 Spacer()
                 Text(detail)
                     .font(.system(size: 11))

@@ -62,6 +62,7 @@ struct IslandView: View {
                 .clipShape(shape)
                 .contentShape(shape)
         }
+        .id(settings.lookKey)
         .scaleEffect(visible ? 1 : 0.6, anchor: .top)
         .opacity(visible ? 1 : 0)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -233,6 +234,31 @@ struct ExpandedIsland: View {
             .animation(.easeOut(duration: 0.18), value: model.tab)
         }
         .overlay(alignment: .bottom) {
+            if let undo = model.undo {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.uturn.backward.circle.fill").foregroundStyle(Theme.accent)
+                    Text(undo.message).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                    Button(L("Undo")) { model.performUndo() }
+                        .buttonStyle(AccentButtonStyle())
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(Color.black.opacity(0.7)))
+                .environment(\.colorScheme, .dark)
+                .padding(.bottom, 10)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else if let notice = model.notice {
+                Text(notice)
+                    .font(.system(size: 12, weight: .medium))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color.black.opacity(0.7)))
+                    .foregroundStyle(Color.white)
+                    .padding(.bottom, 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .bottom) {
             if let peek = model.peek, peek.kind.isSlim {
                 InlineHUD(kind: peek.kind)
                     .padding(.bottom, 8)
@@ -284,6 +310,7 @@ private struct IslandHeader: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             model.tab = tab
                             model.editing = false
+                            model.openFolder = nil
                         }
                     }
                 }
@@ -357,7 +384,7 @@ private struct TabPill: View {
                     .font(.system(size: icon, weight: .semibold))
                     .frame(width: icon + 6, height: icon + 6)
                 if selected {
-                    Text(tab.title)
+                    Text(L(tab.title))
                         .font(.system(size: max(12, icon * 0.85), weight: .semibold))
                         .fixedSize()
                         .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
@@ -389,7 +416,7 @@ private struct TabPill: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help(tab.title)
+        .help(L(tab.title))
     }
 }
 

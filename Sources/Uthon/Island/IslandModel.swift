@@ -53,6 +53,9 @@ enum PeekKind: Equatable {
     case lowBattery(name: String, percent: Int)
     case timerDone
     case screenshot(URL)
+    case update(version: String)
+    case prayer(name: String, time: Date)
+    case specialDay(name: String, symbol: String)
 
     /// Peeks of the same category replace each other in place (e.g. volume steps).
     var category: Int {
@@ -68,6 +71,9 @@ enum PeekKind: Equatable {
         case .lowBattery: return 8
         case .timerDone: return 9
         case .screenshot: return 10
+        case .update: return 11
+        case .prayer: return 12
+        case .specialDay: return 13
         }
     }
 
@@ -98,6 +104,53 @@ final class IslandModel: ObservableObject {
     @Published var editing = false
     /// The "+ Add Widget" gallery is open (the island grows to show it).
     @Published var pickerOpen = false
+    /// Which Home page is showing.
+    @Published var homePage = 0
+    /// An open app folder on Home (shown in place of the widgets).
+    @Published var openFolder: UUID?
+    /// "Removed Weather · Undo" message after removing something.
+    @Published var undo: UndoAction?
+
+    struct UndoAction: Equatable {
+        let id = UUID()
+        let message: String
+        let homePages: [[String]]
+        let controls: Set<String>
+
+        static func == (a: UndoAction, b: UndoAction) -> Bool { a.id == b.id }
+    }
+
+    /// A short message at the bottom of the open island.
+    @Published var notice: String?
+
+    func notify(_ text: String) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { notice = text }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            if self?.notice == text { withAnimation { self?.notice = nil } }
+        }
+    }
+
+    /// Remember the layout before a removal so it can be undone for a few seconds.
+    func registerUndo(_ message: String) {
+        let settings = AppSettings.shared
+        let action = UndoAction(message: message, homePages: settings.homePages, controls: settings.enabledControls)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { undo = action }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
+            if self?.undo?.id == action.id {
+                withAnimation { self?.undo = nil }
+            }
+        }
+    }
+
+    func performUndo() {
+        guard let action = undo else { return }
+        let settings = AppSettings.shared
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            settings.homePages = action.homePages
+            settings.enabledControls = action.controls
+            undo = nil
+        }
+    }
 
     static let compactFlare: CGFloat = 6
     static let expandedFlare: CGFloat = 14

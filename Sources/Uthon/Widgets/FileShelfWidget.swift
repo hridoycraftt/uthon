@@ -15,7 +15,7 @@ struct FileShelfWidget: View {
                     VStack(spacing: 6) {
                         Image(systemName: "arrow.down.doc")
                             .font(.system(size: 18, weight: .light))
-                        Text("Drop files here to keep them handy")
+                        Text(L("Drop files here to keep them handy"))
                             .font(.system(size: 11))
                     }
                     .foregroundStyle(Color.secondary)

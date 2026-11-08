@@ -23,7 +23,7 @@ struct CareWidget: View {
                             .background(Capsule().fill(Color.blue.opacity(0.15)))
                         }
                         .buttonStyle(.plain)
-                        .help("Glasses of water today, tap to add one")
+                        .help(L("Glasses of water today, tap to add one"))
                     }
                     row(symbol: "figure.stand", tint: .green, title: "Posture",
                         detail: detail(enabled: settings.postureEnabled, next: care.nextPosture)) {
@@ -49,7 +49,7 @@ struct CareWidget: View {
                 .frame(width: 26, height: 26)
                 .background(Circle().fill(tint.opacity(0.14)))
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 12, weight: .medium))
+                Text(L(title)).font(.system(size: 12, weight: .medium))
                 Text(detail).font(.system(size: 10)).foregroundStyle(Color.secondary)
             }
             Spacer(minLength: 0)
@@ -70,17 +70,17 @@ struct ReminderBanner: View {
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(Theme.accent))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(kind.title).font(.system(size: 13, weight: .semibold))
-                    Text(kind.subtitle)
+                    Text(L(kind.title)).font(.system(size: 13, weight: .semibold))
+                    Text(L(kind.subtitle))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             HStack(spacing: 12) {
-                Button("Done") { CareReminders.shared.complete() }
+                Button(L("Done")) { CareReminders.shared.complete() }
                     .buttonStyle(AccentButtonStyle())
-                Button("Later (5 min)") { CareReminders.shared.snooze() }
+                Button(L("Later (5 min)")) { CareReminders.shared.snooze() }
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.secondary)

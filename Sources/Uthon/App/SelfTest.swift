@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import EventKit
 
 /// Functional self-test. Launch with `--self-test <report.txt>`: exercises the logic of
@@ -51,6 +52,7 @@ enum SelfTest {
 
         // To-do
         let todo = TodoStore.shared
+        todo.source = .uthon
         let before = todo.items.count
         todo.add("   ")
         check("Empty to-do is ignored", todo.items.count == before)
@@ -79,38 +81,139 @@ enum SelfTest {
         check("Shortcuts ignore duplicates", shortcuts.paths.filter { $0 == calc.path }.count == 1)
         if count < shortcuts.paths.count { shortcuts.remove(calc.path) }
 
-        // Home widgets (5 slots, music = 2)
-        settings.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
-        check("Default Home uses 5 slots", settings.homeSlotsUsed == 5, "\(settings.homeSlotsUsed)")
-        check("Full Home refuses another widget", !settings.canEnable(.system))
-        settings.setHomeWidget(.system, true)
-        check("Adding to a full Home does nothing", !settings.enabledHomeWidgets.contains(HomeWidget.system.rawValue))
-        settings.setHomeWidget(.weather, false)
-        check("Removing frees a slot", settings.canEnable(.system))
-        settings.setHomeWidget(.system, true)
-        check("Widget added after freeing room", settings.homeWidgets.contains(HomeItem(.system)))
-        let firstTwo = Array(settings.orderedHomeWidgets.prefix(2))
+        // Home: pages, slots, sizes, colors, apps, folders
+        settings.homePages = [HomeWidget.defaults.map(\.rawValue)]
+        settings.widgetSizes = [:]
+        settings.widgetColors = [:]
+        check("Default Home uses 5 slots", settings.slotsUsed(page: 0) == 5, "\(settings.slotsUsed(page: 0))")
+        check("Full page refuses another widget", !settings.canAdd(HomeItem(.system), page: 0))
+        check("Adding to a full page does nothing", !settings.addToHome(HomeItem(.system), page: 0))
+        settings.removeFromHome(HomeItem(.weather))
+        check("Removing frees a slot", settings.canAdd(HomeItem(.system), page: 0))
+        settings.addToHome(HomeItem(.system), page: 0)
+        check("Widget added after freeing room", settings.homeItems(page: 0).contains(HomeItem(.system)))
+        check("A widget can't be on Home twice", !settings.canAdd(HomeItem(.system), page: 0))
+        let firstTwo = Array(settings.homeItems(page: 0).prefix(2))
         if firstTwo.count == 2 {
-            settings.placeHomeWidget(firstTwo[1], at: firstTwo[0])
-            check("Drag reorder swaps Home widgets", settings.orderedHomeWidgets.first == firstTwo[1])
-            settings.placeHomeWidget(firstTwo[0], at: firstTwo[1])
+            settings.placeHomeItem(firstTwo[1], at: firstTwo[0])
+            check("Drag reorder swaps Home widgets", settings.homeItems(page: 0).first == firstTwo[1])
         }
-        settings.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
-        check("Home order lists every widget", Set(settings.orderedHomeWidgets.compactMap(\.widget)) == Set(HomeWidget.allCases))
-
-        // Apps on Home
-        settings.setHomeWidget(.weather, false)
+        settings.homePages = [HomeWidget.defaults.map(\.rawValue)]
+        settings.setPageCount(3)
+        check("Up to 3 pages", settings.pageCount == 3)
+        check("Widgets can go on page 2", settings.addToHome(HomeItem(.worldClock), page: 1) && settings.pageOf(HomeItem(.worldClock)) == 1)
+        settings.setPageCount(5)
+        check("Never more than 3 pages", settings.pageCount == 3)
+        settings.setPageCount(1)
+        check("Removing pages keeps what fits", settings.pageCount == 1)
+        settings.homePages = [["calendar", "todo"]]
+        check("Widget can be made large", settings.setSize(HomeItem(.calendar), slots: 3) && settings.slots(of: HomeItem(.calendar)) == 3)
+        check("Too big for the page is refused", !settings.setSize(HomeItem(.todo), slots: 3))
+        check("Music is never smaller than 2", { settings.widgetSizes["music"] = 1; return settings.slots(of: HomeItem(.music)) == 2 }())
+        settings.setColor(.ocean, for: HomeItem(.calendar))
+        check("Widget color is saved", settings.color(of: HomeItem(.calendar)) == .ocean)
+        settings.setColor(nil, for: HomeItem(.calendar))
+        check("Widget color can be reset", settings.color(of: HomeItem(.calendar)) == nil)
+        settings.widgetSizes = [:]
         let calcApp = URL(fileURLWithPath: "/System/Applications/Calculator.app")
-        check("An app can be added to Home", settings.addHomeApp(calcApp))
-        check("App tile shows on Home", settings.homeWidgets.contains { $0.appURL?.path == calcApp.path })
-        check("App tile title", settings.homeWidgets.first { $0.appURL != nil }?.title == "Calculator",
-              settings.homeWidgets.first { $0.appURL != nil }?.title ?? "nil")
-        check("Full Home refuses another app", !settings.addHomeApp(URL(fileURLWithPath: "/System/Applications/Notes.app")))
-        settings.setHomeWidget(HomeItem(app: calcApp), false)
-        check("Removing an app takes it off Home", !settings.homeWidgetOrder.contains("app:" + calcApp.path))
+        check("An app can be added to Home", settings.addHomeApp(calcApp, page: 0))
+        check("App tile title", settings.homeItems(page: 0).first { $0.appURL != nil }?.title == "Calculator")
+        settings.removeFromHome(HomeItem(app: calcApp))
+        check("Removing an app takes it off Home", !settings.isOnHome(HomeItem(app: calcApp)))
         check("A missing app is ignored", HomeItem(rawValue: "app:/Applications/Does Not Exist.app") == nil)
+        let folder = settings.createFolder(name: "Tools", apps: [calcApp, URL(fileURLWithPath: "/System/Applications/Notes.app")], page: 0)
+        check("Folder is created on Home", settings.isOnHome(HomeItem(folder: folder)) && HomeItem(folder: folder).title == "Tools")
+        check("Folder keeps its apps", folder.urls.count == 2)
+        settings.deleteFolder(folder)
+        check("Folder can be deleted", !settings.isOnHome(HomeItem(folder: folder)) && !settings.appFolders.contains(folder))
         check("Apps on this Mac are listed", AppSearch.shared.allApps.count > 10, "\(AppSearch.shared.allApps.count) apps")
-        settings.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
+        check("Every built-in widget is offered", Set(HomeItem.allCases.compactMap(\.widget)) == Set(HomeWidget.allCases))
+
+        // Undo
+        settings.homePages = [HomeWidget.defaults.map(\.rawValue)]
+        IslandModel.shared.registerUndo("Removed Weather")
+        settings.removeFromHome(HomeItem(.weather))
+        IslandModel.shared.performUndo()
+        check("Undo brings a removed widget back", settings.isOnHome(HomeItem(.weather)))
+
+        // Profiles and presets
+        for preset in Profiles.presets {
+            Profiles.apply(preset)
+            let fits = (0..<settings.pageCount).allSatisfy { page in
+                settings.page(page).compactMap(HomeItem.init(rawValue:)).reduce(0) { $0 + settings.slots(of: $1) } <= HomeWidget.maxSlots
+            }
+            check("Preset '\(preset.name)' fits on its pages", fits)
+            check("Preset '\(preset.name)' applies its theme", settings.themeColor.rawValue == preset.theme)
+        }
+        let saved = Profiles.saveCurrent(as: "Self-test")
+        Profiles.apply(Profiles.presets[0])
+        Profiles.apply(saved)
+        check("Saved profile restores its layout", settings.homePages == saved.homePages)
+        Profiles.delete(saved)
+        check("Profile can be deleted", !UserLibrary.shared.profiles.contains(saved))
+        settings.homePages = [HomeWidget.defaults.map(\.rawValue)]
+        settings.themeColor = .terracotta
+
+        // Language
+        settings.language = .bangla
+        check("Bangla interface translates", L("Home") == "হোম" && L("Prayer Times") == "নামাজের সময়")
+        check("Unknown text stays as is", L("Rahim's AirPods") == "Rahim's AirPods")
+        settings.language = .english
+        check("English interface", L("Home") == "Home")
+        settings.language = .system
+
+        // Themes
+        for theme in ThemeColor.allCases {
+            settings.themeColor = theme
+            check("Theme '\(theme.title)' gives a color", NSColor(Theme.accent).usingColorSpace(.sRGB) != nil)
+        }
+        settings.customAccentHex = "#3366CC"
+        check("Custom hex color round-trips", Color(hex: "#3366CC")?.hexString == "#3366CC", Color(hex: "#3366CC")?.hexString ?? "nil")
+        settings.themeColor = .terracotta
+
+        // Prayer times (Dhaka, a day in March)
+        var march = DateComponents()
+        march.year = 2026; march.month = 3; march.day = 21; march.hour = 12
+        let dhaka = TimeZone(identifier: "Asia/Dhaka")!
+        var dhakaCal = Calendar(identifier: .gregorian)
+        dhakaCal.timeZone = dhaka
+        if let day = dhakaCal.date(from: march),
+           let t = PrayerTimes.compute(for: day, latitude: 23.81, longitude: 90.41, timeZone: dhaka, method: .karachi, hanafi: true) {
+            let f = DateFormatter()
+            f.timeZone = dhaka
+            f.dateFormat = "HH:mm"
+            let hour = { (d: Date) in Double(dhakaCal.component(.hour, from: d)) + Double(dhakaCal.component(.minute, from: d)) / 60 }
+            let note = t.all.map { "\($0.name) \(f.string(from: $0.time))" }.joined(separator: ", ")
+            check("Prayer times are in order", t.fajr < t.sunrise && t.sunrise < t.dhuhr && t.dhuhr < t.asr && t.asr < t.maghrib && t.maghrib < t.isha, note)
+            check("Dhaka Fajr about 4:40", abs(hour(t.fajr) - 4.67) < 0.35, note)
+            check("Dhaka Dhuhr about 12:05", abs(hour(t.dhuhr) - 12.1) < 0.3, note)
+            check("Dhaka Maghrib about 6:10 pm", abs(hour(t.maghrib) - 18.15) < 0.3, note)
+        } else {
+            check("Prayer times calculate", false)
+        }
+
+        // Special days, bookmarks, updates
+        let inThree = Calendar.current.date(byAdding: .day, value: 3, to: Date())!
+        check("Special day countdown", SpecialDay(name: "Test", date: inThree).daysLeft() == 3)
+        let lastYear = Calendar.current.date(byAdding: .year, value: -5, to: Date())!
+        check("Yearly day counts today", SpecialDay(name: "Birthday", date: lastYear).daysLeft() == 0)
+        check("Bookmark without https still opens", Bookmark(title: "x", url: "example.com").link?.absoluteString == "https://example.com")
+        check("Version 0.10.0 is newer than 0.9.5", Updater.isNewer("0.10.0", than: "0.9.5"))
+        check("Same version is not newer", !Updater.isNewer("0.5.0", than: "0.5.0"))
+        check("Older version is not newer", !Updater.isNewer("0.4.9", than: "0.5.0"))
+        check("Gradient wallpaper renders", WallpaperChanger.shared.makeGradient(index: 2) != nil)
+
+        // Crash guard: the island must not close while a menu is open
+        IslandController.shared.expand(tab: .home)
+        NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: NSMenu())
+        IslandController.shared.collapse()
+        check("Island stays open while a menu is open", IslandModel.shared.expanded)
+        NotificationCenter.default.post(name: NSMenu.didEndTrackingNotification, object: NSMenu())
+        IslandModel.shared.editing = true
+        IslandModel.shared.pickerOpen = true
+        IslandController.shared.collapse()
+        check("Island closes after the menu", !IslandModel.shared.expanded)
+        check("Closing ends editing and the gallery", !IslandModel.shared.editing && !IslandModel.shared.pickerOpen)
 
         // Controls
         settings.enabledControls = Set(ControlKind.allCases.prefix(8).map(\.rawValue))
@@ -139,7 +242,8 @@ enum SelfTest {
         let kinds: [PeekKind] = [.volume(level: 0, muted: false), .brightness(level: 0), .capsLock(true), .charging(percent: 1),
                                  .headphones(name: "", symbol: "", levels: nil), .track, .download(calc),
                                  .meeting(title: "", start: Date(), link: nil), .lowBattery(name: "", percent: 1),
-                                 .timerDone, .screenshot(calc)]
+                                 .timerDone, .screenshot(calc), .update(version: "1"), .prayer(name: "Fajr", time: Date()),
+                                 .specialDay(name: "", symbol: "gift.fill")]
         check("Every pop-up type is distinct", Set(kinds.map(\.category)).count == kinds.count)
 
         // Parsing and mapping
@@ -149,7 +253,9 @@ enum SelfTest {
         check("Weather: thunderstorm", WeatherStore.symbol(code: 95, isDay: true) == "cloud.bolt.rain.fill")
         check("AirPods Pro icon", DeviceBatteryStore.headphoneSymbol(for: "Rahim's AirPods Pro") == "airpodspro")
         check("Magic Mouse icon", DeviceBatteryStore.symbol(for: "Magic Mouse") == "magicmouse.fill")
-        for symbol in ["airpodspro", "magicmouse.fill", "cloud.bolt.rain.fill", "brain.head.profile", "eyedropper.halffull",
+        for symbol in ["globe.asia.australia.fill", "moon.stars.fill", "gift.fill", "bookmark.fill", "folder.fill",
+                       "arrow.down.app.fill", "arrow.uturn.backward.circle.fill", "paintpalette", "puzzlepiece.extension",
+                       "person.2.crop.square.stack", "folder.badge.plus", "airpodspro", "magicmouse.fill", "cloud.bolt.rain.fill", "brain.head.profile", "eyedropper.halffull",
                        "menubar.dock.rectangle", "capslock.fill", "speaker.wave.3.fill", "rectangle.3.group.fill"] {
             check("SF Symbol exists: \(symbol)", NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil)
         }
@@ -206,8 +312,17 @@ enum SelfTest {
 
         // Clipboard history (async: the store polls the pasteboard)
         let clipboard = ClipboardStore.shared
-        clipboard.clear()
         clipboard.start()
+        clipboard.debugAdd("pin me")
+        if let item = clipboard.items.first(where: { $0.text == "pin me" }) {
+            clipboard.togglePin(item)
+            check("Clipboard item can be pinned", UserLibrary.shared.pinnedClips.contains("pin me"))
+            clipboard.clear()
+            check("Clear keeps pinned items", clipboard.items.contains { $0.text == "pin me" })
+            if let pinned = clipboard.items.first(where: { $0.text == "pin me" }) { clipboard.remove(pinned) }
+            check("Pinned item can be removed", !UserLibrary.shared.pinnedClips.contains("pin me"))
+        }
+        clipboard.clear()
         let board = NSPasteboard.general
         board.clearContents()
         board.setString("uthon self-test clip", forType: .string)

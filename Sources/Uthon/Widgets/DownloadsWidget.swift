@@ -11,7 +11,7 @@ struct DownloadsWidget: View {
             }
         }) {
             if store.recent.isEmpty {
-                Text("Nothing downloaded yet")
+                Text(L("Nothing downloaded yet"))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.secondary)
             } else {

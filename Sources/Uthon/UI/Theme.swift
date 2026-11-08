@@ -4,7 +4,8 @@ import UniformTypeIdentifiers
 
 /// Design tokens: one warm accent, soft glass, generous rounding.
 enum Theme {
-    static let accent = Color(red: 0.89, green: 0.48, blue: 0.36)   // warm terracotta
+    /// The theme color chosen in Settings (Terracotta by default).
+    static var accent: Color { AppSettings.shared.themeColor.color }
     static let panelRadius: CGFloat = 24
     static let cardRadius: CGFloat = 16
 }
@@ -31,7 +32,7 @@ struct Card<Content: View, Trailing: View>: View {
                 Image(systemName: symbol)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Theme.accent)
-                Text(title.uppercased())
+                Text(L(title).uppercased())
                     .font(.system(size: 10, weight: .semibold))
                     .tracking(0.8)
                     .foregroundStyle(Color.secondary)
@@ -72,7 +73,7 @@ struct IconButton: View {
         .buttonStyle(.plain)
         .foregroundStyle(Color.secondary)
         .onHover { hover = $0 }
-        .help(help)
+        .help(L(help))
     }
 }
 
@@ -107,7 +108,7 @@ struct FileRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let subtitle {
-                    Text(subtitle)
+                    Text(L(subtitle))
                         .font(.system(size: 10))
                         .foregroundStyle(Color.secondary)
                 }
@@ -128,14 +129,14 @@ struct FileRow: View {
         .onTapGesture(count: 2) { NSWorkspace.shared.open(url) }
         .onDrag { NSItemProvider(object: url as NSURL) }
         .contextMenu {
-            Button("Open") { NSWorkspace.shared.open(url) }
-            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            MenuButton("Open") { NSWorkspace.shared.open(url) }
+            MenuButton("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             if let onRemove {
                 Divider()
-                Button("Remove", action: onRemove)
+                MenuButton("Remove", action: onRemove)
             }
         }
-        .help("Double-click to open, or drag it where you need it")
+        .help(L("Double-click to open, or drag it where you need it"))
     }
 }
 

@@ -7,7 +7,7 @@ struct TodoWidget: View {
     var body: some View {
         Card("To-do", symbol: "checklist", trailing: {
             if store.items.contains(where: { $0.done }) {
-                Button("Clear done") { store.clearDone() }
+                Button(L("Clear done")) { store.clearDone() }
                     .buttonStyle(.plain)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.secondary)
@@ -32,14 +32,14 @@ struct TodoWidget: View {
                         Spacer(minLength: 0)
                     }
                     .contextMenu {
-                        Button("Delete") { store.delete(item.id) }
+                        MenuButton("Delete") { store.delete(item.id) }
                     }
                 }
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Color.secondary)
-                    TextField("Add a task…", text: $draft)
+                    TextField(L("Add a task…"), text: $draft)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12))
                         .onSubmit {

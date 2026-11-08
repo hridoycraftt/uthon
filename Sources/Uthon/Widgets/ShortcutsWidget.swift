@@ -27,7 +27,7 @@ struct ShortcutsWidget: View {
                 return true
             }
             if store.paths.isEmpty {
-                Text("Drag apps or folders here, or press +")
+                Text(L("Drag apps or folders here, or press +"))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.secondary)
             }
@@ -59,10 +59,10 @@ private struct ShortcutTile: View {
         .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hover = h } }
         .help(FileManager.default.displayName(atPath: url.path))
         .contextMenu {
-            Button("Open") { NSWorkspace.shared.open(url) }
-            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            MenuButton("Open") { NSWorkspace.shared.open(url) }
+            MenuButton("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             Divider()
-            Button("Remove from Shortcuts", action: onRemove)
+            MenuButton("Remove from Shortcuts", action: onRemove)
         }
     }
 }

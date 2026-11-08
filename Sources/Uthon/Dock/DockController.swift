@@ -196,6 +196,7 @@ final class DockController {
         let inside = zone.contains(mouse)
         if inside { sticky = false }
         let busy = holdOpen
+            || MenuTracker.shared.isTracking
             || sticky
             || NSEvent.pressedMouseButtons != 0
             || CareReminders.shared.active != nil

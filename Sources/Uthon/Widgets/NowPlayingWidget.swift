@@ -35,11 +35,11 @@ struct NowPlayingWidget: View {
                 }
             } else {
                 HStack {
-                    Text("Nothing playing")
+                    Text(L("Nothing playing"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
                     Spacer()
-                    Button("Open Music") { player.openMusic() }
+                    Button(L("Open Music")) { player.openMusic() }
                         .buttonStyle(.plain)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Theme.accent)

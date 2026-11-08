@@ -82,20 +82,20 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
             if editing {
                 Group {
                     if let onAdd {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Button(action: onAdd) {
                                 Label(addTitle, systemImage: "plus")
                                     .font(.system(size: 12, weight: .semibold))
-                                    .padding(.horizontal, 14)
+                                    .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
                                     .background(Capsule().fill(Theme.accent))
                                     .foregroundStyle(Color.white)
+                                    .fixedSize()
                             }
                             .buttonStyle(.plain)
-                            Text("Drag to reorder · tap − to remove · \(usedSlots) of \(maxSlots) slots used")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.secondary)
-                            Spacer(minLength: 0)
+                            .help(L("Open the full widget gallery"))
+                            // Quick suggestions right next to it: tap one to add it.
+                            gallery
                         }
                         .frame(height: 30)
                     } else {
@@ -112,9 +112,14 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 if available.isEmpty {
-                    Text("Everything is already added")
+                    Text(L("Everything is already added"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
+                } else if usedSlots >= maxSlots {
+                    Text(L("Page full: remove one to add more"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.orange)
+                        .fixedSize()
                 }
                 ForEach(available) { item in
                     let fits = canAdd(item)
@@ -123,7 +128,7 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: item.symbol).font(.system(size: 11, weight: .semibold))
-                            Text(item.title).font(.system(size: 11, weight: .medium)).fixedSize()
+                            Text(L(item.title)).font(.system(size: 11, weight: .medium)).fixedSize()
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 12))
                                 .foregroundStyle(fits ? Color.green : Color.secondary)

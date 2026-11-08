@@ -12,13 +12,18 @@ struct LiquidGlass<S: Shape>: View {
 
     var body: some View {
         let dark = scheme == .dark
-        switch settings.glassClarity {
-        case .automatic:
-            automatic(dark: dark)
-        case .clear:
-            manual(clear: true, dark: dark)
-        case .frosted:
-            manual(clear: false, dark: dark)
+        ZStack {
+            switch settings.glassClarity {
+            case .automatic:
+                automatic(dark: dark)
+            case .clear:
+                manual(clear: true, dark: dark)
+            case .frosted:
+                manual(clear: false, dark: dark)
+            }
+            if settings.tintGlass {
+                shape.fill(Theme.accent.opacity(dark ? 0.16 : 0.12)).allowsHitTesting(false)
+            }
         }
     }
 

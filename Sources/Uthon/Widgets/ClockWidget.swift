@@ -27,14 +27,14 @@ struct ClockWidget: View {
     private var events: some View {
         switch calendar.access {
         case .notDetermined:
-            Button("Show my calendar events") { calendar.requestAccess() }
+            Button(L("Show my calendar events")) { calendar.requestAccess() }
                 .buttonStyle(AccentButtonStyle())
         case .denied:
             VStack(alignment: .leading, spacing: 6) {
-                Text("Calendar access is off.")
+                Text(L("Calendar access is off."))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.secondary)
-                Button("Open Privacy Settings") {
+                Button(L("Open Privacy Settings")) {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
                         NSWorkspace.shared.open(url)
                     }
@@ -45,7 +45,7 @@ struct ClockWidget: View {
             }
         case .granted:
             if calendar.events.isEmpty {
-                Text("Nothing else on the calendar today")
+                Text(L("Nothing else on the calendar today"))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.secondary)
             } else {

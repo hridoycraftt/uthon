@@ -44,18 +44,34 @@ jobs:
           perl -e 'alarm 120; exec @ARGV' ./dist/Uthon.app/Contents/MacOS/Uthon --self-test "$PWD/shots/self-test.txt"
 
       - name: Snapshot tour (light and dark)
+        id: tour
+        continue-on-error: true
         run: |
           mkdir -p shots
           sw_vers > shots/os.txt
+          status=0
           for mode in light dark; do
             extra=""
             [ "$mode" = dark ] && extra="--dark"
-            perl -e 'alarm 180; exec @ARGV' ./dist/Uthon.app/Contents/MacOS/Uthon --snapshot-tour "$PWD/shots" $extra \
-              > "shots/log-$mode.txt" 2>&1 || echo "tour ($mode) exited with $?" >> shots/os.txt
+            if ! perl -e 'alarm 240; exec @ARGV' ./dist/Uthon.app/Contents/MacOS/Uthon --snapshot-tour "$PWD/shots" $extra \
+                 > "shots/log-$mode.txt" 2>&1; then
+              echo "tour ($mode) did not finish cleanly" | tee -a shots/os.txt
+              status=1
+            fi
           done
           ls -la shots
+          exit $status
+
+      - name: Collect crash reports
+        if: always()
+        run: |
+          mkdir -p shots/crashes
+          find ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports -name 'Uthon*' -exec cp {} shots/crashes/ \; 2>/dev/null || true
+          ls shots/crashes
+          if [ -n "$(ls -A shots/crashes)" ]; then echo "CRASH REPORTS FOUND" | tee -a shots/os.txt; fi
 
       - name: Publish screenshots to the qa branch
+        if: always()
         run: |
           cd shots
           git init -q -b main
@@ -65,8 +81,10 @@ jobs:
           git commit -qm "Visual QA on ${{ matrix.os }} for ${{ github.sha }}"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" HEAD:refs/heads/qa-${{ matrix.os }}
 
-      - name: Fail if the self-test failed
-        if: steps.selftest.outcome != 'success'
+      - name: Fail if anything failed or crashed
+        if: always()
         run: |
           cat shots/self-test.txt || true
-          exit 1
+          if [ "${{ steps.selftest.outcome }}" != "success" ]; then echo "Self-test failed"; exit 1; fi
+          if [ "${{ steps.tour.outcome }}" != "success" ]; then echo "Snapshot tour failed"; exit 1; fi
+          if [ -n "$(ls -A shots/crashes 2>/dev/null)" ]; then echo "Uthon crashed"; exit 1; fi
