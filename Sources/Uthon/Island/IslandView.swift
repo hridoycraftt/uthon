@@ -63,6 +63,7 @@ struct IslandView: View {
                 .contentShape(shape)
         }
         .id(settings.lookKey)
+        .environment(\.locale, Localization.locale)
         .scaleEffect(visible ? 1 : 0.6, anchor: .top)
         .opacity(visible ? 1 : 0)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

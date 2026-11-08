@@ -117,7 +117,10 @@ enum SnapshotTour {
             IslandController.shared.expand(tab: .home, sticky: true)
             model.homePage = 1
         }
-        add("capture-page2") { capture("screen-island-page2") }
+        add("capture-page2") {
+            print("state before page-2 capture: homePage=\(model.homePage) pages=\(s.pageCount) expanded=\(model.expanded) tab=\(model.tab)")
+            capture("screen-island-page2")
+        }
         add("live-bangla") {
             model.homePage = 0
             s.language = .bangla

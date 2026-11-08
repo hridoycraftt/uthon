@@ -68,6 +68,7 @@ struct SettingsView: View {
         }
         .frame(width: 660, height: 680)
         .id(settings.lookKey)
+        .environment(\.locale, Localization.locale)
     }
 }
 

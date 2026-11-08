@@ -8,6 +8,9 @@ func L(_ english: String) -> String {
 }
 
 enum Localization {
+    /// Locale for dates and numbers (Bangla weekday and month names when Bangla is on).
+    static var locale: Locale { isBangla ? Locale(identifier: "bn_BD") : .current }
+
     static var isBangla: Bool {
         switch AppSettings.shared.language {
         case .bangla: return true

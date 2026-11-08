@@ -13,6 +13,7 @@ struct DockRootView: View {
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
         .id(settings.lookKey)
+        .environment(\.locale, Localization.locale)
         // The glass stays outside the scaled content so the blur keeps its real size.
         .background(LiquidGlass(shape: RoundedRectangle(cornerRadius: Theme.panelRadius * DockController.scale, style: .continuous)))
     }
