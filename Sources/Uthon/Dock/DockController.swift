@@ -49,7 +49,9 @@ final class DockController {
         p.hidesOnDeactivate = false
         p.isMovable = false
         p.becomesKeyOnlyIfNeeded = true
-        p.contentView = NSHostingView(rootView: DockRootView())
+        let host = NSHostingView(rootView: DockRootView())
+        host.sizingOptions = []   // the dock's size is set by DockController only (see IslandController)
+        p.contentView = host
         panel = p
 
         let t = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in self?.tick() }

@@ -205,6 +205,19 @@ enum SelfTest {
         check("Older version is not newer", !Updater.isNewer("0.4.9", than: "0.5.0"))
         check("Gradient wallpaper renders", WallpaperChanger.shared.makeGradient(index: 2) != nil)
 
+        // The reported crash path: Edit -> + Add Widget (island grows) -> close, repeated.
+        for _ in 0..<5 {
+            IslandController.shared.expand(tab: .home)
+            IslandModel.shared.editing = true
+            IslandModel.shared.pickerOpen = true
+            RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+            IslandModel.shared.pickerOpen = false
+            RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+            IslandController.shared.collapse()
+            RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+        }
+        check("Edit → Add Widget → close five times without crashing", true)
+
         // Crash guard: the island must not close while a menu is open
         IslandController.shared.expand(tab: .home)
         NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: NSMenu())

@@ -239,7 +239,9 @@ enum GlassLab {
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.level = .floating
-        panel.contentView = NSHostingView(rootView: GlassLabView())
+        let host = NSHostingView(rootView: GlassLabView())
+        host.sizingOptions = []
+        panel.contentView = host
         panel.center()
         panel.orderFrontRegardless()
         window = panel
