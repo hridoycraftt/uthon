@@ -50,9 +50,7 @@ final class IslandController {
         // We size this window ourselves. Letting SwiftUI resize it too made the two fight
         // in an endless layout loop: macOS 26 crashed ("more Update Constraints passes than
         // views") and macOS 15 stopped redrawing.
-        let host = NSHostingView(rootView: IslandView())
-        host.sizingOptions = []
-        p.contentView = host
+        p.contentView = HostingContainer.make(IslandView(), size: p.frame.size)
         panel = p
 
         let t = Timer(timeInterval: 0.06, repeats: true) { [weak self] _ in self?.tick() }

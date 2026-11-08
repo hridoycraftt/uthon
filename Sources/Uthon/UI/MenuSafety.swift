@@ -47,3 +47,23 @@ struct MenuButton: View {
         }
     }
 }
+
+/// Hosts SwiftUI inside a plain container view instead of making the NSHostingView the
+/// window's content view. As the content view, NSHostingView keeps recomputing the
+/// window's min/max size during layout; with continuous animations (wiggling tiles in
+/// edit mode) macOS 26 looped forever ("more Update Constraints in Window passes than
+/// there are views in the window") and crashed. Inside a container it never touches
+/// the window size.
+enum HostingContainer {
+    static func make<Content: View>(_ root: Content, size: NSSize) -> NSView {
+        let container = NSView(frame: NSRect(origin: .zero, size: size))
+        container.autoresizesSubviews = true
+        let host = NSHostingView(rootView: root)
+        host.sizingOptions = []
+        host.translatesAutoresizingMaskIntoConstraints = true
+        host.frame = container.bounds
+        host.autoresizingMask = [.width, .height]
+        container.addSubview(host)
+        return container
+    }
+}
