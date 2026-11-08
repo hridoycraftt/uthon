@@ -38,9 +38,7 @@ struct IslandHome: View {
                         .contextMenu { TileMenu(item: item) }
                 }
                 .frame(height: model.pickerOpen ? 158 : nil)
-                .id("page-\(page)")
-                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
-                                        removal: .opacity))
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: page)
             }
             if model.pickerOpen {
                 WidgetGallery(page: page)
@@ -776,7 +774,7 @@ struct IslandCalendarTile: View {
         VStack(alignment: .leading, spacing: 3) {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(context.date.formatted(.dateTime.weekday(.wide)).uppercased())
+                    Text(context.date.formatted(.dateTime.weekday(.wide).locale(Localization.locale)).uppercased())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Theme.accent)
                     Text(context.date, format: .dateTime.day())

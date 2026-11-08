@@ -115,7 +115,7 @@ enum SnapshotTour {
         // 2. Live captures of the real windows (shows the actual glass on this macOS).
         add("live-page2") {
             IslandController.shared.expand(tab: .home, sticky: true)
-            model.homePage = 1
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.homePage = 1 }
         }
         add("capture-page2") {
             print("state before page-2 capture: homePage=\(model.homePage) pages=\(s.pageCount) expanded=\(model.expanded) tab=\(model.tab)")
