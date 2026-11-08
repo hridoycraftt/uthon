@@ -68,7 +68,13 @@ jobs:
           mkdir -p shots/crashes
           find ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports -name 'Uthon*' -exec cp {} shots/crashes/ \; 2>/dev/null || true
           ls shots/crashes
-          if [ -n "$(ls -A shots/crashes)" ]; then echo "CRASH REPORTS FOUND" | tee -a shots/os.txt; fi
+          if [ -n "$(ls -A shots/crashes)" ]; then
+            echo "CRASH REPORTS FOUND" | tee -a shots/os.txt
+            # The exception reason is in the system log, not in the crash report.
+            log show --last 20m --style compact --predicate 'process == "Uthon" AND (eventMessage CONTAINS "xception" OR eventMessage CONTAINS "Terminating" OR messageType == fault)' \
+              > shots/crashes/system-log.txt 2>&1 || true
+            tail -40 shots/crashes/system-log.txt
+          fi
 
       - name: Publish screenshots to the qa branch
         if: always()

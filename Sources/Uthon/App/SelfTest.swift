@@ -12,6 +12,26 @@ enum SelfTest {
 
     private static func check(_ name: String, _ ok: Bool, _ note: String = "") {
         results.append((name, ok, note))
+        progress("\(ok ? "PASS" : "FAIL")  \(name)\(note.isEmpty ? "" : "  [\(note)]")")
+    }
+
+    /// Written line by line so that, if the app ever crashes, we know exactly where.
+    private static func progress(_ line: String) {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "--self-test"), i + 1 < args.count else { return }
+        let path = args[i + 1] + ".progress"
+        if let handle = FileHandle(forWritingAtPath: path) {
+            handle.seekToEndOfFile()
+            handle.write((line + "\n").data(using: .utf8) ?? Data())
+            try? handle.close()
+        } else {
+            try? (line + "\n").write(toFile: path, atomically: false, encoding: .utf8)
+        }
+    }
+
+    /// Mark the start of a group of steps (shows where a crash happened).
+    private static func step(_ name: String) {
+        progress("--> \(name)")
     }
 
     private static func info(_ name: String, _ note: String) {
@@ -24,6 +44,7 @@ enum SelfTest {
         IslandController.shared.start()
 
         // Timer
+        step("Timer")
         let timers = TimerStore.shared
         timers.cancelTimer()
         timers.startTimer(minutes: 2)
@@ -42,6 +63,7 @@ enum SelfTest {
         check("Format tenths 5.37 = 0:05.3", TimerStore.format(5.37, tenths: true) == "0:05.3", TimerStore.format(5.37, tenths: true))
 
         // Stopwatch
+        step("Stopwatch")
         timers.resetStopwatch()
         timers.toggleStopwatch()
         check("Stopwatch starts", timers.stopwatchRunning)
@@ -53,6 +75,7 @@ enum SelfTest {
         check("Stopwatch resets", !timers.stopwatchUsed && timers.laps.isEmpty)
 
         // To-do
+        step("To-do")
         let todo = TodoStore.shared
         todo.source = .uthon
         let before = todo.items.count
@@ -69,6 +92,7 @@ enum SelfTest {
         }
 
         // Shelf and shortcuts
+        step("Shelf and shortcuts")
         let shelf = ShelfStore.shared
         shelf.clear()
         let calc = URL(fileURLWithPath: "/System/Applications/Calculator.app")
@@ -84,6 +108,7 @@ enum SelfTest {
         if count < shortcuts.paths.count { shortcuts.remove(calc.path) }
 
         // Home: pages, slots, sizes, colors, apps, folders
+        step("Home: pages, slots, sizes, colors, apps, folders")
         settings.homePages = [HomeWidget.defaults.map(\.rawValue)]
         settings.widgetSizes = [:]
         settings.widgetColors = [:]
@@ -132,6 +157,7 @@ enum SelfTest {
         check("Every built-in widget is offered", Set(HomeItem.allCases.compactMap(\.widget)) == Set(HomeWidget.allCases))
 
         // Undo
+        step("Undo")
         settings.homePages = [HomeWidget.defaults.map(\.rawValue)]
         IslandModel.shared.registerUndo("Removed Weather")
         settings.removeFromHome(HomeItem(.weather))
@@ -139,6 +165,7 @@ enum SelfTest {
         check("Undo brings a removed widget back", settings.isOnHome(HomeItem(.weather)))
 
         // Profiles and presets
+        step("Profiles and presets")
         for preset in Profiles.presets {
             Profiles.apply(preset)
             let fits = (0..<settings.pageCount).allSatisfy { page in
@@ -157,6 +184,7 @@ enum SelfTest {
         settings.themeColor = .terracotta
 
         // Language
+        step("Language")
         settings.language = .bangla
         check("Bangla interface translates", L("Home") == "হোম" && L("Prayer Times") == "নামাজের সময়")
         check("Unknown text stays as is", L("Rahim's AirPods") == "Rahim's AirPods")
@@ -165,6 +193,7 @@ enum SelfTest {
         settings.language = .system
 
         // Themes
+        step("Themes")
         for theme in ThemeColor.allCases {
             settings.themeColor = theme
             check("Theme '\(theme.title)' gives a color", NSColor(Theme.accent).usingColorSpace(.sRGB) != nil)
@@ -174,6 +203,7 @@ enum SelfTest {
         settings.themeColor = .terracotta
 
         // Prayer times (Dhaka, a day in March)
+        step("Prayer times (Dhaka, a day in March)")
         var march = DateComponents()
         march.year = 2026; march.month = 3; march.day = 21; march.hour = 12
         let dhaka = TimeZone(identifier: "Asia/Dhaka")!
@@ -195,6 +225,7 @@ enum SelfTest {
         }
 
         // Special days, bookmarks, updates
+        step("Special days, bookmarks, updates")
         let inThree = Calendar.current.date(byAdding: .day, value: 3, to: Date())!
         check("Special day countdown", SpecialDay(name: "Test", date: inThree).daysLeft() == 3)
         let lastYear = Calendar.current.date(byAdding: .year, value: -5, to: Date())!
@@ -206,6 +237,7 @@ enum SelfTest {
         check("Gradient wallpaper renders", WallpaperChanger.shared.makeGradient(index: 2) != nil)
 
         // The reported crash path: Edit -> + Add Widget (island grows) -> close, repeated.
+        step("The reported crash path: Edit -> + Add Widget (island grows) -> close, repeated.")
         for _ in 0..<5 {
             IslandController.shared.expand(tab: .home)
             IslandModel.shared.editing = true
@@ -219,6 +251,7 @@ enum SelfTest {
         check("Edit → Add Widget → close five times without crashing", true)
 
         // Crash guard: the island must not close while a menu is open
+        step("Crash guard: the island must not close while a menu is open")
         IslandController.shared.expand(tab: .home)
         NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: NSMenu())
         IslandController.shared.collapse()
@@ -231,12 +264,14 @@ enum SelfTest {
         check("Closing ends editing and the gallery", !IslandModel.shared.editing && !IslandModel.shared.pickerOpen)
 
         // Controls
+        step("Controls")
         settings.enabledControls = Set(ControlKind.allCases.prefix(8).map(\.rawValue))
         check("Controls cap at 8", settings.controls.count == 8 && !settings.canEnableControl(.screenRecording))
         settings.enabledControls = Set(ControlKind.defaults.map(\.rawValue))
         check("Default controls", settings.controls == ControlKind.defaults)
 
         // Tabs
+        step("Tabs")
         let tabsBefore = settings.orderedIslandTabs
         settings.moveTab(.notes, by: -1)
         check("Tabs can be reordered", settings.orderedIslandTabs != tabsBefore)
@@ -246,6 +281,7 @@ enum SelfTest {
         settings.hiddenIslandTabs = []
 
         // Island geometry
+        step("Island geometry")
         let model = IslandModel.shared
         settings.islandScale = 1.2
         check("Island size setting scales the island",
@@ -254,6 +290,7 @@ enum SelfTest {
         check("Island fits a 1280-wide screen", model.expandedSize.width <= 1280)
 
         // Pop-ups
+        step("Pop-ups")
         let kinds: [PeekKind] = [.volume(level: 0, muted: false), .brightness(level: 0), .capsLock(true), .charging(percent: 1),
                                  .headphones(name: "", symbol: "", levels: nil), .track, .download(calc),
                                  .meeting(title: "", start: Date(), link: nil), .lowBattery(name: "", percent: 1),
@@ -262,6 +299,7 @@ enum SelfTest {
         check("Every pop-up type is distinct", Set(kinds.map(\.category)).count == kinds.count)
 
         // Parsing and mapping
+        step("Parsing and mapping")
         check("AppleScript number '12,5' = 12.5", NowPlayingStore.number("12,5") == 12.5)
         check("AppleScript number '215.0' = 215", NowPlayingStore.number("215.0") == 215)
         check("Weather: clear day is sunny", WeatherStore.symbol(code: 0, isDay: true) == "sun.max.fill")
@@ -285,6 +323,7 @@ enum SelfTest {
         }
 
         // Search
+        step("Search")
         let found = AppSearch.shared.search("safa")
         check("Search finds Safari", found.first?.name == "Safari", found.map(\.name).joined(separator: ", "))
         check("Search finds Calculator", AppSearch.shared.search("calc").contains { $0.name == "Calculator" })
@@ -292,6 +331,7 @@ enum SelfTest {
               AppSearch.webSearchURL("a b&c")?.absoluteString ?? "nil")
 
         // Calendar helpers
+        step("Calendar helpers")
         let store = EKEventStore()
         let event = EKEvent(eventStore: store)
         event.title = "Family call"
@@ -303,6 +343,7 @@ enum SelfTest {
         check("All-day event text", event.uthonTimeText == "All day", event.uthonTimeText)
 
         // System services
+        step("System services")
         let actions = QuickActions.shared
         actions.toggleKeepAwake()
         check("Keep Awake turns on", actions.keepAwake)
@@ -326,6 +367,7 @@ enum SelfTest {
         }
 
         // Clipboard history (async: the store polls the pasteboard)
+        step("Clipboard history (async: the store polls the pasteboard)")
         let clipboard = ClipboardStore.shared
         clipboard.start()
         clipboard.debugAdd("pin me")
