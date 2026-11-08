@@ -77,6 +77,11 @@ final class IslandController {
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .sink { [weak self] _ in self?.layout() }
             .store(in: &cancellables)
+
+        AppSettings.shared.$islandScale
+            .dropFirst()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.layout() } }
+            .store(in: &cancellables)
     }
 
     private func apply(enabled: Bool) {
@@ -208,7 +213,7 @@ final class IslandController {
             let zone = rect(for: model.expandedSize, on: s).insetBy(dx: -18, dy: -18)
             let inside = Self.contains(zone, mouse)
             if inside { stickyOpen = false }
-            let typing = panel.isKeyWindow && (model.tab == .notes || model.tab == .search)
+            let typing = panel.isKeyWindow
             let busy = holdOpen || stickyOpen || pressed || typing
                 || CareReminders.shared.active != nil || TimerStore.shared.alarmRinging
             if inside || busy {

@@ -40,6 +40,11 @@ final class ClipboardStore: ObservableObject {
         if items.count > 25 { items.removeLast(items.count - 25) }
     }
 
+    /// Used only by the screenshot tour.
+    func debugAdd(_ text: String) {
+        items.insert(Item(text: text, date: Date()), at: 0)
+    }
+
     func copy(_ item: Item) {
         let board = NSPasteboard.general
         board.clearContents()

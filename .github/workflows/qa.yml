@@ -1,0 +1,59 @@
+name: Visual QA
+
+# Launches Uthon on real macOS machines, renders every screen in light and dark
+# mode, captures the live screen (real glass), and publishes the PNGs to the
+# `qa-<os>` branch so they can be reviewed.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick newest Xcode
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_*.app | grep -viE 'beta|release_candidate|_rc' | sort -V | tail -1)"
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+
+      - name: Build app
+        run: ./scripts/build-dmg.sh
+
+      - name: Snapshot tour (light and dark)
+        run: |
+          mkdir -p shots
+          sw_vers > shots/os.txt
+          for mode in light dark; do
+            extra=""
+            [ "$mode" = dark ] && extra="--dark"
+            perl -e 'alarm 180; exec @ARGV' ./dist/Uthon.app/Contents/MacOS/Uthon --snapshot-tour "$PWD/shots" $extra \
+              > "shots/log-$mode.txt" 2>&1 || echo "tour ($mode) exited with $?" >> shots/os.txt
+          done
+          ls -la shots
+
+      - name: Publish screenshots to the qa branch
+        run: |
+          cd shots
+          git init -q -b main
+          git config user.name "uthon-qa"
+          git config user.email "qa@users.noreply.github.com"
+          git add -A
+          git commit -qm "Visual QA on ${{ matrix.os }} for ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" HEAD:refs/heads/qa-${{ matrix.os }}

@@ -2,25 +2,47 @@ import SwiftUI
 import AppKit
 
 /// Liquid Glass surface.
-/// - macOS 26+: Apple's real Liquid Glass (`glassEffect`), "Clear" or "Frosted" (regular).
-/// - macOS 14/15: a see-through blur of what is behind the window, layered with the
-///   cues that make glass read as glass: a bright specular rim, light bending along the
-///   inside edge, a soft caustic at the bottom and a thin outline for definition.
+/// - Automatic (default): exactly what this macOS uses. macOS 26+ gets Apple's real
+///   Liquid Glass; macOS 14/15 get the native frosted HUD material, like Control Center.
+/// - Clear / Frosted: manual overrides for people who want more or less see-through.
 struct LiquidGlass<S: Shape>: View {
     var shape: S
     @ObservedObject private var settings = AppSettings.shared
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        let clear = settings.glassClarity == .clear
         let dark = scheme == .dark
+        switch settings.glassClarity {
+        case .automatic:
+            automatic(dark: dark)
+        case .clear:
+            manual(clear: true, dark: dark)
+        case .frosted:
+            manual(clear: false, dark: dark)
+        }
+    }
+
+    @ViewBuilder
+    private func automatic(dark: Bool) -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            Color.clear.glassEffect(.regular, in: shape)
+        } else {
+            native(dark: dark)
+        }
+        #else
+        native(dark: dark)
+        #endif
+    }
+
+    @ViewBuilder
+    private func manual(clear: Bool, dark: Bool) -> some View {
         #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             ZStack {
                 Color.clear.glassEffect(clear ? .clear : .regular, in: shape)
-                // Clear glass needs a whisper of dimming so text stays readable.
                 if clear {
-                    shape.fill(dark ? Color.black.opacity(0.22) : Color.white.opacity(0.12))
+                    shape.fill(dark ? Color.black.opacity(0.2) : Color.white.opacity(0.1))
                 }
             }
         } else {
@@ -29,6 +51,20 @@ struct LiquidGlass<S: Shape>: View {
         #else
         frosted(clear: clear, dark: dark)
         #endif
+    }
+
+    /// The system's own translucent material plus a hairline rim, nothing invented.
+    private func native(dark: Bool) -> some View {
+        ZStack {
+            BehindWindowBlur(shape: shape, material: dark ? .hudWindow : .popover)
+            shape.stroke(
+                LinearGradient(
+                    colors: [Color.white.opacity(dark ? 0.35 : 0.9), Color.white.opacity(dark ? 0.08 : 0.4)],
+                    startPoint: .top, endPoint: .bottom
+                ),
+                lineWidth: 1
+            )
+        }
     }
 
     private func frosted(clear: Bool, dark: Bool) -> some View {

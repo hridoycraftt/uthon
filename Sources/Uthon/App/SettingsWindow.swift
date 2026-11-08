@@ -2,9 +2,24 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 
+enum SettingsTab: Hashable {
+    case general, island, alerts, dock, care
+}
+
+/// Which Settings tab is showing (so other parts of the app can open a specific one).
+final class SettingsRouter: ObservableObject {
+    static let shared = SettingsRouter()
+    @Published var tab: SettingsTab = .general
+}
+
 final class SettingsWindowController {
     static let shared = SettingsWindowController()
     private var window: NSWindow?
+
+    func show(tab: SettingsTab) {
+        SettingsRouter.shared.tab = tab
+        show()
+    }
 
     func show() {
         if window == nil {
@@ -35,15 +50,17 @@ enum LoginItem {
 }
 
 struct SettingsView: View {
+    @ObservedObject private var router = SettingsRouter.shared
+
     var body: some View {
-        TabView {
-            GeneralSettings().tabItem { Label("General", systemImage: "gearshape") }
-            IslandSettings().tabItem { Label("Island", systemImage: "capsule.tophalf.filled") }
-            AlertsSettings().tabItem { Label("Alerts", systemImage: "bell.badge") }
-            DockSettings().tabItem { Label("Side Dock", systemImage: "sidebar.right") }
-            CareSettings().tabItem { Label("Care", systemImage: "heart") }
+        TabView(selection: $router.tab) {
+            GeneralSettings().tabItem { Label("General", systemImage: "gearshape") }.tag(SettingsTab.general)
+            IslandSettings().tabItem { Label("Island", systemImage: "capsule.tophalf.filled") }.tag(SettingsTab.island)
+            AlertsSettings().tabItem { Label("Alerts", systemImage: "bell.badge") }.tag(SettingsTab.alerts)
+            DockSettings().tabItem { Label("Side Dock", systemImage: "sidebar.right") }.tag(SettingsTab.dock)
+            CareSettings().tabItem { Label("Care", systemImage: "heart") }.tag(SettingsTab.care)
         }
-        .frame(width: 500, height: 620)
+        .frame(width: 520, height: 660)
     }
 }
 
@@ -62,7 +79,7 @@ private struct GeneralSettings: View {
                     ForEach(GlassClarity.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Text("Clear shows more of what is behind. Frosted is calmer and easier to read.")
+                Text(glassNote)
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Startup & shortcut") {
@@ -96,6 +113,13 @@ private struct GeneralSettings: View {
     }
 }
 
+private var glassNote: String {
+    if #available(macOS 26.0, *) {
+        return "Automatic uses Apple's Liquid Glass, exactly like macOS 26 itself. Clear and Frosted are manual overrides."
+    }
+    return "Automatic uses the same frosted material as macOS Control Center on this Mac. Clear and Frosted are manual overrides."
+}
+
 private struct IslandSettings: View {
     @ObservedObject private var settings = AppSettings.shared
 
@@ -108,6 +132,32 @@ private struct IslandSettings: View {
                 }
                 .pickerStyle(.segmented)
                 .disabled(!settings.islandEnabled)
+            }
+            Section("Size") {
+                LabeledSlider(title: "Island size", value: $settings.islandScale, range: 0.85...1.4, step: 0.05,
+                              format: { "\(Int(($0 * 100).rounded()))%" })
+                LabeledSlider(title: "Tab icon size", value: $settings.tabIconSize, range: 11...22, step: 1,
+                              format: { "\(Int($0)) pt" })
+            }
+            Section {
+                ForEach(Array(settings.orderedHomeWidgets.enumerated()), id: \.element) { index, widget in
+                    ReorderRow(
+                        title: widget.slots > 1 ? "\(widget.title) (2 slots)" : widget.title,
+                        symbol: widget.symbol,
+                        isOn: Binding(
+                            get: { settings.enabledHomeWidgets.contains(widget.rawValue) },
+                            set: { settings.setHomeWidget(widget, $0) }
+                        ),
+                        locked: !settings.canEnable(widget),
+                        canMoveUp: index > 0,
+                        canMoveDown: index < settings.orderedHomeWidgets.count - 1,
+                        move: { settings.moveHomeWidget(widget, by: $0) }
+                    )
+                }
+            } header: {
+                Text("Home widgets · \(settings.homeSlotsUsed) of \(HomeWidget.maxSlots) slots used")
+            } footer: {
+                Text("Choose what the Home tab shows and in which order. Music takes two slots; turn something off to make room.")
             }
             Section {
                 ForEach(Array(settings.orderedIslandTabs.enumerated()), id: \.element) { index, tab in
@@ -189,6 +239,9 @@ private struct DockSettings: View {
         Form {
             Section("Side dock") {
                 Toggle("Show the side dock", isOn: $settings.sideDockEnabled)
+                LabeledSlider(title: "Dock size", value: $settings.dockScale, range: 0.85...1.4, step: 0.05,
+                              format: { "\(Int(($0 * 100).rounded()))%" })
+                    .disabled(!settings.sideDockEnabled)
                 Picker("Screen edge", selection: $settings.edge) {
                     ForEach(DockEdge.allCases) { Text($0.title).tag($0) }
                 }
@@ -265,6 +318,25 @@ private struct ReorderRow: View {
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .disabled(locked)
+        }
+    }
+}
+
+private struct LabeledSlider: View {
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let format: (Double) -> String
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Slider(value: $value, in: range, step: step)
+            Text(format(value))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 48, alignment: .trailing)
         }
     }
 }

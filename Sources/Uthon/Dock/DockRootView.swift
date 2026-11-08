@@ -1,6 +1,23 @@
 import SwiftUI
 
+/// Lays the dock out at its normal size, then scales it to the user's chosen dock size.
 struct DockRootView: View {
+    @ObservedObject private var settings = AppSettings.shared
+
+    var body: some View {
+        GeometryReader { geo in
+            let scale = DockController.scale
+            DockContentView()
+                .frame(width: geo.size.width / scale, height: geo.size.height / scale)
+                .scaleEffect(scale, anchor: .topLeading)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+        }
+        // The glass stays outside the scaled content so the blur keeps its real size.
+        .background(LiquidGlass(shape: RoundedRectangle(cornerRadius: Theme.panelRadius * DockController.scale, style: .continuous)))
+    }
+}
+
+struct DockContentView: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var care = CareReminders.shared
 
@@ -29,7 +46,6 @@ struct DockRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .clipShape(RoundedRectangle(cornerRadius: Theme.panelRadius, style: .continuous))
-        .background(LiquidGlass(shape: RoundedRectangle(cornerRadius: Theme.panelRadius, style: .continuous)))
     }
 
     private var header: some View {

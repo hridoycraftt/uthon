@@ -186,6 +186,13 @@ final class NowPlayingStore: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.refresh() }
     }
 
+    /// Used only by the screenshot tour.
+    func debugSet(_ track: Track?, artwork: NSImage? = nil) {
+        self.track = track
+        self.artwork = artwork
+        artworkKey = track?.key
+    }
+
     func openMusic() {
         let url = URL(fileURLWithPath: "/System/Applications/Music.app")
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())

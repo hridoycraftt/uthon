@@ -3,18 +3,253 @@ import AppKit
 import EventKit
 import AVFoundation
 
-// MARK: Home
+// MARK: Home (customizable widgets)
 
 struct IslandHome: View {
+    @ObservedObject private var settings = AppSettings.shared
+    private let spacing: CGFloat = 10
+
     var body: some View {
-        HStack(spacing: 10) {
-            IslandMusicTile()
-                .frame(maxWidth: .infinity)
-            IslandCalendarTile()
-                .frame(width: 160)
-            IslandShortcutsTile()
-                .frame(width: 108)
+        let widgets = settings.homeWidgets
+        GeometryReader { geo in
+            let slots = max(1, widgets.reduce(0) { $0 + $1.slots })
+            let unit = (geo.size.width - spacing * CGFloat(slots - 1)) / CGFloat(slots)
+            HStack(spacing: spacing) {
+                ForEach(widgets) { widget in
+                    HomeWidgetView(widget: widget)
+                        .frame(width: unit * CGFloat(widget.slots) + spacing * CGFloat(widget.slots - 1))
+                        .frame(maxHeight: .infinity)
+                }
+            }
         }
+        .overlay {
+            if widgets.isEmpty {
+                Button("Add widgets to Home…") { SettingsWindowController.shared.show(tab: .island) }
+                    .buttonStyle(AccentButtonStyle())
+            }
+        }
+        .contextMenu {
+            Button("Customize Home…") { SettingsWindowController.shared.show(tab: .island) }
+        }
+    }
+}
+
+struct HomeWidgetView: View {
+    let widget: HomeWidget
+
+    var body: some View {
+        switch widget {
+        case .music: IslandMusicTile()
+        case .calendar: IslandCalendarTile()
+        case .weather: WeatherTile()
+        case .shortcuts: IslandShortcutsTile()
+        case .system: SystemTile()
+        case .batteries: BatteriesTile()
+        case .todo: TodoTile()
+        case .controls: MiniControlsTile()
+        case .notes: NoteTile()
+        }
+    }
+}
+
+/// Common frame for Home widgets.
+struct WidgetTile<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        content()
+            .padding(12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .glassChip(radius: 20)
+    }
+}
+
+struct WeatherTile: View {
+    @ObservedObject private var weather = WeatherStore.shared
+
+    var body: some View {
+        WidgetTile {
+            if let w = weather.current {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(w.city.uppercased())
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Theme.accent)
+                        .lineLimit(1)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(Int(w.temperature.rounded()))°")
+                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                        Image(systemName: w.symbol)
+                            .symbolRenderingMode(.multicolor)
+                            .font(.system(size: 20))
+                    }
+                    Spacer(minLength: 0)
+                    if let high = w.high, let low = w.low {
+                        Text("H \(Int(high.rounded()))°  L \(Int(low.rounded()))°")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    SectionLabel("Weather")
+                    Spacer(minLength: 0)
+                    Image(systemName: "cloud.sun.fill").symbolRenderingMode(.multicolor).font(.system(size: 22))
+                    Button("Set your city") { SettingsWindowController.shared.show(tab: .general) }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+        }
+    }
+}
+
+struct SystemTile: View {
+    @ObservedObject private var stats = SystemStatsStore.shared
+
+    var body: some View {
+        WidgetTile {
+            VStack(alignment: .leading, spacing: 8) {
+                SectionLabel("System")
+                Spacer(minLength: 0)
+                MeterRow(label: "CPU", value: stats.cpu, detail: "\(Int((stats.cpu * 100).rounded()))%")
+                MeterRow(label: "Memory", value: stats.memoryFraction, detail: "\(Int((stats.memoryFraction * 100).rounded()))%")
+            }
+        }
+        .onAppear { SystemStatsStore.shared.setActive(true) }
+        .onDisappear { SystemStatsStore.shared.setActive(false) }
+    }
+}
+
+struct BatteriesTile: View {
+    @ObservedObject private var store = DeviceBatteryStore.shared
+
+    var body: some View {
+        WidgetTile {
+            VStack(alignment: .leading, spacing: 7) {
+                SectionLabel("Batteries")
+                Spacer(minLength: 0)
+                if let mac = DeviceBatteryStore.internalBattery() {
+                    row(symbol: "laptopcomputer", name: "Mac", percent: mac.percent)
+                }
+                ForEach(store.devices.prefix(3)) { device in
+                    row(symbol: device.symbol, name: device.name, percent: device.percent)
+                }
+                if store.devices.isEmpty && !store.hasInternalBattery {
+                    Text("No wireless devices")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+        }
+        .onAppear { store.refreshDevices() }
+    }
+
+    private func row(symbol: String, name: String, percent: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol).font(.system(size: 12)).frame(width: 18)
+            Text(name).font(.system(size: 11)).lineLimit(1)
+            Spacer(minLength: 4)
+            Text("\(percent)%")
+                .font(.system(size: 11, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(percent <= 15 ? Color.red : Color.primary)
+        }
+        .help(name)
+    }
+}
+
+struct TodoTile: View {
+    @ObservedObject private var store = TodoStore.shared
+    @State private var draft = ""
+
+    var body: some View {
+        WidgetTile {
+            VStack(alignment: .leading, spacing: 6) {
+                SectionLabel("To-do")
+                ForEach(store.items.filter { !$0.done }.prefix(3)) { item in
+                    HStack(spacing: 6) {
+                        Button { withAnimation { store.toggle(item.id) } } label: {
+                            Image(systemName: "circle").font(.system(size: 12)).foregroundStyle(Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        Text(item.text).font(.system(size: 11)).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                TextField("Add a task", text: $draft)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11))
+                    .onSubmit {
+                        store.add(draft)
+                        draft = ""
+                    }
+            }
+        }
+    }
+}
+
+struct MiniControlsTile: View {
+    @ObservedObject private var actions = QuickActions.shared
+
+    var body: some View {
+        WidgetTile {
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    mini(actions.keepAwake ? "cup.and.saucer.fill" : "cup.and.saucer", active: actions.keepAwake, help: "Keep awake") {
+                        actions.toggleKeepAwake()
+                    }
+                    mini(actions.darkMode ? "moon.fill" : "sun.max.fill", active: actions.darkMode, help: "Dark mode") {
+                        actions.toggleDarkMode()
+                    }
+                }
+                HStack(spacing: 8) {
+                    mini(AudioController.shared.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                         active: AudioController.shared.isMuted, help: "Mute") {
+                        AudioController.shared.toggleMute()
+                        actions.objectWillChange.send()
+                    }
+                    mini("camera.viewfinder", active: false, help: "Screenshot") { actions.screenshot() }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func mini(_ symbol: String, active: Bool, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .medium))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .foregroundStyle(active ? Color.white : Color.primary)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(active ? Theme.accent : Color.primary.opacity(0.08)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
+struct NoteTile: View {
+    @ObservedObject private var notes = NotesStore.shared
+
+    var body: some View {
+        Button {
+            withAnimation { IslandModel.shared.tab = .notes }
+        } label: {
+            WidgetTile {
+                VStack(alignment: .leading, spacing: 6) {
+                    SectionLabel("Note")
+                    Text(notes.text.isEmpty ? "Tap to write a note" : notes.text)
+                        .font(.system(size: 11))
+                        .foregroundStyle(notes.text.isEmpty ? Color.secondary : Color.primary)
+                        .lineLimit(5)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -370,31 +605,37 @@ struct ArtworkView: View {
 
 struct IslandControls: View {
     @ObservedObject private var actions = QuickActions.shared
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 6)
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
+        HStack(spacing: 10) {
             ControlTile(symbol: actions.keepAwake ? "cup.and.saucer.fill" : "cup.and.saucer",
-                        title: "Keep Awake", active: actions.keepAwake) { actions.toggleKeepAwake() }
+                        title: "Keep Awake", subtitle: actions.keepAwake ? "On" : "Off",
+                        active: actions.keepAwake) { actions.toggleKeepAwake() }
             ControlTile(symbol: actions.darkMode ? "moon.fill" : "sun.max.fill",
-                        title: actions.darkMode ? "Dark" : "Light", active: actions.darkMode) { actions.toggleDarkMode() }
+                        title: "Appearance", subtitle: actions.darkMode ? "Dark" : "Light",
+                        active: actions.darkMode) { actions.toggleDarkMode() }
             ControlTile(symbol: AudioController.shared.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
-                        title: "Mute", active: AudioController.shared.isMuted) {
+                        title: "Sound", subtitle: AudioController.shared.isMuted ? "Muted" : "On",
+                        active: AudioController.shared.isMuted) {
                 AudioController.shared.toggleMute()
                 actions.objectWillChange.send()
             }
-            ControlTile(symbol: "camera.viewfinder", title: "Screenshot", active: false) { actions.screenshot() }
-            ControlTile(symbol: "display", title: "Sleep Display", active: false) { actions.sleepDisplay() }
-            ControlTile(symbol: "trash", title: "Empty Trash", active: false) { actions.emptyTrash() }
+            ControlTile(symbol: "camera.viewfinder", title: "Screenshot", subtitle: "Select area",
+                        active: false) { actions.screenshot() }
+            ControlTile(symbol: "moon.zzz.fill", title: "Sleep Display", subtitle: "Turn off screen",
+                        active: false) { actions.sleepDisplay() }
+            ControlTile(symbol: "trash.fill", title: "Empty Trash", subtitle: "Finder",
+                        active: false) { actions.emptyTrash() }
         }
-        .frame(maxHeight: .infinity)
         .onAppear { actions.refresh() }
     }
 }
 
+/// Control Center style tile: big round icon on top, name and state below.
 private struct ControlTile: View {
     let symbol: String
     let title: String
+    let subtitle: String
     let active: Bool
     let action: () -> Void
     @State private var hover = false
@@ -405,26 +646,33 @@ private struct ControlTile: View {
             tapped += 1
             action()
         } label: {
-            VStack(spacing: 8) {
+            VStack(spacing: 0) {
+                Spacer(minLength: 6)
                 Image(systemName: symbol)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(active ? Color.white : Color.primary)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(active ? Theme.accent : Color.primary.opacity(hover ? 0.16 : 0.09)))
+                    .frame(width: 52, height: 52)
+                    .background(Circle().fill(active ? Theme.accent : Color.primary.opacity(hover ? 0.16 : 0.10)))
                     .symbolEffect(.bounce, value: tapped)
                     .contentTransition(.symbolEffect(.replace))
+                Spacer(minLength: 8)
                 Text(title)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(subtitle)
+                    .font(.system(size: 10))
                     .foregroundStyle(Color.secondary)
                     .lineLimit(1)
+                Spacer(minLength: 6)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .glassChip(radius: 20)
-        .scaleEffect(hover ? 1.03 : 1)
+        .glassChip(radius: 22)
+        .scaleEffect(hover ? 1.02 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hover)
     }
 }

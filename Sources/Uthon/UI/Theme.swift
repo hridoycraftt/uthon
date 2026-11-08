@@ -57,14 +57,15 @@ extension Card where Trailing == EmptyView {
 struct IconButton: View {
     let symbol: String
     var help: String = ""
+    var size: CGFloat = 11
     let action: () -> Void
     @State private var hover = false
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 22, height: 22)
+                .font(.system(size: size, weight: .semibold))
+                .frame(width: size * 2, height: size * 2)
                 .background(Circle().fill(Color.primary.opacity(hover ? 0.12 : 0)))
                 .contentShape(Circle())
         }

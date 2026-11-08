@@ -14,7 +14,8 @@ final class DockPanel: NSPanel {
 final class DockController {
     static let shared = DockController()
 
-    let width: CGFloat = 300
+    var width: CGFloat { 300 * DockController.scale }
+    static var scale: CGFloat { CGFloat(min(max(AppSettings.shared.dockScale, 0.8), 1.5)) }
     private let margin: CGFloat = 10
     private let revealDelay: TimeInterval = 0.15
     private let hideDelay: TimeInterval = 0.5
@@ -54,6 +55,11 @@ final class DockController {
         let t = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
+
+        AppSettings.shared.$dockScale
+            .dropFirst()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.reposition() } }
+            .store(in: &cancellables)
 
         AppSettings.shared.$edge
             .dropFirst()

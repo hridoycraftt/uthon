@@ -43,7 +43,7 @@ struct IslandView: View {
             bottomRadius: mode == .open ? 32 : min(mode == .peek ? 24 : 14, size.height * 0.45)
         )
         // With a notch the closed island stays black so it melts into the hardware.
-        let glass = settings.islandStyle == .glass && (mode != .closed || !model.hasNotch)
+        let glass = settings.islandStyle == .automatic && (mode != .closed || !model.hasNotch)
         let visible = mode != .closed || model.hasNotch || activity != nil
 
         ZStack(alignment: .top) {
@@ -73,16 +73,26 @@ struct IslandView: View {
 
     @ViewBuilder
     private func content(_ mode: Mode) -> some View {
+        let scale = IslandModel.scale
         switch mode {
         case .open:
+            // Laid out at the base size, then scaled to the user's chosen island size.
+            let base = model.baseExpandedSize
             ExpandedIsland()
+                .frame(width: base.width, height: base.height)
+                .scaleEffect(scale, anchor: .top)
+                .frame(width: base.width * scale, height: base.height * scale, alignment: .top)
                 .transition(.asymmetric(
                     insertion: .opacity.combined(with: .scale(scale: 0.92, anchor: .top)).animation(IslandModel.spring.delay(0.05)),
                     removal: .opacity.animation(.easeOut(duration: 0.12))
                 ))
         case .peek:
             if let peek = model.peek {
+                let base = model.basePeekSize(peek.kind)
                 PeekView(kind: peek.kind)
+                    .frame(width: base.width, height: base.height)
+                    .scaleEffect(scale, anchor: .top)
+                    .frame(width: base.width * scale, height: base.height * scale, alignment: .top)
                     .id(peek.id)
                     .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .top)))
             }
@@ -203,7 +213,7 @@ struct ExpandedIsland: View {
     var body: some View {
         VStack(spacing: 0) {
             IslandHeader()
-                .frame(height: max(model.notchSize.height, 30))
+                .frame(height: model.headerHeight)
             Group {
                 if let kind = care.active {
                     IslandReminder(kind: kind)
@@ -218,7 +228,7 @@ struct ExpandedIsland: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, IslandModel.expandedFlare + 12)
-            .padding(.top, 6)
+            .padding(.top, 4)
             .padding(.bottom, 14)
             .animation(.easeOut(duration: 0.18), value: model.tab)
         }
@@ -265,7 +275,7 @@ private struct IslandHeader: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 2) {
+            HStack(spacing: 4) {
                 ForEach(settings.visibleIslandTabs) { tab in
                     TabPill(tab: tab,
                             badge: tab == .shelf && !shelf.paths.isEmpty ? shelf.paths.count : nil,
@@ -295,16 +305,16 @@ private struct IslandHeader: View {
                 }
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Text(context.date, format: .dateTime.hour().minute())
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                 }
                 if settings.sideDockEnabled {
-                    IconButton(symbol: settings.edge == .right ? "sidebar.right" : "sidebar.left", help: "Open the side dock") {
+                    IconButton(symbol: settings.edge == .right ? "sidebar.right" : "sidebar.left", help: "Open the side dock", size: 14) {
                         IslandController.shared.collapse()
                         DockController.shared.show(sticky: true)
                     }
                 }
-                IconButton(symbol: "gearshape", help: "Customize") {
+                IconButton(symbol: "gearshape", help: "Customize", size: 14) {
                     SettingsWindowController.shared.show()
                 }
             }
@@ -314,6 +324,7 @@ private struct IslandHeader: View {
 }
 
 private struct TabPill: View {
+    @ObservedObject private var settings = AppSettings.shared
     let tab: IslandTab
     let badge: Int?
     let selected: Bool
@@ -323,11 +334,14 @@ private struct TabPill: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: tab.symbol).font(.system(size: 10, weight: .bold))
+            let icon = CGFloat(settings.tabIconSize)
+            HStack(spacing: 6) {
+                Image(systemName: tab.symbol)
+                    .font(.system(size: icon, weight: .semibold))
+                    .frame(width: icon + 6, height: icon + 6)
                 if selected {
                     Text(tab.title)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: max(12, icon * 0.85), weight: .semibold))
                         .fixedSize()
                         .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
                 }
@@ -339,8 +353,8 @@ private struct TabPill: View {
                         .foregroundStyle(Color.white)
                 }
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
             .background {
                 if selected {
                     Capsule()

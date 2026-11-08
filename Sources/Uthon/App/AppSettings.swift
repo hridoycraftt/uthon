@@ -23,16 +23,67 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     }
 }
 
+/// How the open island looks. "Automatic" uses the material that matches your macOS
+/// (Liquid Glass on macOS 26, native frosted material on macOS 14/15).
 enum IslandStyle: String, CaseIterable, Identifiable {
-    case glass, black
+    case automatic, black
     var id: String { rawValue }
-    var title: String { self == .glass ? "Liquid Glass" : "Black" }
+    var title: String { self == .automatic ? "Automatic" : "Black" }
 }
 
+/// Glass material. "Automatic" picks what macOS itself uses on this version.
 enum GlassClarity: String, CaseIterable, Identifiable {
-    case clear, frosted
+    case automatic, clear, frosted
     var id: String { rawValue }
-    var title: String { self == .clear ? "Clear" : "Frosted" }
+
+    var title: String {
+        switch self {
+        case .automatic: return "Automatic"
+        case .clear: return "Clear"
+        case .frosted: return "Frosted"
+        }
+    }
+}
+
+/// Widgets that can be placed on the island's Home tab.
+enum HomeWidget: String, CaseIterable, Identifiable {
+    case music, calendar, weather, shortcuts, system, batteries, todo, controls, notes
+
+    var id: String { rawValue }
+
+    /// Width in slots; the Home row holds 5 slots.
+    var slots: Int { self == .music ? 2 : 1 }
+
+    var title: String {
+        switch self {
+        case .music: return "Music"
+        case .calendar: return "Calendar"
+        case .weather: return "Weather"
+        case .shortcuts: return "Shortcuts"
+        case .system: return "System"
+        case .batteries: return "Batteries"
+        case .todo: return "To-do"
+        case .controls: return "Quick Controls"
+        case .notes: return "Note"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .music: return "music.note"
+        case .calendar: return "calendar"
+        case .weather: return "cloud.sun.fill"
+        case .shortcuts: return "square.grid.2x2.fill"
+        case .system: return "cpu"
+        case .batteries: return "battery.75percent"
+        case .todo: return "checklist"
+        case .controls: return "switch.2"
+        case .notes: return "note.text"
+        }
+    }
+
+    static let maxSlots = 5
+    static let defaults: [HomeWidget] = [.music, .calendar, .weather, .shortcuts]
 }
 
 enum DockEdge: String, CaseIterable, Identifiable {
@@ -86,10 +137,10 @@ final class AppSettings: ObservableObject {
         static let postureOn = "postureEnabled"
         static let postureMin = "postureMinutes"
         static let island = "islandEnabled"
-        static let islandStyle = "islandStyle"
+        static let islandStyle = "islandLook"
         static let sideDock = "sideDockEnabled"
         static let appearance = "appearance"
-        static let glassClarity = "glassClarity"
+        static let glassClarity = "glassMaterial"
         static let peekTrack = "peekTrack"
         static let hud = "hudEnabled"
         static let replaceHUD = "replaceSystemHUD"
@@ -108,6 +159,11 @@ final class AppSettings: ObservableObject {
         static let liveMusic = "liveMusic"
         static let liveTimers = "liveTimers"
         static let peekScreenshots = "peekScreenshots"
+        static let homeOrder = "homeWidgetOrder"
+        static let homeEnabled = "homeWidgetsEnabled"
+        static let islandScale = "islandScale"
+        static let tabIconSize = "tabIconSize"
+        static let dockScale = "dockScale"
     }
 
     private let defaults = UserDefaults.standard
@@ -142,6 +198,14 @@ final class AppSettings: ObservableObject {
     @Published var liveMusic: Bool { didSet { defaults.set(liveMusic, forKey: Keys.liveMusic) } }
     @Published var liveTimers: Bool { didSet { defaults.set(liveTimers, forKey: Keys.liveTimers) } }
     @Published var peekScreenshots: Bool { didSet { defaults.set(peekScreenshots, forKey: Keys.peekScreenshots) } }
+    /// Overall size of the open island and its pop-ups (0.85 ... 1.4).
+    @Published var islandScale: Double { didSet { defaults.set(islandScale, forKey: Keys.islandScale) } }
+    /// Size of the tab icons at the top of the open island.
+    @Published var tabIconSize: Double { didSet { defaults.set(tabIconSize, forKey: Keys.tabIconSize) } }
+    /// Overall size of the side dock (0.85 ... 1.4).
+    @Published var dockScale: Double { didSet { defaults.set(dockScale, forKey: Keys.dockScale) } }
+    @Published var homeWidgetOrder: [String] { didSet { defaults.set(homeWidgetOrder, forKey: Keys.homeOrder) } }
+    @Published var enabledHomeWidgets: Set<String> { didSet { defaults.set(Array(enabledHomeWidgets), forKey: Keys.homeEnabled) } }
 
     private init() {
         edge = DockEdge(rawValue: defaults.string(forKey: Keys.edge) ?? "") ?? .right
@@ -152,10 +216,10 @@ final class AppSettings: ObservableObject {
         postureEnabled = defaults.object(forKey: Keys.postureOn) as? Bool ?? true
         postureMinutes = defaults.object(forKey: Keys.postureMin) as? Int ?? 30
         islandEnabled = defaults.object(forKey: Keys.island) as? Bool ?? true
-        islandStyle = IslandStyle(rawValue: defaults.string(forKey: Keys.islandStyle) ?? "") ?? .glass
+        islandStyle = IslandStyle(rawValue: defaults.string(forKey: Keys.islandStyle) ?? "") ?? .automatic
         sideDockEnabled = defaults.object(forKey: Keys.sideDock) as? Bool ?? true
         appearance = AppAppearance(rawValue: defaults.string(forKey: Keys.appearance) ?? "") ?? .system
-        glassClarity = GlassClarity(rawValue: defaults.string(forKey: Keys.glassClarity) ?? "") ?? .clear
+        glassClarity = GlassClarity(rawValue: defaults.string(forKey: Keys.glassClarity) ?? "") ?? .automatic
         peekTrack = defaults.object(forKey: Keys.peekTrack) as? Bool ?? true
         hudEnabled = defaults.object(forKey: Keys.hud) as? Bool ?? true
         replaceSystemHUD = defaults.object(forKey: Keys.replaceHUD) as? Bool ?? false
@@ -174,6 +238,11 @@ final class AppSettings: ObservableObject {
         liveMusic = defaults.object(forKey: Keys.liveMusic) as? Bool ?? true
         liveTimers = defaults.object(forKey: Keys.liveTimers) as? Bool ?? true
         peekScreenshots = defaults.object(forKey: Keys.peekScreenshots) as? Bool ?? true
+        islandScale = defaults.object(forKey: Keys.islandScale) as? Double ?? 1.0
+        tabIconSize = defaults.object(forKey: Keys.tabIconSize) as? Double ?? 15
+        dockScale = defaults.object(forKey: Keys.dockScale) as? Double ?? 1.0
+        homeWidgetOrder = defaults.stringArray(forKey: Keys.homeOrder) ?? HomeWidget.allCases.map(\.rawValue)
+        enabledHomeWidgets = Set(defaults.stringArray(forKey: Keys.homeEnabled) ?? HomeWidget.defaults.map(\.rawValue))
     }
 
     /// Widgets in the user's order (new widgets from updates go at the end).
@@ -196,6 +265,43 @@ final class AppSettings: ObservableObject {
 
     func setTabVisible(_ tab: IslandTab, _ visible: Bool) {
         if visible { hiddenIslandTabs.remove(tab.rawValue) } else { hiddenIslandTabs.insert(tab.rawValue) }
+    }
+
+    var orderedHomeWidgets: [HomeWidget] {
+        Self.ordered(HomeWidget.allCases, by: homeWidgetOrder)
+    }
+
+    /// Enabled Home widgets in order, trimmed to what fits in 5 slots.
+    var homeWidgets: [HomeWidget] {
+        var used = 0
+        var result: [HomeWidget] = []
+        for widget in orderedHomeWidgets where enabledHomeWidgets.contains(widget.rawValue) {
+            guard used + widget.slots <= HomeWidget.maxSlots else { continue }
+            used += widget.slots
+            result.append(widget)
+        }
+        return result
+    }
+
+    var homeSlotsUsed: Int { homeWidgets.reduce(0) { $0 + $1.slots } }
+
+    func canEnable(_ widget: HomeWidget) -> Bool {
+        enabledHomeWidgets.contains(widget.rawValue) || homeSlotsUsed + widget.slots <= HomeWidget.maxSlots
+    }
+
+    func setHomeWidget(_ widget: HomeWidget, _ on: Bool) {
+        if on {
+            guard canEnable(widget) else { return }
+            enabledHomeWidgets.insert(widget.rawValue)
+        } else {
+            enabledHomeWidgets.remove(widget.rawValue)
+        }
+    }
+
+    func moveHomeWidget(_ widget: HomeWidget, by offset: Int) {
+        var order = orderedHomeWidgets.map(\.rawValue)
+        Self.move(&order, widget.rawValue, by: offset)
+        homeWidgetOrder = order
     }
 
     func moveWidget(_ kind: WidgetKind, by offset: Int) {

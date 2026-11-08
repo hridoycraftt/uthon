@@ -33,6 +33,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { appearance in NSApp.appearance = appearance.nsAppearance }
             .store(in: &cancellables)
 
+        if SnapshotTour.isActive {
+            DockController.shared.start()
+            IslandController.shared.start()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { SnapshotTour.run() }
+            return
+        }
+
         NowPlayingStore.shared.start()
         DockController.shared.start()
         IslandController.shared.start()

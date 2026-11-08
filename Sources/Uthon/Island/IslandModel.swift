@@ -100,9 +100,19 @@ final class IslandModel: ObservableObject {
     static let spring = Animation.spring(response: 0.42, dampingFraction: 0.8)
     static let peekSpring = Animation.spring(response: 0.36, dampingFraction: 0.76)
 
-    var expandedSize: CGSize {
-        CGSize(width: max(720, notchSize.width + 500), height: notchSize.height + 178)
+    /// Layout size of the open island before the user's size setting is applied.
+    var baseExpandedSize: CGSize {
+        CGSize(width: max(740, notchSize.width + 520), height: max(notchSize.height, 40) + 176)
     }
+
+    static var scale: CGFloat { CGFloat(min(max(AppSettings.shared.islandScale, 0.8), 1.5)) }
+
+    var expandedSize: CGSize {
+        CGSize(width: baseExpandedSize.width * Self.scale, height: baseExpandedSize.height * Self.scale)
+    }
+
+    /// Height of the tab bar row (at least the notch height so it never sits under the notch).
+    var headerHeight: CGFloat { max(notchSize.height, 40) }
 
     func earWidth(for activity: IslandActivity) -> CGFloat {
         switch activity {
@@ -119,12 +129,17 @@ final class IslandModel: ObservableObject {
         return CGSize(width: base + earWidth(for: activity) * 2, height: notchSize.height)
     }
 
-    func peekSize(_ kind: PeekKind) -> CGSize {
-        let top = hasNotch ? notchSize.height : 0
+    func basePeekSize(_ kind: PeekKind) -> CGSize {
+        let top = hasNotch ? notchSize.height / Self.scale : 0
         if kind.isSlim {
-            return CGSize(width: max(notchSize.width + 150, 300), height: top + 42)
+            return CGSize(width: max(notchSize.width + 150, 320), height: top + 46)
         }
-        return CGSize(width: max(notchSize.width + 230, 420), height: top + 72)
+        return CGSize(width: max(notchSize.width + 240, 440), height: top + 78)
+    }
+
+    func peekSize(_ kind: PeekKind) -> CGSize {
+        let base = basePeekSize(kind)
+        return CGSize(width: base.width * Self.scale, height: base.height * Self.scale)
     }
 
     /// What the closed island should show right now (highest priority first).
