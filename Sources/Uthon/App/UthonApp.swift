@@ -37,6 +37,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DockController.shared.start()
         IslandController.shared.start()
         CareReminders.shared.start()
+        AudioController.shared.start()
+        BrightnessController.shared.start()
+        DeviceBatteryStore.shared.start()
+        WeatherStore.shared.start()
+        ClipboardStore.shared.start()
+        ScreenshotWatcher.shared.start()
+        DownloadsStore.shared.startWatching()
+        MediaKeyTap.shared.update()
+
+        AppSettings.shared.$hotkeyEnabled
+            .sink { _ in DispatchQueue.main.async { HotKey.shared.update() } }
+            .store(in: &cancellables)
+        AppSettings.shared.$replaceSystemHUD
+            .sink { _ in DispatchQueue.main.async { MediaKeyTap.shared.update() } }
+            .store(in: &cancellables)
 
         // First launch: show the dock once so people know where it lives.
         let key = "didShowWelcome"
@@ -68,7 +83,9 @@ struct MenuContent: View {
             }
         }
         Divider()
-        Button("Settings…") { SettingsWindowController.shared.show() }
+        Button("Open island") { IslandController.shared.expand(sticky: true) }
+            .disabled(!settings.islandEnabled)
+        Button("Customize…") { SettingsWindowController.shared.show() }
             .keyboardShortcut(",")
         Button("Quit \(AppInfo.name)") { NSApp.terminate(nil) }
             .keyboardShortcut("q")

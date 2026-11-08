@@ -1,46 +1,7 @@
 import AppKit
 import SwiftUI
 import Combine
-
-enum IslandActivity: Equatable {
-    case music
-    case reminder(CareReminders.Kind)
-}
-
-/// Shared state for the island view.
-final class IslandModel: ObservableObject {
-    static let shared = IslandModel()
-
-    enum Tab { case home, shelf }
-
-    @Published var expanded = false
-    @Published var tab: Tab = .home
-    @Published var hasNotch = false
-    @Published var notchSize = CGSize(width: 190, height: 32)
-    @Published var dropTargeted = false
-
-    static let compactFlare: CGFloat = 6
-    static let expandedFlare: CGFloat = 14
-    static let expandedSpring = Animation.spring(response: 0.42, dampingFraction: 0.8)
-
-    var earWidth: CGFloat { notchSize.height + 8 }
-
-    var expandedSize: CGSize {
-        CGSize(width: max(640, notchSize.width + 440), height: notchSize.height + 168)
-    }
-
-    func compactSize(hasActivity: Bool) -> CGSize {
-        let base = notchSize.width + Self.compactFlare * 2
-        return CGSize(width: hasActivity ? base + earWidth * 2 : base, height: notchSize.height)
-    }
-
-    /// What the closed island shows on its "ears", if anything.
-    static func currentActivity() -> IslandActivity? {
-        if let kind = CareReminders.shared.active { return .reminder(kind) }
-        if NowPlayingStore.shared.track?.isPlaying == true { return .music }
-        return nil
-    }
-}
+import EventKit
 
 final class IslandPanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -56,7 +17,16 @@ final class IslandController {
     private var panel: IslandPanel?
     private var screen: NSScreen?
     private var timer: Timer?
+    private var slowTimer: Timer?
     private var outsideSince: Date?
+    private var peekDeadline: Date?
+    private var peekHovered = false
+    private var stickyOpen = false
+    private var lastCapsLock: Bool?
+    private var scrollMonitor: Any?
+    private var scrollAccumulator: CGFloat = 0
+    private var lastSwipe = Date.distantPast
+    private var notifiedMeetings: Set<String> = []
     private var cancellables = Set<AnyCancellable>()
     var holdOpen = false
 
@@ -84,6 +54,22 @@ final class IslandController {
         RunLoop.main.add(t, forMode: .common)
         timer = t
 
+        let slow = Timer(timeInterval: 30, repeats: true) { [weak self] _ in self?.slowTick() }
+        RunLoop.main.add(slow, forMode: .common)
+        slowTimer = slow
+
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            guard let self else { return event }
+            return self.handleScroll(event) ? nil : event
+        }
+
+        lastCapsLock = NSEvent.modifierFlags.contains(.capsLock)
+
+        NotificationCenter.default.addObserver(forName: NowPlayingStore.trackChanged, object: nil, queue: .main) { [weak self] _ in
+            guard let self, AppSettings.shared.peekTrack, !self.model.expanded else { return }
+            self.showPeek(.track, duration: 3.5)
+        }
+
         AppSettings.shared.$islandEnabled
             .sink { [weak self] enabled in DispatchQueue.main.async { self?.apply(enabled: enabled) } }
             .store(in: &cancellables)
@@ -100,8 +86,10 @@ final class IslandController {
             panel.orderFrontRegardless()
         } else {
             collapse()
+            model.peek = nil
             panel.orderOut(nil)
         }
+        MediaKeyTap.shared.update()
     }
 
     // MARK: Geometry
@@ -129,7 +117,6 @@ final class IslandController {
                        display: true)
     }
 
-    /// Island rectangle in screen coordinates for a given size (top-centred).
     private func rect(for size: CGSize, on s: NSScreen) -> NSRect {
         NSRect(x: s.frame.midX - size.width / 2, y: s.frame.maxY - size.height, width: size.width, height: size.height)
     }
@@ -140,14 +127,20 @@ final class IslandController {
 
     // MARK: Open / close
 
-    func expand(tab: IslandModel.Tab? = nil) {
+    func expand(tab: IslandTab? = nil, sticky: Bool = false) {
         guard AppSettings.shared.islandEnabled, let panel else { return }
         if let tab { model.tab = tab }
+        if sticky { stickyOpen = true }
         guard !model.expanded else { return }
         if screen == nil { layout() }
         panel.ignoresMouseEvents = false
         outsideSince = nil
-        withAnimation(IslandModel.expandedSpring) { model.expanded = true }
+        withAnimation(IslandModel.spring) {
+            model.expanded = true
+            if let peek = model.peek, peek.kind.isSlim == false, peek.kind != .timerDone {
+                model.peek = nil
+            }
+        }
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
         NowPlayingStore.shared.setActive(true)
         CalendarStore.shared.refresh()
@@ -155,44 +148,172 @@ final class IslandController {
 
     func collapse() {
         guard model.expanded else { return }
-        withAnimation(IslandModel.expandedSpring) {
+        stickyOpen = false
+        withAnimation(IslandModel.spring) {
             model.expanded = false
             model.dropTargeted = false
         }
         panel?.ignoresMouseEvents = true
+        if panel?.isKeyWindow == true { panel?.resignKey() }
         NowPlayingStore.shared.setActive(false)
     }
 
-    // MARK: Mouse tracking
+    func toggleFromShortcut() {
+        if AppSettings.shared.islandEnabled {
+            model.expanded ? collapse() : expand(sticky: true)
+        } else if AppSettings.shared.sideDockEnabled {
+            DockController.shared.toggle()
+        }
+    }
+
+    // MARK: Peeks
+
+    func showPeek(_ kind: PeekKind, duration: TimeInterval = 2.2) {
+        guard AppSettings.shared.islandEnabled, screen != nil else { return }
+        if let current = model.peek, current.kind.category == kind.category {
+            model.peek?.kind = kind   // update in place: no new pop animation
+        } else {
+            withAnimation(IslandModel.peekSpring) { model.peek = Peek(kind: kind) }
+        }
+        peekDeadline = Date().addingTimeInterval(duration)
+    }
+
+    /// Replace the content of the current peek if it is of the same category.
+    func updatePeek(_ kind: PeekKind) {
+        guard let current = model.peek, current.kind.category == kind.category else { return }
+        withAnimation(.easeOut(duration: 0.25)) { model.peek?.kind = kind }
+        peekDeadline = Date().addingTimeInterval(3)
+    }
+
+    func dismissPeek() {
+        withAnimation(IslandModel.peekSpring) { model.peek = nil }
+        peekDeadline = nil
+        peekHovered = false
+    }
+
+    // MARK: Tracking
 
     private func tick() {
-        guard AppSettings.shared.islandEnabled, let s = screen else { return }
+        guard AppSettings.shared.islandEnabled, let s = screen, let panel else { return }
         let mouse = NSEvent.mouseLocation
         let pressed = NSEvent.pressedMouseButtons != 0
 
-        if !model.expanded {
-            let compact = model.compactSize(hasActivity: IslandModel.currentActivity() != nil)
-            // Without a notch an idle island is invisible, so use a hot strip at the top edge.
-            let hotSize = CGSize(width: max(compact.width, 220), height: max(compact.height, 6))
-            if Self.contains(rect(for: hotSize, on: s), mouse) {
-                let draggingFiles = pressed && (NSPasteboard(name: .drag).types ?? []).contains(.fileURL)
-                expand(tab: draggingFiles ? .shelf : nil)
+        checkCapsLock()
+
+        if model.peek != nil, let deadline = peekDeadline, Date() > deadline, !peekHovered {
+            dismissPeek()
+        }
+
+        if model.expanded {
+            let zone = rect(for: model.expandedSize, on: s).insetBy(dx: -18, dy: -18)
+            let inside = Self.contains(zone, mouse)
+            if inside { stickyOpen = false }
+            let typing = panel.isKeyWindow && (model.tab == .notes || model.tab == .search)
+            let busy = holdOpen || stickyOpen || pressed || typing
+                || CareReminders.shared.active != nil || TimerStore.shared.alarmRinging
+            if inside || busy {
+                outsideSince = nil
+            } else if let since = outsideSince {
+                if Date().timeIntervalSince(since) >= 0.25 {
+                    outsideSince = nil
+                    collapse()
+                }
+            } else {
+                outsideSince = Date()
             }
             return
         }
 
-        let zone = rect(for: model.expandedSize, on: s).insetBy(dx: -18, dy: -18)
-        let inside = Self.contains(zone, mouse)
-        let busy = holdOpen || pressed || CareReminders.shared.active != nil
-        if inside || busy {
-            outsideSince = nil
-        } else if let since = outsideSince {
-            if Date().timeIntervalSince(since) >= 0.25 {
-                outsideSince = nil
-                collapse()
-            }
+        if let peek = model.peek {
+            let inside = Self.contains(rect(for: model.peekSize(peek.kind), on: s).insetBy(dx: -6, dy: -6), mouse)
+            peekHovered = inside
+            panel.ignoresMouseEvents = !inside
+            if inside { return }
         } else {
-            outsideSince = Date()
+            peekHovered = false
+            panel.ignoresMouseEvents = true
         }
+
+        let activity = IslandModel.currentActivity()
+        let compact = model.compactSize(activity: activity)
+        // An idle island without a notch is invisible: only a thin strip at the very top opens it.
+        let invisible = !model.hasNotch && activity == nil
+        let hot = CGSize(width: max(compact.width, 220), height: invisible ? 4 : compact.height)
+        if Self.contains(rect(for: hot, on: s), mouse) {
+            let draggingFiles = pressed && (NSPasteboard(name: .drag).types ?? []).contains(.fileURL)
+            expand(tab: draggingFiles ? .shelf : nil)
+        }
+    }
+
+    private func checkCapsLock() {
+        let on = NSEvent.modifierFlags.contains(.capsLock)
+        defer { lastCapsLock = on }
+        guard let last = lastCapsLock, last != on, AppSettings.shared.peekCapsLock else { return }
+        showPeek(.capsLock(on), duration: 1.6)
+    }
+
+    /// Every 30 seconds: meeting reminders and the media key tap (after permission is granted).
+    private func slowTick() {
+        MediaKeyTap.shared.update()
+        guard AppSettings.shared.peekMeetings, AppSettings.shared.islandEnabled else { return }
+        let calendar = CalendarStore.shared
+        calendar.refresh()
+        let now = Date()
+        for event in calendar.events where !event.isAllDay {
+            let start: Date = event.startDate
+            let lead = start.timeIntervalSince(now)
+            let key = "\(event.eventIdentifier ?? "")-\(start.timeIntervalSince1970)"
+            if lead > 0, lead <= 5 * 60, !notifiedMeetings.contains(key) {
+                notifiedMeetings.insert(key)
+                showPeek(.meeting(title: event.title ?? "Meeting", start: start, link: event.meetingLink), duration: 15)
+                NSSound(named: "Tink")?.play()
+                break
+            }
+        }
+    }
+
+    // MARK: Scroll gestures
+
+    /// Over the open Home tab or a peek: scroll up/down = volume, swipe sideways = next/previous song.
+    private func handleScroll(_ event: NSEvent) -> Bool {
+        guard let s = screen else { return false }
+        let size: CGSize
+        if model.expanded {
+            guard model.tab == .home else { return false }
+            size = model.expandedSize
+        } else if let peek = model.peek {
+            size = model.peekSize(peek.kind)
+        } else {
+            return false
+        }
+        guard Self.contains(rect(for: size, on: s), NSEvent.mouseLocation) else { return false }
+
+        var dx = event.scrollingDeltaX
+        var dy = event.scrollingDeltaY
+        if !event.hasPreciseScrollingDeltas {
+            dx *= 8
+            dy *= 8
+        }
+        if event.isDirectionInvertedFromDevice {
+            dx = -dx
+            dy = -dy
+        }
+
+        if abs(dx) > abs(dy) * 1.5 {
+            if abs(dx) > 14, Date().timeIntervalSince(lastSwipe) > 0.7, NowPlayingStore.shared.track != nil {
+                lastSwipe = Date()
+                NowPlayingStore.shared.command(dx < 0 ? "next track" : "previous track")
+            }
+            return true
+        }
+
+        scrollAccumulator += dy
+        let step: CGFloat = 10
+        while abs(scrollAccumulator) >= step {
+            let up = scrollAccumulator > 0
+            AudioController.shared.nudge(up ? 1.0 / 32.0 : -1.0 / 32.0)
+            scrollAccumulator += up ? -step : step
+        }
+        return true
     }
 }

@@ -2,46 +2,73 @@ import SwiftUI
 import AppKit
 
 /// Liquid Glass surface.
-/// - macOS 26+: Apple's real Liquid Glass (`glassEffect`).
-/// - macOS 14/15: frosted blur of whatever is behind the window, plus a soft
-///   inner sheen and a specular rim, which reads as glass in light and dark mode.
+/// - macOS 26+: Apple's real Liquid Glass (`glassEffect`), "Clear" or "Frosted" (regular).
+/// - macOS 14/15: a see-through blur of what is behind the window, layered with the
+///   cues that make glass read as glass: a bright specular rim, light bending along the
+///   inside edge, a soft caustic at the bottom and a thin outline for definition.
 struct LiquidGlass<S: Shape>: View {
     var shape: S
+    @ObservedObject private var settings = AppSettings.shared
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
+        let clear = settings.glassClarity == .clear
+        let dark = scheme == .dark
         #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
-            Color.clear.glassEffect(.regular, in: shape)
+            ZStack {
+                Color.clear.glassEffect(clear ? .clear : .regular, in: shape)
+                // Clear glass needs a whisper of dimming so text stays readable.
+                if clear {
+                    shape.fill(dark ? Color.black.opacity(0.22) : Color.white.opacity(0.12))
+                }
+            }
         } else {
-            frosted
+            frosted(clear: clear, dark: dark)
         }
         #else
-        frosted
+        frosted(clear: clear, dark: dark)
         #endif
     }
 
-    private var frosted: some View {
-        let dark = scheme == .dark
-        return ZStack {
-            BehindWindowBlur(shape: shape, dark: dark)
+    private func frosted(clear: Bool, dark: Bool) -> some View {
+        ZStack {
+            BehindWindowBlur(shape: shape, material: clear ? .fullScreenUI : (dark ? .hudWindow : .popover))
+            // Body: barely tinted so the background shows through.
             shape.fill(
                 LinearGradient(
-                    colors: [Color.white.opacity(dark ? 0.10 : 0.40), Color.white.opacity(dark ? 0.01 : 0.12)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
+                    colors: [Color.white.opacity(dark ? 0.07 : 0.28), Color.white.opacity(dark ? 0.0 : 0.05)],
+                    startPoint: .top, endPoint: .bottom
                 )
             )
+            // Light bending along the inside of the edge.
+            shape
+                .stroke(Color.white.opacity(dark ? 0.20 : 0.55), lineWidth: 10)
+                .blur(radius: 9)
+                .clipShape(shape)
+            // Soft caustic glow near the bottom.
+            shape
+                .fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(dark ? 0.10 : 0.22), Color.clear],
+                        center: .bottom, startRadius: 0, endRadius: 260
+                    )
+                )
+            // Specular rim: bright top-left, fading, bright again bottom-right.
             shape.stroke(
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(dark ? 0.45 : 0.95),
-                        Color.white.opacity(dark ? 0.04 : 0.30),
-                        Color.white.opacity(dark ? 0.20 : 0.70),
+                        Color.white.opacity(dark ? 0.75 : 1.0),
+                        Color.white.opacity(dark ? 0.06 : 0.35),
+                        Color.white.opacity(dark ? 0.04 : 0.25),
+                        Color.white.opacity(dark ? 0.40 : 0.85),
                     ],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ),
-                lineWidth: 1
+                lineWidth: 1.3
             )
+            // Hairline outline so the glass has an edge on busy wallpapers.
+            shape.stroke(Color.black.opacity(dark ? 0.45 : 0.10), lineWidth: 0.5)
         }
     }
 }
@@ -50,7 +77,7 @@ struct LiquidGlass<S: Shape>: View {
 /// behind-window blur working, unlike a layer mask).
 struct BehindWindowBlur<S: Shape>: NSViewRepresentable {
     var shape: S
-    var dark: Bool
+    var material: NSVisualEffectView.Material
 
     func makeNSView(context: Context) -> ShapedEffectView {
         let view = ShapedEffectView()
@@ -65,7 +92,7 @@ struct BehindWindowBlur<S: Shape>: NSViewRepresentable {
     }
 
     private func configure(_ view: ShapedEffectView) {
-        view.material = dark ? .hudWindow : .popover
+        view.material = material
         let shape = self.shape
         view.pathProvider = { rect in shape.path(in: rect).cgPath }
     }
@@ -103,7 +130,12 @@ struct GlassChip: ViewModifier {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         return content.background(
             shape
-                .fill(Color.white.opacity(dark ? 0.07 : 0.45))
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(dark ? 0.11 : 0.55), Color.white.opacity(dark ? 0.04 : 0.30)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
                 .overlay(
                     shape.strokeBorder(
                         LinearGradient(

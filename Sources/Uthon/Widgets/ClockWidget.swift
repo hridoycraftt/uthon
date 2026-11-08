@@ -96,3 +96,22 @@ extension EKEvent {
             + " – " + end.formatted(date: .omitted, time: .shortened)
     }
 }
+
+extension EKEvent {
+    /// A video-call link from the event's URL, location or notes, if there is one.
+    var meetingLink: URL? {
+        let hosts = ["zoom.us", "meet.google.com", "teams.microsoft.com", "teams.live.com", "webex.com", "facetime.apple.com", "whereby.com"]
+        func isMeeting(_ url: URL) -> Bool {
+            guard let host = url.host?.lowercased() else { return false }
+            return hosts.contains { host.contains($0) }
+        }
+        if let url, isMeeting(url) { return url }
+        let text = [location, notes].compactMap { $0 }.joined(separator: " ")
+        if !text.isEmpty, let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) {
+            for match in detector.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                if let found = match.url, isMeeting(found) { return found }
+            }
+        }
+        return url
+    }
+}

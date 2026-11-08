@@ -103,6 +103,46 @@ final class DownloadsStore: ObservableObject {
     let folder: URL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
         ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
 
+    private var source: DispatchSourceFileSystemObject?
+    private var known: Set<String> = []
+    private var pendingCheck: DispatchWorkItem?
+
+    /// Watch ~/Downloads so a finished download can pop up on the island.
+    func startWatching() {
+        guard source == nil else { return }
+        let fd = open(folder.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        known = Set(currentNames())
+        let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write], queue: .main)
+        src.setEventHandler { [weak self] in self?.folderChanged() }
+        src.setCancelHandler { close(fd) }
+        src.resume()
+        source = src
+    }
+
+    private func currentNames() -> [String] {
+        (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+    }
+
+    private func folderChanged() {
+        pendingCheck?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.detectNewFiles() }
+        pendingCheck = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
+    }
+
+    private func detectNewFiles() {
+        let names = Set(currentNames())
+        let added = names.subtracting(known)
+        known = names
+        let partial: Set<String> = ["download", "crdownload", "part", "partial", "tmp", "opdownload"]
+        if AppSettings.shared.peekDownloads,
+           let name = added.sorted().first(where: { !$0.hasPrefix(".") && !partial.contains(($0 as NSString).pathExtension.lowercased()) }) {
+            IslandController.shared.showPeek(.download(folder.appendingPathComponent(name)), duration: 6)
+        }
+        refresh()
+    }
+
     func refresh() {
         let folder = self.folder
         DispatchQueue.global(qos: .utility).async { [weak self] in

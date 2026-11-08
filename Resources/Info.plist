@@ -34,6 +34,8 @@
     <string>Uthon shows today's events from your calendar in the side dock.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Uthon reads the current song from Music or Spotify so you can see and control it.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>The Mirror tab shows your camera so you can check your look before a call. Nothing is recorded.</string>
     <key>NSDownloadsFolderUsageDescription</key>
     <string>Uthon lists your latest downloads for quick access.</string>
     <key>NSDesktopFolderUsageDescription</key>

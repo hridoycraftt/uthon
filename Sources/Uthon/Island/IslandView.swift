@@ -2,89 +2,134 @@ import SwiftUI
 import AppKit
 import EventKit
 
+/// Root of the island window: one shape that morphs between closed, peek and open.
 struct IslandView: View {
     @ObservedObject private var model = IslandModel.shared
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var player = NowPlayingStore.shared
     @ObservedObject private var care = CareReminders.shared
+    @ObservedObject private var timers = TimerStore.shared
     @Environment(\.colorScheme) private var systemScheme
+
+    private enum Mode: Equatable { case closed, peek, open }
 
     private var activity: IslandActivity? {
         if let kind = care.active { return .reminder(kind) }
-        if player.track?.isPlaying == true { return .music }
+        if settings.liveTimers, timers.timerActive { return .timer }
+        if settings.liveTimers, timers.stopwatchRunning { return .stopwatch }
+        if settings.liveMusic, player.track?.isPlaying == true { return .music }
         return nil
     }
 
+    private var mode: Mode {
+        if model.expanded { return .open }
+        if model.peek != nil { return .peek }
+        return .closed
+    }
+
+    private func size(for mode: Mode) -> CGSize {
+        switch mode {
+        case .open: return model.expandedSize
+        case .peek: return model.peek.map { model.peekSize($0.kind) } ?? model.compactSize(activity: activity)
+        case .closed: return model.compactSize(activity: activity)
+        }
+    }
+
     var body: some View {
-        let expanded = model.expanded
-        let glass = settings.islandStyle == .glass
-        let size = expanded ? model.expandedSize : model.compactSize(hasActivity: activity != nil)
+        let mode = self.mode
+        let size = size(for: mode)
         let shape = NotchShape(
-            topRadius: expanded ? IslandModel.expandedFlare : IslandModel.compactFlare,
-            bottomRadius: expanded ? 32 : min(14, size.height * 0.42)
+            topRadius: mode == .open ? IslandModel.expandedFlare : IslandModel.compactFlare,
+            bottomRadius: mode == .open ? 32 : min(mode == .peek ? 24 : 14, size.height * 0.45)
         )
-        // Closed, the island is black so it melts into the notch.
-        let visible = expanded || model.hasNotch || activity != nil
+        // With a notch the closed island stays black so it melts into the hardware.
+        let glass = settings.islandStyle == .glass && (mode != .closed || !model.hasNotch)
+        let visible = mode != .closed || model.hasNotch || activity != nil
 
         ZStack(alignment: .top) {
-            if glass {
-                LiquidGlass(shape: NotchShape(topRadius: IslandModel.expandedFlare, bottomRadius: 32))
-                    .frame(width: model.expandedSize.width, height: model.expandedSize.height)
-                    .opacity(expanded ? 1 : 0)
+            ZStack {
+                LiquidGlass(shape: shape)
+                    .opacity(glass ? 1 : 0)
+                shape
+                    .fill(Color.black)
+                    .opacity(glass ? 0 : 1)
             }
-            shape
-                .fill(Color.black)
-                .frame(width: size.width, height: size.height)
-                .shadow(color: .black.opacity(expanded && !glass ? 0.35 : 0), radius: 20, y: 10)
-                .opacity(glass && expanded ? 0 : 1)
+            .frame(width: size.width, height: size.height)
+            .shadow(color: .black.opacity(mode == .closed ? 0 : 0.3), radius: 20, y: 10)
 
-            content(expanded: expanded)
+            content(mode)
                 .frame(width: size.width, height: size.height)
                 .clipShape(shape)
                 .contentShape(shape)
         }
+        .scaleEffect(visible ? 1 : 0.6, anchor: .top)
         .opacity(visible ? 1 : 0)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .environment(\.colorScheme, (!glass || !expanded) ? .dark : systemScheme)
-        .animation(IslandModel.expandedSpring, value: expanded)
-        .animation(IslandModel.expandedSpring, value: activity)
+        .environment(\.colorScheme, glass ? systemScheme : .dark)
+        .animation(IslandModel.spring, value: mode)
+        .animation(IslandModel.spring, value: activity)
+        .animation(IslandModel.peekSpring, value: model.peek?.id)
     }
 
     @ViewBuilder
-    private func content(expanded: Bool) -> some View {
-        if expanded {
+    private func content(_ mode: Mode) -> some View {
+        switch mode {
+        case .open:
             ExpandedIsland()
-                .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .top)))
-        } else if let activity {
-            CompactActivity(activity: activity)
-                .transition(.opacity)
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .scale(scale: 0.92, anchor: .top)).animation(IslandModel.spring.delay(0.05)),
+                    removal: .opacity.animation(.easeOut(duration: 0.12))
+                ))
+        case .peek:
+            if let peek = model.peek {
+                PeekView(kind: peek.kind)
+                    .id(peek.id)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .top)))
+            }
+        case .closed:
+            if let activity {
+                CompactActivity(activity: activity)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
         }
     }
 }
 
-// MARK: - Closed island (live activity on the "ears" either side of the notch)
+// MARK: - Closed island: live activity on the "ears"
 
 private struct CompactActivity: View {
     let activity: IslandActivity
     @ObservedObject private var model = IslandModel.shared
     @ObservedObject private var player = NowPlayingStore.shared
+    @ObservedObject private var timers = TimerStore.shared
 
     var body: some View {
         let h = model.notchSize.height
+        let ear = model.earWidth(for: activity)
         HStack(spacing: 0) {
-            left.frame(width: model.earWidth, height: h)
+            left.frame(width: ear, height: h)
             Spacer(minLength: 0)
-            right.frame(width: model.earWidth, height: h)
+            right.frame(width: ear, height: h)
         }
         .padding(.horizontal, IslandModel.compactFlare + 2)
+        .foregroundStyle(Color.white)
     }
 
     @ViewBuilder private var left: some View {
         switch activity {
         case .music:
-            ArtworkView(image: player.artwork, bundleID: player.track?.bundleID ?? "", size: model.notchSize.height - 12)
+            ArtworkView(image: player.artwork, bundleID: player.track?.bundleID ?? "", size: model.notchSize.height - 10)
         case .reminder(let kind):
             Image(systemName: kind.symbol)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+        case .timer:
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                RingProgress(progress: timers.progress(at: context.date), lineWidth: 2.5, color: Theme.accent)
+                    .frame(width: 15, height: 15)
+            }
+        case .stopwatch:
+            Image(systemName: "stopwatch.fill")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.accent)
         }
@@ -97,11 +142,26 @@ private struct CompactActivity: View {
                 .frame(width: 16, height: 12)
         case .reminder:
             PulsingDot()
+        case .timer:
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(TimerStore.format(timers.remaining(at: context.date)))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(timers.timerPaused ? Color.secondary : Theme.accent)
+                    .contentTransition(.numericText(countsDown: true))
+            }
+        case .stopwatch:
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(TimerStore.format(timers.elapsed(at: context.date)))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
         }
     }
 }
 
-private struct PulsingDot: View {
+struct PulsingDot: View {
     @State private var on = false
 
     var body: some View {
@@ -116,29 +176,58 @@ private struct PulsingDot: View {
     }
 }
 
+struct RingProgress: View {
+    var progress: Double
+    var lineWidth: CGFloat = 4
+    var color: Color = Theme.accent
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(color.opacity(0.22), lineWidth: lineWidth)
+            Circle()
+                .trim(from: 0, to: CGFloat(min(max(progress, 0), 1)))
+                .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.4), value: progress)
+        }
+    }
+}
+
 // MARK: - Open island
 
-private struct ExpandedIsland: View {
+struct ExpandedIsland: View {
     @ObservedObject private var model = IslandModel.shared
     @ObservedObject private var care = CareReminders.shared
+    @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
         VStack(spacing: 0) {
             IslandHeader()
-                .frame(height: model.notchSize.height)
+                .frame(height: max(model.notchSize.height, 30))
             Group {
                 if let kind = care.active {
                     IslandReminder(kind: kind)
-                } else if model.tab == .home {
-                    IslandHome()
                 } else {
-                    IslandShelf()
+                    tabContent
+                        .id(model.tab)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 6)),
+                            removal: .opacity
+                        ))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, IslandModel.expandedFlare + 12)
-            .padding(.top, 8)
+            .padding(.top, 6)
             .padding(.bottom, 14)
+            .animation(.easeOut(duration: 0.18), value: model.tab)
+        }
+        .overlay(alignment: .bottom) {
+            if let peek = model.peek, peek.kind.isSlim {
+                InlineHUD(kind: peek.kind)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .onDrop(of: FileDrop.types, isTargeted: $model.dropTargeted) { providers in
             FileDrop.load(providers) { urls in
@@ -147,6 +236,22 @@ private struct ExpandedIsland: View {
             }
             return true
         }
+        .onAppear {
+            if !settings.visibleIslandTabs.contains(model.tab) { model.tab = .home }
+        }
+    }
+
+    @ViewBuilder private var tabContent: some View {
+        switch model.tab {
+        case .home: IslandHome()
+        case .controls: IslandControls()
+        case .search: IslandSearch()
+        case .shelf: IslandShelf()
+        case .timer: IslandTimerTab()
+        case .clipboard: IslandClipboard()
+        case .notes: IslandNotes()
+        case .mirror: IslandMirror()
+        }
     }
 }
 
@@ -154,17 +259,40 @@ private struct IslandHeader: View {
     @ObservedObject private var model = IslandModel.shared
     @ObservedObject private var shelf = ShelfStore.shared
     @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var weather = WeatherStore.shared
+    @ObservedObject private var batteries = DeviceBatteryStore.shared
+    @Namespace private var tabNamespace
 
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 4) {
-                TabPill(symbol: "house.fill", title: "Home", selected: model.tab == .home) { model.tab = .home }
-                TabPill(symbol: "tray.fill",
-                        title: shelf.paths.isEmpty ? "Shelf" : "Shelf · \(shelf.paths.count)",
-                        selected: model.tab == .shelf) { model.tab = .shelf }
+            HStack(spacing: 2) {
+                ForEach(settings.visibleIslandTabs) { tab in
+                    TabPill(tab: tab,
+                            badge: tab == .shelf && !shelf.paths.isEmpty ? shelf.paths.count : nil,
+                            selected: model.tab == tab,
+                            namespace: tabNamespace) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { model.tab = tab }
+                    }
+                }
             }
-            Spacer(minLength: model.notchSize.width + 24)
-            HStack(spacing: 6) {
+            Spacer(minLength: model.hasNotch ? model.notchSize.width + 24 : 16)
+            HStack(spacing: 8) {
+                if let w = weather.current {
+                    HStack(spacing: 3) {
+                        Image(systemName: w.symbol).symbolRenderingMode(.multicolor)
+                        Text("\(Int(w.temperature.rounded()))°")
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .help("\(w.city)")
+                }
+                ForEach(batteries.devices.prefix(2)) { device in
+                    HStack(spacing: 2) {
+                        Image(systemName: device.symbol).font(.system(size: 9))
+                        Text("\(device.percent)%").font(.system(size: 10, weight: .semibold)).monospacedDigit()
+                    }
+                    .foregroundStyle(device.percent <= 15 ? Color.red : Color.secondary)
+                    .help(device.name)
+                }
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Text(context.date, format: .dateTime.hour().minute())
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -176,396 +304,73 @@ private struct IslandHeader: View {
                         DockController.shared.show(sticky: true)
                     }
                 }
-                IconButton(symbol: "gearshape", help: "Settings") {
+                IconButton(symbol: "gearshape", help: "Customize") {
                     SettingsWindowController.shared.show()
                 }
             }
         }
-        .padding(.horizontal, IslandModel.expandedFlare + 14)
+        .padding(.horizontal, IslandModel.expandedFlare + 12)
     }
 }
 
 private struct TabPill: View {
-    let symbol: String
-    let title: String
+    let tab: IslandTab
+    let badge: Int?
     let selected: Bool
+    let namespace: Namespace.ID
     let action: () -> Void
+    @State private var hover = false
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: symbol).font(.system(size: 9, weight: .bold))
-                Text(title).font(.system(size: 11, weight: .semibold))
+                Image(systemName: tab.symbol).font(.system(size: 10, weight: .bold))
+                if selected {
+                    Text(tab.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .fixedSize()
+                        .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+                }
+                if let badge {
+                    Text("\(badge)")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 4)
+                        .background(Capsule().fill(Theme.accent))
+                        .foregroundStyle(Color.white)
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(Color.primary.opacity(selected ? 0.14 : 0)))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background {
+                if selected {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.14))
+                        .matchedGeometryEffect(id: "tab", in: namespace)
+                } else if hover {
+                    Capsule().fill(Color.primary.opacity(0.06))
+                }
+            }
             .foregroundStyle(selected ? Color.primary : Color.secondary)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: Home tab
-
-private struct IslandHome: View {
-    var body: some View {
-        HStack(spacing: 10) {
-            IslandMusicTile()
-                .frame(maxWidth: .infinity)
-            IslandCalendarTile()
-                .frame(width: 150)
-            IslandShortcutsTile()
-                .frame(width: 108)
-        }
-    }
-}
-
-private struct IslandMusicTile: View {
-    @ObservedObject private var player = NowPlayingStore.shared
-
-    var body: some View {
-        Group {
-            if let track = player.track {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 11) {
-                        ArtworkView(image: player.artwork, bundleID: track.bundleID, size: 46)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(track.title)
-                                .font(.system(size: 13, weight: .semibold))
-                                .lineLimit(1)
-                            Text(track.artist.isEmpty ? track.player : track.artist)
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.secondary)
-                                .lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                        EqualizerBars(playing: track.isPlaying)
-                            .frame(width: 16, height: 13)
-                            .opacity(track.isPlaying ? 1 : 0.4)
-                    }
-                    if track.duration > 0 {
-                        ProgressRow(track: track)
-                    }
-                    HStack(spacing: 28) {
-                        Spacer()
-                        control("backward.fill") { player.command("previous track") }
-                        control(track.isPlaying ? "pause.fill" : "play.fill", size: 19) { player.command("playpause") }
-                        control("forward.fill") { player.command("next track") }
-                        Spacer()
-                    }
-                }
-            } else {
-                VStack(spacing: 6) {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 20, weight: .light))
-                        .foregroundStyle(Color.secondary)
-                    Text("Nothing playing")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
-                    Button("Open Music") { player.openMusic() }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Theme.accent)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .glassChip(radius: 20)
-    }
-
-    private func control(_ symbol: String, size: CGFloat = 13, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: size, weight: .semibold))
-                .frame(width: 28, height: 26)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.primary)
-    }
-}
-
-private struct ProgressRow: View {
-    let track: NowPlayingStore.Track
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { context in
-            let position = track.currentPosition(at: context.date)
-            let fraction = track.duration > 0 ? min(max(position / track.duration, 0), 1) : 0
-            HStack(spacing: 8) {
-                Text(Self.time(position))
-                    .font(.system(size: 9, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(Color.secondary)
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.primary.opacity(0.14))
-                        Capsule()
-                            .fill(Color.primary.opacity(0.85))
-                            .frame(width: max(3, geo.size.width * CGFloat(fraction)))
-                    }
-                }
-                .frame(height: 4)
-                Text(Self.time(track.duration))
-                    .font(.system(size: 9, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(Color.secondary)
-            }
-        }
-    }
-
-    private static func time(_ seconds: Double) -> String {
-        guard seconds.isFinite, seconds > 0 else { return "0:00" }
-        let total = Int(seconds)
-        return String(format: "%d:%02d", total / 60, total % 60)
-    }
-}
-
-private struct IslandCalendarTile: View {
-    @ObservedObject private var calendar = CalendarStore.shared
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(context.date.formatted(.dateTime.weekday(.wide)).uppercased())
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Theme.accent)
-                    Text(context.date, format: .dateTime.day())
-                        .font(.system(size: 30, weight: .semibold, design: .rounded))
-                    Text(context.date, format: .dateTime.month(.wide))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.secondary)
-                }
-            }
-            Spacer(minLength: 0)
-            switch calendar.access {
-            case .granted:
-                if let next = calendar.events.first {
-                    Text(next.title ?? "Event")
-                        .font(.system(size: 11, weight: .semibold))
-                        .lineLimit(1)
-                    Text(next.uthonTimeText)
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(1)
-                } else {
-                    Text("No more events")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.secondary)
-                }
-            case .notDetermined:
-                Button("Connect calendar") { calendar.requestAccess() }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Theme.accent)
-            case .denied:
-                Text("Calendar off")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.secondary)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .glassChip(radius: 20)
-    }
-}
-
-private struct IslandShortcutsTile: View {
-    @ObservedObject private var store = ShortcutsStore.shared
-    private let columns = [GridItem(.fixed(38), spacing: 8), GridItem(.fixed(38), spacing: 8)]
-
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(Array(store.paths.prefix(4)), id: \.self) { path in
-                let url = URL(fileURLWithPath: path)
-                Button {
-                    NSWorkspace.shared.open(url)
-                } label: {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: 34, height: 34)
-                        .frame(width: 38, height: 38)
-                }
-                .buttonStyle(.plain)
-                .help(FileManager.default.displayName(atPath: url.path))
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .glassChip(radius: 20)
-    }
-}
-
-// MARK: Shelf tab
-
-private struct IslandShelf: View {
-    @ObservedObject private var shelf = ShelfStore.shared
-    @ObservedObject private var model = IslandModel.shared
-
-    var body: some View {
-        HStack(spacing: 10) {
-            if shelf.paths.isEmpty {
-                VStack(spacing: 6) {
-                    Image(systemName: "tray.and.arrow.down")
-                        .font(.system(size: 22, weight: .light))
-                    Text("Drop files on the island to keep them here")
-                        .font(.system(size: 11))
-                }
-                .foregroundStyle(model.dropTargeted ? Theme.accent : Color.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .strokeBorder(model.dropTargeted ? Theme.accent : Color.secondary.opacity(0.4),
-                                      style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
-                )
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(shelf.paths, id: \.self) { path in
-                            ShelfTile(url: URL(fileURLWithPath: path)) { shelf.remove(path) }
-                        }
-                    }
-                    .padding(.horizontal, 8)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .glassChip(radius: 20)
-                VStack(spacing: 8) {
-                    ShelfAction(symbol: "paperplane.fill", title: "AirDrop") { airDrop() }
-                    ShelfAction(symbol: "trash", title: "Clear") { shelf.clear() }
-                }
-                .frame(width: 86)
-            }
-        }
-    }
-
-    private func airDrop() {
-        let urls = shelf.paths.map { URL(fileURLWithPath: $0) }
-        guard let service = NSSharingService(named: .sendViaAirDrop), service.canPerform(withItems: urls) else { return }
-        NSApp.activate(ignoringOtherApps: true)
-        service.perform(withItems: urls)
-    }
-}
-
-private struct ShelfTile: View {
-    let url: URL
-    let onRemove: () -> Void
-    @State private var hover = false
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                .resizable()
-                .interpolation(.high)
-                .frame(width: 40, height: 40)
-            Text(url.lastPathComponent)
-                .font(.system(size: 10))
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .truncationMode(.middle)
-                .frame(width: 70)
-        }
-        .padding(6)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.primary.opacity(hover ? 0.10 : 0))
-        )
-        .contentShape(Rectangle())
         .onHover { hover = $0 }
-        .onTapGesture(count: 2) { NSWorkspace.shared.open(url) }
-        .onDrag { NSItemProvider(object: url as NSURL) }
-        .contextMenu {
-            Button("Open") { NSWorkspace.shared.open(url) }
-            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-            Divider()
-            Button("Remove from Shelf", action: onRemove)
-        }
-        .help("Double-click to open, or drag it out")
+        .help(tab.title)
     }
 }
 
-private struct ShelfAction: View {
-    let symbol: String
-    let title: String
-    let action: () -> Void
+/// Volume / brightness bar shown at the bottom of the open island.
+private struct InlineHUD: View {
+    let kind: PeekKind
 
     var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 14, weight: .medium))
-                Text(title).font(.system(size: 10, weight: .semibold))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
+        HStack(spacing: 10) {
+            PeekHUDContent(kind: kind)
         }
-        .buttonStyle(.plain)
-        .glassChip(radius: 16)
-    }
-}
-
-// MARK: Reminder
-
-private struct IslandReminder: View {
-    let kind: CareReminders.Kind
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: kind.symbol)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(Color.white)
-                .frame(width: 52, height: 52)
-                .background(Circle().fill(Theme.accent))
-            VStack(alignment: .leading, spacing: 3) {
-                Text(kind.title).font(.system(size: 15, weight: .semibold))
-                Text(kind.subtitle)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.secondary)
-            }
-            Spacer(minLength: 0)
-            VStack(spacing: 8) {
-                Button("Done") { CareReminders.shared.complete() }
-                    .buttonStyle(AccentButtonStyle())
-                Button("Later") { CareReminders.shared.snooze() }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.secondary)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .glassChip(radius: 22)
-    }
-}
-
-// MARK: Shared
-
-struct ArtworkView: View {
-    let image: NSImage?
-    let bundleID: String
-    let size: CGFloat
-
-    var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: appURL.path))
-                    .resizable()
-                    .padding(size * 0.08)
-            } else {
-                Image(systemName: "music.note")
-                    .font(.system(size: size * 0.45))
-                    .foregroundStyle(Theme.accent)
-            }
-        }
-        .frame(width: size, height: size)
-        .background(Color.primary.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: size * 0.26, style: .continuous))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(width: 280)
+        .background(Capsule().fill(Color.black.opacity(0.55)))
+        .environment(\.colorScheme, .dark)
     }
 }

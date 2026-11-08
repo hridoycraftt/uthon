@@ -6,6 +6,7 @@ import AppKit
 /// (macOS asks once for permission to control these apps).
 final class NowPlayingStore: ObservableObject {
     static let shared = NowPlayingStore()
+    static let trackChanged = Notification.Name("UthonTrackChanged")
 
     struct Track: Equatable {
         var player: String
@@ -130,10 +131,17 @@ final class NowPlayingStore: ObservableObject {
             duration: duration,
             fetchedAt: Date()
         )
+        let isNewSong = new.key != track?.key && track != nil && new.isPlaying
         track = new
         if new.key != artworkKey {
             artworkKey = new.key
             loadArtwork(for: new)
+        }
+        if isNewSong {
+            // Give the artwork a moment to load before the island shows it.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                NotificationCenter.default.post(name: Self.trackChanged, object: nil)
+            }
         }
     }
 
