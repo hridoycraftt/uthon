@@ -109,15 +109,38 @@ struct SystemTile: View {
 
     var body: some View {
         WidgetTile {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
                 SectionLabel("System")
+                Spacer(minLength: 6)
+                HStack(spacing: 0) {
+                    gauge("CPU", stats.cpu)
+                    Spacer(minLength: 4)
+                    gauge("RAM", stats.memoryFraction)
+                }
                 Spacer(minLength: 0)
-                MeterRow(label: "CPU", value: stats.cpu, detail: "\(Int((stats.cpu * 100).rounded()))%")
-                MeterRow(label: "Memory", value: stats.memoryFraction, detail: "\(Int((stats.memoryFraction * 100).rounded()))%")
             }
         }
         .onAppear { SystemStatsStore.shared.setActive(true) }
         .onDisappear { SystemStatsStore.shared.setActive(false) }
+    }
+}
+
+extension SystemTile {
+    fileprivate func gauge(_ label: String, _ value: Double) -> some View {
+        let color: Color = value > 0.85 ? .red : (value > 0.65 ? .orange : Theme.accent)
+        return VStack(spacing: 4) {
+            ZStack {
+                RingProgress(progress: value, lineWidth: 6, color: color)
+                Text("\(Int((value * 100).rounded()))%")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+            }
+            .frame(width: 54, height: 54)
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

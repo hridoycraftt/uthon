@@ -23,14 +23,21 @@ final class SystemStatsStore: ObservableObject {
         memoryTotal == 0 ? 0 : Double(memoryUsed) / Double(memoryTotal)
     }
 
+    private var activeCount = 0
+
+    /// Counted, so the dock and the island can both use it without stopping each other.
     func setActive(_ active: Bool) {
-        timer?.invalidate()
-        timer = nil
-        guard active else { return }
-        refresh()
-        let t = Timer(timeInterval: 2, repeats: true) { [weak self] _ in self?.refresh() }
-        RunLoop.main.add(t, forMode: .common)
-        timer = t
+        activeCount = max(0, activeCount + (active ? 1 : -1))
+        if activeCount > 0 {
+            guard timer == nil else { return }
+            refresh()
+            let t = Timer(timeInterval: 2, repeats: true) { [weak self] _ in self?.refresh() }
+            RunLoop.main.add(t, forMode: .common)
+            timer = t
+        } else {
+            timer?.invalidate()
+            timer = nil
+        }
     }
 
     func refresh() {

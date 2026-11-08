@@ -347,10 +347,13 @@ private struct TabPill: View {
                 }
                 if let badge {
                     Text("\(badge)")
-                        .font(.system(size: 9, weight: .bold))
-                        .padding(.horizontal, 4)
-                        .background(Capsule().fill(Theme.accent))
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(Color.white)
+                        .fixedSize()
+                        .padding(.horizontal, 5)
+                        .frame(minWidth: 17, minHeight: 17)
+                        .background(Capsule().fill(Theme.accent))
                 }
             }
             .padding(.horizontal, 10)
