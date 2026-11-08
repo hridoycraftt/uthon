@@ -10,12 +10,17 @@ final class MenuTracker {
     private(set) var openMenus = 0
     var isTracking: Bool { openMenus > 0 }
 
+    private var started = false
+
     func start() {
+        guard !started else { return }
+        started = true
         let center = NotificationCenter.default
-        center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in
+        // queue: nil runs the handler immediately, while the menu is opening, so there is no gap.
+        center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) { [weak self] _ in
             self?.openMenus += 1
         }
-        center.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main) { [weak self] _ in
+        center.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: nil) { [weak self] _ in
             guard let self else { return }
             self.openMenus = max(0, self.openMenus - 1)
         }

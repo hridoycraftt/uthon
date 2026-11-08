@@ -20,6 +20,8 @@ enum SelfTest {
 
     static func run() {
         let settings = AppSettings.shared
+        MenuTracker.shared.start()
+        IslandController.shared.start()
 
         // Timer
         let timers = TimerStore.shared

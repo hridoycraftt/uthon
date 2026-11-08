@@ -84,7 +84,8 @@ extension Color {
 
     var hexString: String {
         let c = NSColor(self).usingColorSpace(.sRGB) ?? .orange
-        return String(format: "#%02X%02X%02X", Int(c.redComponent * 255), Int(c.greenComponent * 255), Int(c.blueComponent * 255))
+        func byte(_ v: CGFloat) -> Int { Int((min(max(v, 0), 1) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", byte(c.redComponent), byte(c.greenComponent), byte(c.blueComponent))
     }
 }
 
