@@ -40,16 +40,42 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Dock") {
+            Section("Look") {
+                Picker("Appearance", selection: $settings.appearance) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Toggle("Open at login", isOn: $openAtLogin)
+                    .onChange(of: openAtLogin) { _, newValue in LoginItem.set(newValue) }
+            }
+
+            Section("Top island") {
+                Toggle("Show the island at the top of the screen", isOn: $settings.islandEnabled)
+                Picker("Open island style", selection: $settings.islandStyle) {
+                    ForEach(IslandStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .disabled(!settings.islandEnabled)
+                Text("Hover over the notch (or the top centre of the screen) to open it. Drop files on it to put them on the shelf.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Side dock") {
+                Toggle("Show the side dock", isOn: $settings.sideDockEnabled)
                 Picker("Screen edge", selection: $settings.edge) {
                     ForEach(DockEdge.allCases) { edge in
                         Text(edge.title).tag(edge)
                     }
                 }
                 .pickerStyle(.segmented)
+                .disabled(!settings.sideDockEnabled)
                 Toggle("Keep visible (pinned)", isOn: $settings.pinned)
-                Toggle("Open at login", isOn: $openAtLogin)
-                    .onChange(of: openAtLogin) { _, newValue in LoginItem.set(newValue) }
+                    .disabled(!settings.sideDockEnabled)
             }
 
             Section("Widgets") {
@@ -80,12 +106,9 @@ struct SettingsView: View {
                     Spacer()
                     Text("Made for family").foregroundStyle(.secondary)
                 }
-                Text("Tip: move the mouse to the \(settings.edge.title.lowercased()) edge of the screen to open the dock.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 600)
+        .frame(width: 440, height: 680)
     }
 }

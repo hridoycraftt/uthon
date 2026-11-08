@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 enum AppInfo {
     static var name: String {
@@ -22,17 +23,26 @@ struct UthonApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var cancellables = Set<AnyCancellable>()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // No Dock icon: Uthon lives in the menu bar and on the screen edge.
+        // No Dock icon: Uthon lives in the menu bar, the notch and the screen edge.
         NSApp.setActivationPolicy(.accessory)
+
+        AppSettings.shared.$appearance
+            .sink { appearance in NSApp.appearance = appearance.nsAppearance }
+            .store(in: &cancellables)
+
+        NowPlayingStore.shared.start()
         DockController.shared.start()
+        IslandController.shared.start()
         CareReminders.shared.start()
 
         // First launch: show the dock once so people know where it lives.
         let key = "didShowWelcome"
         if !UserDefaults.standard.bool(forKey: key) {
             UserDefaults.standard.set(true, forKey: key)
-            DockController.shared.show(sticky: true)
+            if AppSettings.shared.sideDockEnabled { DockController.shared.show(sticky: true) }
         }
     }
 }
@@ -41,11 +51,20 @@ struct MenuContent: View {
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        Button("Show \(AppInfo.name)") { DockController.shared.show(sticky: true) }
-        Toggle("Keep visible", isOn: $settings.pinned)
-        Picker("Screen edge", selection: $settings.edge) {
-            ForEach(DockEdge.allCases) { edge in
-                Text(edge.title).tag(edge)
+        Toggle("Top island", isOn: $settings.islandEnabled)
+        Toggle("Side dock", isOn: $settings.sideDockEnabled)
+        if settings.sideDockEnabled {
+            Button("Show side dock") { DockController.shared.show(sticky: true) }
+            Toggle("Keep side dock visible", isOn: $settings.pinned)
+            Picker("Side dock edge", selection: $settings.edge) {
+                ForEach(DockEdge.allCases) { edge in
+                    Text(edge.title).tag(edge)
+                }
+            }
+        }
+        Picker("Appearance", selection: $settings.appearance) {
+            ForEach(AppAppearance.allCases) { appearance in
+                Text(appearance.title).tag(appearance)
             }
         }
         Divider()

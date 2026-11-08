@@ -64,7 +64,7 @@ final class DockController {
             .sink { [weak self] _ in self?.reposition() }
             .store(in: &cancellables)
 
-        if AppSettings.shared.pinned { show() }
+        if AppSettings.shared.pinned && AppSettings.shared.sideDockEnabled { show() }
     }
 
     // MARK: Show / hide
@@ -150,6 +150,11 @@ final class DockController {
         guard let panel else { return }
         let settings = AppSettings.shared
         let mouse = NSEvent.mouseLocation
+
+        if !settings.sideDockEnabled {
+            if isShown { hide() }
+            return
+        }
 
         if settings.pinned {
             if !isShown { show() }

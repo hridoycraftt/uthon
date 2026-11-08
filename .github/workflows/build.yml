@@ -16,8 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Toolchain
+      # Use the newest stable Xcode on the runner. With Xcode 26+ the app gets
+      # Apple's real Liquid Glass on macOS 26; older macOS still gets the frosted look.
+      - name: Pick newest Xcode
         run: |
+          ls -d /Applications/Xcode*.app
+          XCODE="$(ls -d /Applications/Xcode_*.app | grep -viE 'beta|release_candidate|_rc' | sort -V | tail -1)"
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
           swift --version
           xcodebuild -version
 

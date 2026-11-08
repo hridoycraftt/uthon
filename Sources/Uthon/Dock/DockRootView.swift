@@ -28,12 +28,8 @@ struct DockRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(GlassBackground(radius: Theme.panelRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.panelRadius, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-        )
         .clipShape(RoundedRectangle(cornerRadius: Theme.panelRadius, style: .continuous))
+        .background(LiquidGlass(shape: RoundedRectangle(cornerRadius: Theme.panelRadius, style: .continuous)))
     }
 
     private var header: some View {

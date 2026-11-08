@@ -81,7 +81,12 @@ final class CareReminders: ObservableObject {
     private func fire(_ kind: Kind) {
         active = kind
         NSSound(named: "Glass")?.play()
-        DockController.shared.show()
+        let settings = AppSettings.shared
+        if settings.islandEnabled {
+            IslandController.shared.expand()
+        } else if settings.sideDockEnabled {
+            DockController.shared.show()
+        }
     }
 
     /// "Done": closes the card (and counts a glass for water).

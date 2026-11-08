@@ -71,24 +71,27 @@ private struct EventRow: View {
                 Text(event.title ?? "Untitled")
                     .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
-                Text(timeText)
+                Text(event.uthonTimeText)
                     .font(.system(size: 10))
                     .foregroundStyle(Color.secondary)
             }
         }
     }
+}
 
-    private var timeText: String {
+extension EKEvent {
+    /// "10:00 – 11:00", "Tomorrow · All day", "Fri · 09:30 – 10:00"
+    var uthonTimeText: String {
         let cal = Calendar.current
-        let start: Date = event.startDate
-        let end: Date = event.endDate
+        let start: Date = startDate
+        let end: Date = endDate
         var prefix = ""
         if cal.isDateInTomorrow(start) {
             prefix = "Tomorrow · "
         } else if !cal.isDateInToday(start) {
             prefix = start.formatted(.dateTime.weekday(.abbreviated)) + " · "
         }
-        if event.isAllDay { return prefix + "All day" }
+        if isAllDay { return prefix + "All day" }
         return prefix + start.formatted(date: .omitted, time: .shortened)
             + " – " + end.formatted(date: .omitted, time: .shortened)
     }

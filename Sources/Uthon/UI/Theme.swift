@@ -5,38 +5,8 @@ import UniformTypeIdentifiers
 /// Design tokens: one warm accent, soft glass, generous rounding.
 enum Theme {
     static let accent = Color(red: 0.89, green: 0.48, blue: 0.36)   // warm terracotta
-    static let panelRadius: CGFloat = 20
-    static let cardRadius: CGFloat = 14
-}
-
-/// Frosted glass that blurs whatever is behind the dock window.
-struct GlassBackground: NSViewRepresentable {
-    var radius: CGFloat
-
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = .popover
-        view.blendingMode = .behindWindow
-        view.state = .active
-        view.maskImage = Self.mask(radius: radius)
-        return view
-    }
-
-    func updateNSView(_ view: NSVisualEffectView, context: Context) {
-        view.maskImage = Self.mask(radius: radius)
-    }
-
-    private static func mask(radius: CGFloat) -> NSImage {
-        let edge = radius * 2 + 1
-        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-            return true
-        }
-        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
-        image.resizingMode = .stretch
-        return image
-    }
+    static let panelRadius: CGFloat = 24
+    static let cardRadius: CGFloat = 16
 }
 
 /// The card every widget sits in: small caps title, optional trailing control.
@@ -73,10 +43,7 @@ struct Card<Content: View, Trailing: View>: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous)
-                .fill(Color.primary.opacity(0.05))
-        )
+        .glassChip(radius: Theme.cardRadius)
     }
 }
 
