@@ -291,7 +291,7 @@ private struct HomeSettings: View {
                     ForEach($settings.appFolders) { $folder in
                         HStack {
                             Image(systemName: "folder.fill").foregroundStyle(Theme.accent)
-                            TextField(L("Name"), text: $folder.name)
+                            TextField(L("Name"), text: $folder.name).labelsHidden()
                             Text("\(folder.urls.count) " + L("apps")).foregroundStyle(.secondary)
                             Button(L("Delete")) { settings.deleteFolder(folder) }
                         }
@@ -432,7 +432,7 @@ private struct WidgetDataSettings: View {
             Section(L("Bookmarks")) {
                 ForEach($library.bookmarks) { $bookmark in
                     HStack {
-                        TextField(L("Name"), text: $bookmark.title).frame(width: 140)
+                        TextField(L("Name"), text: $bookmark.title).labelsHidden().frame(width: 140)
                         TextField(L("https://"), text: $bookmark.url)
                         Button { library.bookmarks.removeAll { $0.id == bookmark.id } } label: {
                             Image(systemName: "minus.circle.fill").foregroundStyle(.red)
@@ -476,7 +476,7 @@ private struct WidgetDataSettings: View {
             Section(L("Birthdays & special days")) {
                 ForEach($library.specialDays) { $day in
                     HStack {
-                        TextField(L("Name"), text: $day.name)
+                        TextField(L("Name"), text: $day.name).labelsHidden()
                         DatePicker("", selection: $day.date, displayedComponents: .date).labelsHidden()
                         Toggle(L("Every year"), isOn: $day.yearly).toggleStyle(.checkbox)
                         Button { library.specialDays.removeAll { $0.id == day.id } } label: {
