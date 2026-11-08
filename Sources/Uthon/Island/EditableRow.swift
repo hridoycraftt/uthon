@@ -1,0 +1,165 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// A row of tiles that can be edited in place, like Control Center on iPhone:
+/// in edit mode tiles jiggle, show a remove (−) badge, can be dragged to reorder,
+/// and a gallery underneath adds new ones (+).
+struct EditableRow<Item: CustomizableItem, Tile: View>: View {
+    let items: [Item]
+    let allItems: [Item]
+    let maxSlots: Int
+    let editing: Bool
+    let canAdd: (Item) -> Bool
+    let setEnabled: (Item, Bool) -> Void
+    let place: (Item, Item) -> Void
+    @ViewBuilder let tile: (Item) -> Tile
+
+    @State private var dragging: Item?
+    private let spacing: CGFloat = 10
+
+    private var usedSlots: Int { items.reduce(0) { $0 + $1.slots } }
+    private var available: [Item] { allItems.filter { !items.contains($0) } }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            GeometryReader { geo in
+                // In edit mode keep room for the full row so you can see what still fits.
+                let slots = max(1, editing ? max(usedSlots, min(maxSlots, usedSlots + 1)) : usedSlots)
+                let unit = (geo.size.width - spacing * CGFloat(slots - 1)) / CGFloat(slots)
+                HStack(spacing: spacing) {
+                    ForEach(items) { item in
+                        tile(item)
+                            .allowsHitTesting(!editing)
+                            .frame(width: unit * CGFloat(item.slots) + spacing * CGFloat(item.slots - 1))
+                            .frame(maxHeight: .infinity)
+                            .overlay(alignment: .topLeading) {
+                                if editing {
+                                    Button {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { setEnabled(item, false) }
+                                    } label: {
+                                        Image(systemName: "minus.circle.fill")
+                                            .font(.system(size: 20))
+                                            .symbolRenderingMode(.palette)
+                                            .foregroundStyle(Color.white, Color.red)
+                                            .background(Circle().fill(Color.white).padding(3))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .offset(x: -6, y: -6)
+                                    .transition(.scale.combined(with: .opacity))
+                                    .help("Remove \(item.title)")
+                                }
+                            }
+                            .modifier(Jiggle(active: editing, seed: item.rawValue.count))
+                            .opacity(dragging == item ? 0.4 : 1)
+                            .modifier(ReorderModifier(enabled: editing, item: item, dragging: $dragging, place: place))
+                    }
+                    if editing && usedSlots < maxSlots {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+                            .overlay(Text("Add from below").font(.system(size: 10, weight: .medium)).foregroundStyle(Color.secondary))
+                            .frame(width: unit)
+                            .transition(.opacity)
+                    }
+                }
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: items)
+            }
+            if editing {
+                gallery
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: editing)
+    }
+
+    private var gallery: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                if available.isEmpty {
+                    Text("Everything is already added")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.secondary)
+                }
+                ForEach(available) { item in
+                    let fits = canAdd(item)
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { setEnabled(item, true) }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: item.symbol).font(.system(size: 11, weight: .semibold))
+                            Text(item.title).font(.system(size: 11, weight: .medium)).fixedSize()
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(fits ? Color.green : Color.secondary)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.primary.opacity(0.09)))
+                        .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!fits)
+                    .opacity(fits ? 1 : 0.45)
+                    .help(fits ? "Add \(item.title)" : "No room: remove something first")
+                }
+            }
+        }
+        .frame(height: 30)
+    }
+}
+
+/// Gentle wobble while editing.
+struct Jiggle: ViewModifier {
+    let active: Bool
+    let seed: Int
+    @State private var on = false
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(active ? (on ? 0.9 : -0.9) : 0))
+            .animation(active ? .easeInOut(duration: 0.12 + Double(seed % 3) * 0.015).repeatForever(autoreverses: true) : .default,
+                       value: on)
+            .onAppear { if active { on = true } }
+            .onChange(of: active) { _, isActive in on = isActive }
+    }
+}
+
+/// Drag a tile onto another tile to swap their places (only while editing).
+private struct ReorderModifier<Item: CustomizableItem>: ViewModifier {
+    let enabled: Bool
+    let item: Item
+    @Binding var dragging: Item?
+    let place: (Item, Item) -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .onDrag {
+                    dragging = item
+                    return NSItemProvider(object: item.rawValue as NSString)
+                }
+                .onDrop(of: [UTType.text], delegate: ReorderDropDelegate(target: item, dragging: $dragging, place: place))
+        } else {
+            content
+        }
+    }
+}
+
+private struct ReorderDropDelegate<Item: CustomizableItem>: DropDelegate {
+    let target: Item
+    @Binding var dragging: Item?
+    let place: (Item, Item) -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != target else { return }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { place(dragging, target) }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
+    }
+}

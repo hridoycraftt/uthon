@@ -94,6 +94,8 @@ final class IslandModel: ObservableObject {
     @Published var notchSize = CGSize(width: 190, height: 32)
     @Published var dropTargeted = false
     @Published var peek: Peek?
+    /// Control Center style editing of the Home and Controls rows.
+    @Published var editing = false
 
     static let compactFlare: CGFloat = 6
     static let expandedFlare: CGFloat = 14

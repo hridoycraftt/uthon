@@ -36,6 +36,13 @@ jobs:
       - name: Build app
         run: ./scripts/build-dmg.sh
 
+      - name: Functional self-test
+        id: selftest
+        continue-on-error: true
+        run: |
+          mkdir -p shots
+          perl -e 'alarm 120; exec @ARGV' ./dist/Uthon.app/Contents/MacOS/Uthon --self-test "$PWD/shots/self-test.txt"
+
       - name: Snapshot tour (light and dark)
         run: |
           mkdir -p shots
@@ -57,3 +64,9 @@ jobs:
           git add -A
           git commit -qm "Visual QA on ${{ matrix.os }} for ${{ github.sha }}"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" HEAD:refs/heads/qa-${{ matrix.os }}
+
+      - name: Fail if the self-test failed
+        if: steps.selftest.outcome != 'success'
+        run: |
+          cat shots/self-test.txt || true
+          exit 1

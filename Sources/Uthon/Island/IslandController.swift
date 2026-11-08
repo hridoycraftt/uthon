@@ -157,6 +157,7 @@ final class IslandController {
         withAnimation(IslandModel.spring) {
             model.expanded = false
             model.dropTargeted = false
+            model.editing = false
         }
         panel?.ignoresMouseEvents = true
         if panel?.isKeyWindow == true { panel?.resignKey() }

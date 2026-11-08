@@ -206,7 +206,7 @@ final class NowPlayingStore: ObservableObject {
     }
 
     /// AppleScript prints numbers with the user's locale (e.g. "12,5").
-    private static func number(_ text: String) -> Double {
+    static func number(_ text: String) -> Double {
         Double(text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")) ?? 0
     }
 }

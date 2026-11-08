@@ -281,12 +281,29 @@ private struct IslandHeader: View {
                             badge: tab == .shelf && !shelf.paths.isEmpty ? shelf.paths.count : nil,
                             selected: model.tab == tab,
                             namespace: tabNamespace) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { model.tab = tab }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            model.tab = tab
+                            model.editing = false
+                        }
                     }
                 }
             }
             Spacer(minLength: model.hasNotch ? model.notchSize.width + 24 : 16)
             HStack(spacing: 8) {
+                if model.tab == .home || model.tab == .controls {
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.editing.toggle() }
+                    } label: {
+                        Text(model.editing ? "Done" : "Edit")
+                            .font(.system(size: 12, weight: .semibold))
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(model.editing ? Theme.accent : Color.primary.opacity(0.1)))
+                            .foregroundStyle(model.editing ? Color.white : Color.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(model.editing ? "Finish editing" : "Add, remove or reorder")
+                }
                 if let w = weather.current {
                     HStack(spacing: 3) {
                         Image(systemName: w.symbol).symbolRenderingMode(.multicolor)

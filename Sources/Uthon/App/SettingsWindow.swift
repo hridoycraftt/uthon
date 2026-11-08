@@ -157,7 +157,25 @@ private struct IslandSettings: View {
             } header: {
                 Text("Home widgets · \(settings.homeSlotsUsed) of \(HomeWidget.maxSlots) slots used")
             } footer: {
-                Text("Choose what the Home tab shows and in which order. Music takes two slots; turn something off to make room.")
+                Text("Choose what the Home tab shows and in which order. Music takes two slots. Tip: press Edit on the open island to do this right there.")
+            }
+            Section {
+                ForEach(Array(settings.orderedControls.enumerated()), id: \.element) { index, kind in
+                    ReorderRow(
+                        title: kind.title,
+                        symbol: kind.symbol,
+                        isOn: Binding(
+                            get: { settings.enabledControls.contains(kind.rawValue) },
+                            set: { settings.setControl(kind, $0) }
+                        ),
+                        locked: !settings.canEnableControl(kind),
+                        canMoveUp: index > 0,
+                        canMoveDown: index < settings.orderedControls.count - 1,
+                        move: { settings.moveControl(kind, by: $0) }
+                    )
+                }
+            } header: {
+                Text("Controls · \(settings.controls.count) of \(ControlKind.maxSlots)")
             }
             Section {
                 ForEach(Array(settings.orderedIslandTabs.enumerated()), id: \.element) { index, tab in

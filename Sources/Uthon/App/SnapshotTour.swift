@@ -48,6 +48,23 @@ enum SnapshotTour {
             render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-alt")
             s.enabledHomeWidgets = Set(HomeWidget.defaults.map(\.rawValue))
         }
+        add("edit-mode") {
+            model.tab = .home
+            model.editing = true
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-editing")
+            model.tab = .controls
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-controls-editing")
+            model.editing = false
+        }
+        add("live-edit") {
+            IslandController.shared.expand(tab: .home, sticky: true)
+            model.editing = true
+        }
+        add("capture-edit") {
+            capture("screen-island-editing")
+            model.editing = false
+            IslandController.shared.collapse()
+        }
         let peeks: [(String, PeekKind)] = [
             ("volume", .volume(level: 0.62, muted: false)),
             ("brightness", .brightness(level: 0.4)),

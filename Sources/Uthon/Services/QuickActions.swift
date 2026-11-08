@@ -162,3 +162,150 @@ final class ScreenshotWatcher {
         IslandController.shared.showPeek(.screenshot(url), duration: 8)
     }
 }
+
+/// Controls that can be placed on the Controls tab (customizable like Control Center).
+enum ControlKind: String, CaseIterable, Identifiable, CustomizableItem {
+    case keepAwake, appearance, sound, screenshot, sleepDisplay, emptyTrash
+    case focusTimer, hideDesktopIcons, hiddenFiles, missionControl, colorPicker
+    case calculator, activityMonitor, screenRecording
+
+    var id: String { rawValue }
+    var slots: Int { 1 }
+
+    static let maxSlots = 8
+    static let defaults: [ControlKind] = [.keepAwake, .appearance, .sound, .screenshot, .sleepDisplay, .emptyTrash]
+
+    var title: String {
+        switch self {
+        case .keepAwake: return "Keep Awake"
+        case .appearance: return "Appearance"
+        case .sound: return "Sound"
+        case .screenshot: return "Screenshot"
+        case .sleepDisplay: return "Sleep Display"
+        case .emptyTrash: return "Empty Trash"
+        case .focusTimer: return "Focus 25 min"
+        case .hideDesktopIcons: return "Desktop Icons"
+        case .hiddenFiles: return "Hidden Files"
+        case .missionControl: return "Mission Control"
+        case .colorPicker: return "Color Picker"
+        case .calculator: return "Calculator"
+        case .activityMonitor: return "Activity Monitor"
+        case .screenRecording: return "Record Screen"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .keepAwake: return "cup.and.saucer.fill"
+        case .appearance: return "circle.lefthalf.filled"
+        case .sound: return "speaker.wave.2.fill"
+        case .screenshot: return "camera.viewfinder"
+        case .sleepDisplay: return "moon.zzz.fill"
+        case .emptyTrash: return "trash.fill"
+        case .focusTimer: return "brain.head.profile"
+        case .hideDesktopIcons: return "menubar.dock.rectangle"
+        case .hiddenFiles: return "eye.fill"
+        case .missionControl: return "rectangle.3.group.fill"
+        case .colorPicker: return "eyedropper.halffull"
+        case .calculator: return "plusminus.circle.fill"
+        case .activityMonitor: return "waveform.path.ecg"
+        case .screenRecording: return "record.circle"
+        }
+    }
+}
+
+extension QuickActions {
+    struct ControlState {
+        var symbol: String
+        var subtitle: String
+        var active: Bool
+    }
+
+    func state(of kind: ControlKind) -> ControlState {
+        switch kind {
+        case .keepAwake:
+            return ControlState(symbol: keepAwake ? "cup.and.saucer.fill" : "cup.and.saucer",
+                                subtitle: keepAwake ? "On" : "Off", active: keepAwake)
+        case .appearance:
+            return ControlState(symbol: darkMode ? "moon.fill" : "sun.max.fill",
+                                subtitle: darkMode ? "Dark" : "Light", active: darkMode)
+        case .sound:
+            let muted = AudioController.shared.isMuted
+            return ControlState(symbol: muted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                                subtitle: muted ? "Muted" : "On", active: muted)
+        case .screenshot:
+            return ControlState(symbol: kind.symbol, subtitle: "Select area", active: false)
+        case .sleepDisplay:
+            return ControlState(symbol: kind.symbol, subtitle: "Turn off screen", active: false)
+        case .emptyTrash:
+            return ControlState(symbol: kind.symbol, subtitle: "Finder", active: false)
+        case .focusTimer:
+            let running = TimerStore.shared.timerActive
+            return ControlState(symbol: kind.symbol, subtitle: running ? "Running" : "Start", active: running)
+        case .hideDesktopIcons:
+            let hidden = desktopIconsHidden
+            return ControlState(symbol: kind.symbol, subtitle: hidden ? "Hidden" : "Shown", active: hidden)
+        case .hiddenFiles:
+            let shown = hiddenFilesShown
+            return ControlState(symbol: shown ? "eye.fill" : "eye.slash.fill", subtitle: shown ? "Shown" : "Hidden", active: shown)
+        case .missionControl, .colorPicker, .calculator, .activityMonitor:
+            return ControlState(symbol: kind.symbol, subtitle: "Open", active: false)
+        case .screenRecording:
+            return ControlState(symbol: kind.symbol, subtitle: "Screenshot app", active: false)
+        }
+    }
+
+    func perform(_ kind: ControlKind) {
+        switch kind {
+        case .keepAwake: toggleKeepAwake()
+        case .appearance: toggleDarkMode()
+        case .sound:
+            AudioController.shared.toggleMute()
+            objectWillChange.send()
+        case .screenshot: screenshot()
+        case .sleepDisplay: sleepDisplay()
+        case .emptyTrash: emptyTrash()
+        case .focusTimer:
+            if TimerStore.shared.timerActive {
+                TimerStore.shared.cancelTimer()
+            } else {
+                TimerStore.shared.startTimer(minutes: 25)
+            }
+            objectWillChange.send()
+        case .hideDesktopIcons:
+            setFinder("CreateDesktop", value: desktopIconsHidden)   // hidden -> show again
+        case .hiddenFiles:
+            setFinder("AppleShowAllFiles", value: !hiddenFilesShown)
+        case .missionControl: open("/System/Applications/Mission Control.app")
+        case .colorPicker: open("/System/Applications/Utilities/Digital Color Meter.app")
+        case .calculator: open("/System/Applications/Calculator.app")
+        case .activityMonitor: open("/System/Applications/Utilities/Activity Monitor.app")
+        case .screenRecording:
+            IslandController.shared.collapse()
+            open("/System/Applications/Utilities/Screenshot.app")
+        }
+    }
+
+    var desktopIconsHidden: Bool {
+        let value = UserDefaults(suiteName: "com.apple.finder")?.object(forKey: "CreateDesktop") as? Bool
+        return value == false
+    }
+
+    var hiddenFilesShown: Bool {
+        UserDefaults(suiteName: "com.apple.finder")?.bool(forKey: "AppleShowAllFiles") ?? false
+    }
+
+    /// Writes a Finder preference and restarts Finder so it takes effect.
+    private func setFinder(_ key: String, value: Bool) {
+        let write = Process()
+        write.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+        write.arguments = ["write", "com.apple.finder", key, "-bool", value ? "true" : "false"]
+        try? write.run()
+        write.waitUntilExit()
+        let restart = Process()
+        restart.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+        restart.arguments = ["Finder"]
+        try? restart.run()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.objectWillChange.send() }
+    }
+}

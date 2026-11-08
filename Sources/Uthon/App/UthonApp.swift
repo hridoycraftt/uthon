@@ -33,6 +33,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { appearance in NSApp.appearance = appearance.nsAppearance }
             .store(in: &cancellables)
 
+        if SelfTest.isActive {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { SelfTest.run() }
+            return
+        }
+
         if SnapshotTour.isActive {
             DockController.shared.start()
             IslandController.shared.start()

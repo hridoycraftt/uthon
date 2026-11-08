@@ -5,6 +5,7 @@ final class HotKey {
     static let shared = HotKey()
 
     private var hotKeyRef: EventHotKeyRef?
+    var isRegistered: Bool { hotKeyRef != nil }
     private var handlerInstalled = false
 
     func update() {

@@ -45,8 +45,15 @@ enum GlassClarity: String, CaseIterable, Identifiable {
     }
 }
 
+/// Something the user can add, remove and reorder in an editable island row.
+protocol CustomizableItem: RawRepresentable, CaseIterable, Identifiable, Hashable where RawValue == String {
+    var title: String { get }
+    var symbol: String { get }
+    var slots: Int { get }
+}
+
 /// Widgets that can be placed on the island's Home tab.
-enum HomeWidget: String, CaseIterable, Identifiable {
+enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
     case music, calendar, weather, shortcuts, system, batteries, todo, controls, notes
 
     var id: String { rawValue }
@@ -164,6 +171,8 @@ final class AppSettings: ObservableObject {
         static let islandScale = "islandScale"
         static let tabIconSize = "tabIconSize"
         static let dockScale = "dockScale"
+        static let controlOrder = "controlOrder"
+        static let controlsEnabled = "controlsEnabled"
     }
 
     private let defaults = UserDefaults.standard
@@ -204,6 +213,8 @@ final class AppSettings: ObservableObject {
     @Published var tabIconSize: Double { didSet { defaults.set(tabIconSize, forKey: Keys.tabIconSize) } }
     /// Overall size of the side dock (0.85 ... 1.4).
     @Published var dockScale: Double { didSet { defaults.set(dockScale, forKey: Keys.dockScale) } }
+    @Published var controlOrder: [String] { didSet { defaults.set(controlOrder, forKey: Keys.controlOrder) } }
+    @Published var enabledControls: Set<String> { didSet { defaults.set(Array(enabledControls), forKey: Keys.controlsEnabled) } }
     @Published var homeWidgetOrder: [String] { didSet { defaults.set(homeWidgetOrder, forKey: Keys.homeOrder) } }
     @Published var enabledHomeWidgets: Set<String> { didSet { defaults.set(Array(enabledHomeWidgets), forKey: Keys.homeEnabled) } }
 
@@ -241,6 +252,8 @@ final class AppSettings: ObservableObject {
         islandScale = defaults.object(forKey: Keys.islandScale) as? Double ?? 1.0
         tabIconSize = defaults.object(forKey: Keys.tabIconSize) as? Double ?? 15
         dockScale = defaults.object(forKey: Keys.dockScale) as? Double ?? 1.0
+        controlOrder = defaults.stringArray(forKey: Keys.controlOrder) ?? ControlKind.allCases.map(\.rawValue)
+        enabledControls = Set(defaults.stringArray(forKey: Keys.controlsEnabled) ?? ControlKind.defaults.map(\.rawValue))
         homeWidgetOrder = defaults.stringArray(forKey: Keys.homeOrder) ?? HomeWidget.allCases.map(\.rawValue)
         enabledHomeWidgets = Set(defaults.stringArray(forKey: Keys.homeEnabled) ?? HomeWidget.defaults.map(\.rawValue))
     }
@@ -304,6 +317,48 @@ final class AppSettings: ObservableObject {
         homeWidgetOrder = order
     }
 
+    /// Drag-and-drop: put `item` where `target` is.
+    func placeHomeWidget(_ item: HomeWidget, at target: HomeWidget) {
+        var order = orderedHomeWidgets.map(\.rawValue)
+        Self.place(&order, item.rawValue, at: target.rawValue)
+        homeWidgetOrder = order
+    }
+
+    // MARK: Controls tab
+
+    var orderedControls: [ControlKind] {
+        Self.ordered(ControlKind.allCases, by: controlOrder)
+    }
+
+    var controls: [ControlKind] {
+        Array(orderedControls.filter { enabledControls.contains($0.rawValue) }.prefix(ControlKind.maxSlots))
+    }
+
+    func canEnableControl(_ kind: ControlKind) -> Bool {
+        enabledControls.contains(kind.rawValue) || controls.count < ControlKind.maxSlots
+    }
+
+    func setControl(_ kind: ControlKind, _ on: Bool) {
+        if on {
+            guard canEnableControl(kind) else { return }
+            enabledControls.insert(kind.rawValue)
+        } else {
+            enabledControls.remove(kind.rawValue)
+        }
+    }
+
+    func moveControl(_ kind: ControlKind, by offset: Int) {
+        var order = orderedControls.map(\.rawValue)
+        Self.move(&order, kind.rawValue, by: offset)
+        controlOrder = order
+    }
+
+    func placeControl(_ item: ControlKind, at target: ControlKind) {
+        var order = orderedControls.map(\.rawValue)
+        Self.place(&order, item.rawValue, at: target.rawValue)
+        controlOrder = order
+    }
+
     func moveWidget(_ kind: WidgetKind, by offset: Int) {
         var order = orderedWidgets.map(\.rawValue)
         Self.move(&order, kind.rawValue, by: offset)
@@ -316,13 +371,19 @@ final class AppSettings: ObservableObject {
         islandTabOrder = order
     }
 
-    private static func ordered<T: RawRepresentable>(_ all: [T], by order: [String]) -> [T] where T.RawValue == String {
+    static func ordered<T: RawRepresentable>(_ all: [T], by order: [String]) -> [T] where T.RawValue == String {
         let known = order.compactMap { T(rawValue: $0) }
         let missing = all.filter { item in !known.contains { $0.rawValue == item.rawValue } }
         return known + missing
     }
 
-    private static func move(_ array: inout [String], _ item: String, by offset: Int) {
+    static func place(_ array: inout [String], _ item: String, at target: String) {
+        guard item != target, let from = array.firstIndex(of: item), let to = array.firstIndex(of: target) else { return }
+        array.remove(at: from)
+        array.insert(item, at: to)
+    }
+
+    static func move(_ array: inout [String], _ item: String, by offset: Int) {
         guard let index = array.firstIndex(of: item) else { return }
         let target = max(0, min(array.count - 1, index + offset))
         guard target != index else { return }

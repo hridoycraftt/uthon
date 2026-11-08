@@ -7,29 +7,29 @@ import AVFoundation
 
 struct IslandHome: View {
     @ObservedObject private var settings = AppSettings.shared
-    private let spacing: CGFloat = 10
+    @ObservedObject private var model = IslandModel.shared
 
     var body: some View {
-        let widgets = settings.homeWidgets
-        GeometryReader { geo in
-            let slots = max(1, widgets.reduce(0) { $0 + $1.slots })
-            let unit = (geo.size.width - spacing * CGFloat(slots - 1)) / CGFloat(slots)
-            HStack(spacing: spacing) {
-                ForEach(widgets) { widget in
-                    HomeWidgetView(widget: widget)
-                        .frame(width: unit * CGFloat(widget.slots) + spacing * CGFloat(widget.slots - 1))
-                        .frame(maxHeight: .infinity)
-                }
-            }
+        EditableRow(
+            items: settings.homeWidgets,
+            allItems: settings.orderedHomeWidgets,
+            maxSlots: HomeWidget.maxSlots,
+            editing: model.editing,
+            canAdd: { settings.canEnable($0) },
+            setEnabled: { settings.setHomeWidget($0, $1) },
+            place: { settings.placeHomeWidget($0, at: $1) }
+        ) { widget in
+            HomeWidgetView(widget: widget)
         }
         .overlay {
-            if widgets.isEmpty {
-                Button("Add widgets to Home…") { SettingsWindowController.shared.show(tab: .island) }
+            if settings.homeWidgets.isEmpty && !model.editing {
+                Button("Add widgets") { withAnimation { model.editing = true } }
                     .buttonStyle(AccentButtonStyle())
             }
         }
         .contextMenu {
-            Button("Customize Home…") { SettingsWindowController.shared.show(tab: .island) }
+            Button(model.editing ? "Done Editing" : "Edit Home") { withAnimation { model.editing.toggle() } }
+            Button("More Settings…") { SettingsWindowController.shared.show(tab: .island) }
         }
     }
 }
@@ -628,27 +628,27 @@ struct ArtworkView: View {
 
 struct IslandControls: View {
     @ObservedObject private var actions = QuickActions.shared
+    @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var model = IslandModel.shared
+    @ObservedObject private var timers = TimerStore.shared
 
     var body: some View {
-        HStack(spacing: 10) {
-            ControlTile(symbol: actions.keepAwake ? "cup.and.saucer.fill" : "cup.and.saucer",
-                        title: "Keep Awake", subtitle: actions.keepAwake ? "On" : "Off",
-                        active: actions.keepAwake) { actions.toggleKeepAwake() }
-            ControlTile(symbol: actions.darkMode ? "moon.fill" : "sun.max.fill",
-                        title: "Appearance", subtitle: actions.darkMode ? "Dark" : "Light",
-                        active: actions.darkMode) { actions.toggleDarkMode() }
-            ControlTile(symbol: AudioController.shared.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
-                        title: "Sound", subtitle: AudioController.shared.isMuted ? "Muted" : "On",
-                        active: AudioController.shared.isMuted) {
-                AudioController.shared.toggleMute()
-                actions.objectWillChange.send()
+        EditableRow(
+            items: settings.controls,
+            allItems: settings.orderedControls,
+            maxSlots: ControlKind.maxSlots,
+            editing: model.editing,
+            canAdd: { settings.canEnableControl($0) },
+            setEnabled: { settings.setControl($0, $1) },
+            place: { settings.placeControl($0, at: $1) }
+        ) { kind in
+            let state = actions.state(of: kind)
+            ControlTile(symbol: state.symbol, title: kind.title, subtitle: state.subtitle, active: state.active) {
+                actions.perform(kind)
             }
-            ControlTile(symbol: "camera.viewfinder", title: "Screenshot", subtitle: "Select area",
-                        active: false) { actions.screenshot() }
-            ControlTile(symbol: "moon.zzz.fill", title: "Sleep Display", subtitle: "Turn off screen",
-                        active: false) { actions.sleepDisplay() }
-            ControlTile(symbol: "trash.fill", title: "Empty Trash", subtitle: "Finder",
-                        active: false) { actions.emptyTrash() }
+        }
+        .contextMenu {
+            Button(model.editing ? "Done Editing" : "Edit Controls") { withAnimation { model.editing.toggle() } }
         }
         .onAppear { actions.refresh() }
     }
