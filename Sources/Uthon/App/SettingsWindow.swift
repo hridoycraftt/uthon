@@ -233,8 +233,9 @@ private struct GeneralSettings: View {
                         Text(L("Up to date ✓")).foregroundStyle(.secondary)
                         Button(L("Check now")) { updater.check() }
                     case .failed(let message):
-                        Text(L(message)).foregroundStyle(.orange).lineLimit(1)
+                        Text(message).foregroundStyle(.orange).lineLimit(2).font(.footnote)
                         Button(L("Try again")) { updater.check() }
+                        Button(L("Download manually")) { updater.openReleasesPage() }
                     case .idle:
                         Button(L("Check now")) { updater.check() }
                     }

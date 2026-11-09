@@ -189,6 +189,8 @@ enum Localization {
         "Remove from widget": "উইজেট থেকে সরাও", "Choose apps for the Shortcuts widget": "Shortcuts উইজেটের জন্য অ্যাপ বাছো", "Shortcuts widget": "Shortcuts উইজেট",
         "Add as many apps as you like; the widget arranges them to fit its size. You can also drag apps onto the widget.": "যত খুশি অ্যাপ যোগ করো; উইজেট নিজের সাইজ অনুযায়ী সাজিয়ে নেবে। অ্যাপ টেনে এনে উইজেটে ছাড়াও যায়।",
         "Version": "ভার্সন",
+        "No internet connection": "ইন্টারনেট সংযোগ নেই", "GitHub is busy, try again later": "GitHub এখন ব্যস্ত, পরে আবার চেষ্টা করো",
+        "No release found": "কোনো রিলিজ পাওয়া যায়নি", "Could not check for updates": "আপডেট খোঁজা গেল না", "Download manually": "নিজে ডাউনলোড করো",
         // Onboarding
         "Welcome to Uthon": "উঠোনে স্বাগতম",
         "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির ছোট্ট উঠোন: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",

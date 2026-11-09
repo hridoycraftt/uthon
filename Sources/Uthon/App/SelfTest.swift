@@ -245,6 +245,27 @@ enum SelfTest {
         check("Version 0.10.0 is newer than 0.9.5", Updater.isNewer("0.10.0", than: "0.9.5"))
         check("Same version is not newer", !Updater.isNewer("0.5.0", than: "0.5.0"))
         check("Older version is not newer", !Updater.isNewer("0.4.9", than: "0.5.0"))
+        check("Tag URL gives the version", Updater.version(fromTagURL: URL(string: "https://github.com/a/b/releases/tag/v0.5.8")!) == "0.5.8")
+        check("Non-version tag is ignored", Updater.version(fromTagURL: URL(string: "https://github.com/a/b/releases/tag/latest")!) == nil)
+        func waitFor(_ start: (@escaping (Result<Updater.Release, Updater.CheckError>) -> Void) -> Void) -> Result<Updater.Release, Updater.CheckError>? {
+            let done = DispatchSemaphore(value: 0)
+            var result: Result<Updater.Release, Updater.CheckError>?
+            start { result = $0; done.signal() }
+            _ = done.wait(timeout: .now() + 25)
+            return result
+        }
+        let page = waitFor(Updater.fromReleasesPage)
+        if case .success(let release) = page {
+            check("Update check works via the releases page", Updater.isNewer(release.version, than: "0.0.1"), "found \(release.version)")
+        } else {
+            check("Update check works via the releases page", false, "\(String(describing: page))")
+        }
+        let combined = waitFor(Updater.latestRelease)
+        if case .success(let release) = combined {
+            check("Update check finds the latest release", release.dmg.absoluteString.hasSuffix(".dmg"), "found \(release.version)")
+        } else {
+            check("Update check finds the latest release", false, "\(String(describing: combined))")
+        }
         check("Gradient wallpaper renders", WallpaperChanger.shared.makeGradient(index: 2) != nil)
 
         // The reported crash path: Edit -> + Add Widget (island grows) -> close, repeated.
