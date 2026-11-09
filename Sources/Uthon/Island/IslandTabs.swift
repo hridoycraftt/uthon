@@ -1350,34 +1350,11 @@ private struct ControlTile: View {
             action()
         } label: {
             GeometryReader { geo in
-                // Everything is sized from the tile, so 4 or 8 tiles in a row both fit.
-                let icon = min(52, max(34, geo.size.width * 0.5))
-                VStack(spacing: 0) {
-                    Spacer(minLength: 4)
-                    Image(systemName: symbol)
-                        .font(.system(size: icon * 0.42, weight: .medium))
-                        .foregroundStyle(active ? Color.white : Color.primary)
-                        .frame(width: icon, height: icon)
-                        .background(Circle().fill(active ? Theme.accent : Color.primary.opacity(hover ? 0.16 : 0.10)))
-                        .symbolEffect(.bounce, value: tapped)
-                        .contentTransition(.symbolEffect(.replace))
-                    Spacer(minLength: 6)
-                    Text(L(title))
-                        .font(.system(size: geo.size.width < 90 ? 10.5 : 11.5, weight: .medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .allowsTightening(true)
-                    Text(L(subtitle))
-                        .font(.system(size: geo.size.width < 90 ? 9 : 10))
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .allowsTightening(true)
-                        .padding(.top, 1)
-                    Spacer(minLength: 4)
+                if geo.size.width > geo.size.height * 1.5 {
+                    wide(geo.size)
+                } else {
+                    tall(geo.size)
                 }
-                .padding(.horizontal, 6)
-                .frame(width: geo.size.width, height: geo.size.height)
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .contentShape(Rectangle())
@@ -1388,6 +1365,63 @@ private struct ControlTile: View {
         .glassChip(radius: 22)
         .scaleEffect(hover ? 1.02 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hover)
+    }
+
+    private func iconView(_ icon: CGFloat) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: icon * 0.42, weight: .medium))
+            .foregroundStyle(active ? Color.white : Color.primary)
+            .frame(width: icon, height: icon)
+            .background(Circle().fill(active ? Theme.accent : Color.primary.opacity(hover ? 0.16 : 0.10)))
+            .symbolEffect(.bounce, value: tapped)
+            .contentTransition(.symbolEffect(.replace))
+    }
+
+    /// Few tiles in the row: wide tile, icon on the left, name and state beside it.
+    private func wide(_ size: CGSize) -> some View {
+        let icon = min(56, max(36, size.height * 0.42))
+        return HStack(spacing: 12) {
+            iconView(icon)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L(title))
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                Text(L(subtitle))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .frame(width: size.width, height: size.height)
+    }
+
+    /// Many tiles in the row: icon on top, name and state below, sized from the tile.
+    private func tall(_ size: CGSize) -> some View {
+                let icon = min(52, max(34, size.width * 0.5))
+                return VStack(spacing: 0) {
+                        Spacer(minLength: 4)
+                    iconView(icon)
+                    Spacer(minLength: 6)
+                    Text(L(title))
+                        .font(.system(size: size.width < 90 ? 10.5 : 11.5, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .allowsTightening(true)
+                    Text(L(subtitle))
+                        .font(.system(size: size.width < 90 ? 9 : 10))
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .allowsTightening(true)
+                        .padding(.top, 1)
+                    Spacer(minLength: 4)
+                }
+                .padding(.horizontal, 6)
+                .frame(width: size.width, height: size.height)
     }
 }
 

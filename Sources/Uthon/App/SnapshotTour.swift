@@ -123,6 +123,14 @@ enum SnapshotTour {
             render(BottomDockView(forcedItems: BottomDockItem.allCases), size: CGSize(width: width, height: BottomDockController.baseHeight), shape: false, name: "bottom-dock")
             lib.bottomDockItems = ["apps", "clock", "music", "weather"]
         }
+        add("controls-counts") {
+            model.tab = .controls
+            for count in [2, 3, 4, 6] {
+                for kind in ControlKind.allCases { s.setControl(kind, false) }
+                for kind in ControlKind.allCases.prefix(count) { s.setControl(kind, true) }
+                render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-controls-\(count)")
+            }
+        }
         add("controls-full") {
             for kind in ControlKind.allCases where s.canEnableControl(kind) { s.setControl(kind, true) }
             model.tab = .controls
