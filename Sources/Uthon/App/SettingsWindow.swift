@@ -4,8 +4,56 @@ import ServiceManagement
 import UniformTypeIdentifiers
 import CoreBluetooth
 
-enum SettingsTab: Hashable {
+enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
     case general, look, home, island, widgets, alerts, profiles, dock, care
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .look: return "Look"
+        case .home: return "Home"
+        case .island: return "Island"
+        case .widgets: return "Widgets"
+        case .alerts: return "Alerts"
+        case .profiles: return "Profiles"
+        case .dock: return "Side Dock"
+        case .care: return "Care"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .general: return "gearshape.fill"
+        case .look: return "paintpalette.fill"
+        case .home: return "square.grid.2x2.fill"
+        case .island: return "capsule.tophalf.filled"
+        case .widgets: return "puzzlepiece.extension.fill"
+        case .alerts: return "bell.badge.fill"
+        case .profiles: return "person.2.crop.square.stack.fill"
+        case .dock: return "sidebar.right"
+        case .care: return "heart.fill"
+        }
+    }
+
+    /// Icon tile color, like the colored squares in System Settings.
+    var color: Color {
+        switch self {
+        case .general: return Color(white: 0.55)
+        case .look: return .purple
+        case .home: return .blue
+        case .island: return Color(white: 0.2)
+        case .widgets: return .orange
+        case .alerts: return .red
+        case .profiles: return .indigo
+        case .dock: return .teal
+        case .care: return .pink
+        }
+    }
+
+    /// The sidebar groups, as in System Settings.
+    static let groups: [[SettingsTab]] = [[.general, .look], [.home, .island, .widgets], [.alerts, .profiles], [.dock, .care]]
 }
 
 /// Which Settings tab is showing (so other parts of the app can open a specific one).
@@ -28,9 +76,14 @@ final class SettingsWindowController {
             let hosting = NSHostingController(rootView: SettingsView())
             let w = NSWindow(contentViewController: hosting)
             w.title = L("Customize") + " \(AppInfo.name)"
-            w.styleMask = [.titled, .closable]
+            // A modern, System Settings-style window: sidebar under a transparent title bar.
+            w.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            w.titlebarAppearsTransparent = true
+            w.toolbarStyle = .unified
             w.isReleasedWhenClosed = false
             w.level = .floating
+            w.setContentSize(NSSize(width: 860, height: 660))
+            w.contentMinSize = NSSize(width: 760, height: 520)
             w.center()
             window = w
         }
@@ -56,20 +109,77 @@ struct SettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        TabView(selection: $router.tab) {
-            GeneralSettings().tabItem { Label(L("General"), systemImage: "gearshape") }.tag(SettingsTab.general)
-            LookSettings().tabItem { Label(L("Look"), systemImage: "paintpalette") }.tag(SettingsTab.look)
-            HomeSettings().tabItem { Label(L("Home"), systemImage: "square.grid.2x2") }.tag(SettingsTab.home)
-            IslandSettings().tabItem { Label(L("Island"), systemImage: "capsule.tophalf.filled") }.tag(SettingsTab.island)
-            WidgetDataSettings().tabItem { Label(L("Widgets"), systemImage: "puzzlepiece.extension") }.tag(SettingsTab.widgets)
-            AlertsSettings().tabItem { Label(L("Alerts"), systemImage: "bell.badge") }.tag(SettingsTab.alerts)
-            ProfilesSettings().tabItem { Label(L("Profiles"), systemImage: "person.2.crop.square.stack") }.tag(SettingsTab.profiles)
-            DockSettings().tabItem { Label(L("Side Dock"), systemImage: "sidebar.right") }.tag(SettingsTab.dock)
-            CareSettings().tabItem { Label(L("Care"), systemImage: "heart") }.tag(SettingsTab.care)
+        NavigationSplitView {
+            List(selection: Binding(get: { Optional(router.tab) }, set: { if let tab = $0 { router.tab = tab } })) {
+                ForEach(Array(SettingsTab.groups.enumerated()), id: \.offset) { _, group in
+                    Section {
+                        ForEach(group) { tab in
+                            SidebarRow(tab: tab).tag(tab)
+                        }
+                    }
+                }
+            }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
+            .safeAreaInset(edge: .top) {
+                HStack(spacing: 10) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 34, height: 34)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L(AppInfo.name)).font(.system(size: 13, weight: .semibold))
+                        Text(L("Version") + " \(AppInfo.version)").font(.system(size: 10)).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 6)
+                .padding(.bottom, 4)
+            }
+        } detail: {
+            detail(for: router.tab)
+                .navigationTitle(L(router.tab.title))
         }
-        .frame(width: 660, height: 680)
+        .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 760, minHeight: 520)
         .id(settings.lookKey)
         .environment(\.locale, Localization.locale)
+    }
+
+    @ViewBuilder
+    private func detail(for tab: SettingsTab) -> some View {
+        switch tab {
+        case .general: GeneralSettings()
+        case .look: LookSettings()
+        case .home: HomeSettings()
+        case .island: IslandSettings()
+        case .widgets: WidgetDataSettings()
+        case .alerts: AlertsSettings()
+        case .profiles: ProfilesSettings()
+        case .dock: DockSettings()
+        case .care: CareSettings()
+        }
+    }
+}
+
+/// A sidebar row with a colored rounded-square icon, like System Settings.
+private struct SidebarRow: View {
+    let tab: SettingsTab
+
+    var body: some View {
+        Label {
+            Text(L(tab.title))
+        } icon: {
+            Image(systemName: tab.symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(tab.color.gradient)
+                )
+        }
+        .padding(.vertical, 2)
     }
 }
 

@@ -188,6 +188,7 @@ enum Localization {
         "Add apps": "অ্যাপ যোগ করো", "or drag them here": "বা এখানে টেনে আনো", "Add Apps…": "অ্যাপ যোগ করো…", "Edit in Settings…": "সেটিংসে এডিট করো…",
         "Remove from widget": "উইজেট থেকে সরাও", "Choose apps for the Shortcuts widget": "Shortcuts উইজেটের জন্য অ্যাপ বাছো", "Shortcuts widget": "Shortcuts উইজেট",
         "Add as many apps as you like; the widget arranges them to fit its size. You can also drag apps onto the widget.": "যত খুশি অ্যাপ যোগ করো; উইজেট নিজের সাইজ অনুযায়ী সাজিয়ে নেবে। অ্যাপ টেনে এনে উইজেটে ছাড়াও যায়।",
+        "Version": "ভার্সন",
         // Onboarding
         "Welcome to Uthon": "উঠোনে স্বাগতম",
         "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির ছোট্ট উঠোন: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",

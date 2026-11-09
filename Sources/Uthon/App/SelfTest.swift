@@ -392,6 +392,11 @@ enum SelfTest {
         }
         check("1–12 apps always fit at every widget size", true)
 
+        for tab in SettingsTab.allCases {
+            check("Settings icon exists: \(tab.title)", NSImage(systemSymbolName: tab.symbol, accessibilityDescription: nil) != nil)
+        }
+        check("Every settings section is in the sidebar", Set(SettingsTab.groups.flatMap { $0 }) == Set(SettingsTab.allCases))
+
         // Home presets
         step("Home presets")
         check("At least 6 presets", HomePreset.all.count >= 6, "\(HomePreset.all.count)")
