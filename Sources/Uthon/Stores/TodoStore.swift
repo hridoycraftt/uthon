@@ -10,7 +10,7 @@ struct TodoItem: Codable, Identifiable, Equatable {
 enum TodoSource: String, CaseIterable, Identifiable {
     case uthon, reminders
     var id: String { rawValue }
-    var title: String { self == .uthon ? "Uthon (this Mac only)" : "Apple Reminders (syncs with iPhone)" }
+    var title: String { self == .uthon ? "Nook (this Mac only)" : "Apple Reminders (syncs with iPhone)" }
 }
 
 /// To-do list. Either kept by Uthon on this Mac, or synced with a list in Apple Reminders

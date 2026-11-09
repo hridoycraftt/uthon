@@ -85,7 +85,7 @@ enum WallpaperSource: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .off: return "Off"
-        case .gradients: return "Uthon gradients"
+        case .gradients: return "Nook gradients"
         case .folder: return "My folder"
         }
     }
@@ -115,6 +115,37 @@ final class UserLibrary: ObservableObject {
     @Published var homeShortcuts: [String] { didSet { d.set(homeShortcuts, forKey: "homeShortcuts") } }
     @Published var activeProfile: UUID? { didSet { d.set(activeProfile?.uuidString, forKey: "activeProfile") } }
 
+    // Daily Quran & Hadith
+    @Published var verseEnabled: Bool { didSet { d.set(verseEnabled, forKey: "verseEnabled") } }
+    @Published var verseSource: VerseSource { didSet { d.set(verseSource.rawValue, forKey: "verseSource") } }
+    @Published var verseTranslation: VerseTranslation { didSet { d.set(verseTranslation.rawValue, forKey: "verseTranslation") } }
+    @Published var verseShowArabic: Bool { didSet { d.set(verseShowArabic, forKey: "verseShowArabic") } }
+    // Internet & Wi-Fi
+    @Published var networkEnabled: Bool { didSet { d.set(networkEnabled, forKey: "networkEnabled") } }
+    @Published var networkPeeks: Bool { didSet { d.set(networkPeeks, forKey: "networkPeeks") } }
+    @Published var speedTestMB: Int { didSet { d.set(speedTestMB, forKey: "speedTestMB") } }
+    // Notifications on the island
+    @Published var notificationsEnabled: Bool { didSet { d.set(notificationsEnabled, forKey: "notificationsEnabled") } }
+    @Published var notificationHideContent: Bool { didSet { d.set(notificationHideContent, forKey: "notificationHideContent") } }
+    @Published var notificationSeconds: Int { didSet { d.set(notificationSeconds, forKey: "notificationSeconds") } }
+    @Published var notificationQuietWhenFocused: Bool { didSet { d.set(notificationQuietWhenFocused, forKey: "notificationQuietWhenFocused") } }
+    @Published var mutedNotificationApps: [String] { didSet { d.set(mutedNotificationApps, forKey: "mutedNotificationApps") } }
+    // Night dimming
+    @Published var dimEnabled: Bool { didSet { d.set(dimEnabled, forKey: "dimEnabled") } }
+    @Published var dimStrength: Double { didSet { d.set(dimStrength, forKey: "dimStrength") } }
+    @Published var dimSchedule: DimSchedule { didSet { d.set(dimSchedule.rawValue, forKey: "dimSchedule") } }
+    @Published var dimTarget: DimTarget { didSet { d.set(dimTarget.rawValue, forKey: "dimTarget") } }
+    @Published var dimStartHour: Int { didSet { d.set(dimStartHour, forKey: "dimStartHour") } }
+    @Published var dimEndHour: Int { didSet { d.set(dimEndHour, forKey: "dimEndHour") } }
+    // Bottom dock
+    @Published var bottomDockEnabled: Bool { didSet { d.set(bottomDockEnabled, forKey: "bottomDockEnabled") } }
+    @Published var bottomDockItems: [String] { didSet { d.set(bottomDockItems, forKey: "bottomDockItems") } }
+    @Published var bottomDockApps: [String] { didSet { d.set(bottomDockApps, forKey: "bottomDockApps") } }
+    @Published var bottomDockSide: BottomDockSide { didSet { d.set(bottomDockSide.rawValue, forKey: "bottomDockSide") } }
+    @Published var bottomDockScale: Double { didSet { d.set(bottomDockScale, forKey: "bottomDockScale") } }
+    @Published var bottomDockOffset: Double { didSet { d.set(bottomDockOffset, forKey: "bottomDockOffset") } }
+    @Published var bottomDockAutoHide: Bool { didSet { d.set(bottomDockAutoHide, forKey: "bottomDockAutoHide") } }
+
     private init() {
         bookmarks = Persist.load([Bookmark].self, key: "bookmarks") ?? [
             Bookmark(title: "YouTube", url: "https://youtube.com"),
@@ -141,6 +172,75 @@ final class UserLibrary: ObservableObject {
             "/System/Library/CoreServices/Finder.app", "/Applications/Safari.app",
             "/System/Applications/Notes.app", "/System/Applications/Calendar.app",
         ].filter { FileManager.default.fileExists(atPath: $0) }
+        verseEnabled = d.object(forKey: "verseEnabled") as? Bool ?? true
+        verseSource = VerseSource(rawValue: d.string(forKey: "verseSource") ?? "") ?? .both
+        verseTranslation = VerseTranslation(rawValue: d.string(forKey: "verseTranslation") ?? "") ?? .bangla
+        verseShowArabic = d.object(forKey: "verseShowArabic") as? Bool ?? true
+        networkEnabled = d.object(forKey: "networkEnabled") as? Bool ?? true
+        networkPeeks = d.object(forKey: "networkPeeks") as? Bool ?? true
+        speedTestMB = d.object(forKey: "speedTestMB") as? Int ?? 25
+        notificationsEnabled = d.object(forKey: "notificationsEnabled") as? Bool ?? false
+        notificationHideContent = d.object(forKey: "notificationHideContent") as? Bool ?? false
+        notificationSeconds = d.object(forKey: "notificationSeconds") as? Int ?? 4
+        notificationQuietWhenFocused = d.object(forKey: "notificationQuietWhenFocused") as? Bool ?? true
+        mutedNotificationApps = d.stringArray(forKey: "mutedNotificationApps") ?? []
+        dimEnabled = d.object(forKey: "dimEnabled") as? Bool ?? false
+        dimStrength = d.object(forKey: "dimStrength") as? Double ?? 0.3
+        dimSchedule = DimSchedule(rawValue: d.string(forKey: "dimSchedule") ?? "") ?? .sun
+        dimTarget = DimTarget(rawValue: d.string(forKey: "dimTarget") ?? "") ?? .uthon
+        dimStartHour = d.object(forKey: "dimStartHour") as? Int ?? 21
+        dimEndHour = d.object(forKey: "dimEndHour") as? Int ?? 6
+        bottomDockEnabled = d.object(forKey: "bottomDockEnabled") as? Bool ?? false
+        bottomDockItems = d.stringArray(forKey: "bottomDockItems") ?? ["apps", "clock", "music", "weather"]
+        bottomDockApps = d.stringArray(forKey: "bottomDockApps") ?? [
+            "/System/Library/CoreServices/Finder.app", "/Applications/Safari.app", "/System/Applications/Notes.app",
+        ].filter { FileManager.default.fileExists(atPath: $0) }
+        bottomDockSide = BottomDockSide(rawValue: d.string(forKey: "bottomDockSide") ?? "") ?? .right
+        bottomDockScale = d.object(forKey: "bottomDockScale") as? Double ?? 1.0
+        bottomDockOffset = d.object(forKey: "bottomDockOffset") as? Double ?? 0
+        bottomDockAutoHide = d.object(forKey: "bottomDockAutoHide") as? Bool ?? false
+    }
+}
+
+extension UserLibrary {
+    var bottomDockAppURLs: [URL] {
+        bottomDockApps.filter { FileManager.default.fileExists(atPath: $0) }.map { URL(fileURLWithPath: $0) }
+    }
+
+    func pickBottomDockApps() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = L("Add")
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK else { return }
+        for url in panel.urls where !bottomDockApps.contains(url.path) {
+            bottomDockApps.append(url.path)
+        }
+    }
+
+    func moveBottomDockApp(_ path: String, by offset: Int) {
+        guard let i = bottomDockApps.firstIndex(of: path) else { return }
+        let j = min(max(i + offset, 0), bottomDockApps.count - 1)
+        guard i != j else { return }
+        bottomDockApps.swapAt(i, j)
+    }
+
+    func isBottomDockItemOn(_ item: BottomDockItem) -> Bool { bottomDockItems.contains(item.rawValue) }
+
+    func setBottomDockItem(_ item: BottomDockItem, _ on: Bool) {
+        if on {
+            guard !bottomDockItems.contains(item.rawValue) else { return }
+            // Keep the standard order.
+            let order = BottomDockItem.allCases.map(\.rawValue)
+            bottomDockItems = (bottomDockItems + [item.rawValue]).sorted {
+                (order.firstIndex(of: $0) ?? 0) < (order.firstIndex(of: $1) ?? 0)
+            }
+        } else {
+            bottomDockItems.removeAll { $0 == item.rawValue }
+        }
     }
 }
 

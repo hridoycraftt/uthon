@@ -56,6 +56,8 @@ enum PeekKind: Equatable {
     case update(version: String)
     case prayer(name: String, time: Date)
     case specialDay(name: String, symbol: String)
+    case network(online: Bool)
+    case notification(NotificationPeek)
 
     /// Peeks of the same category replace each other in place (e.g. volume steps).
     var category: Int {
@@ -74,13 +76,15 @@ enum PeekKind: Equatable {
         case .update: return 11
         case .prayer: return 12
         case .specialDay: return 13
+        case .network: return 14
+        case .notification: return 15
         }
     }
 
     /// Small one-line pill (vs. a bigger card).
     var isSlim: Bool {
         switch self {
-        case .volume, .brightness, .capsLock, .charging: return true
+        case .volume, .brightness, .capsLock, .charging, .network: return true
         default: return false
         }
     }

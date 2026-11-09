@@ -41,7 +41,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p shots
-          perl -e 'alarm 120; exec @ARGV' ./dist/Uthon.app/Contents/MacOS/Uthon --self-test "$PWD/shots/self-test.txt"
+          perl -e 'alarm 120; exec @ARGV' ./dist/Nook.app/Contents/MacOS/Nook --self-test "$PWD/shots/self-test.txt"
 
       - name: Snapshot tour (light and dark)
         id: tour
@@ -53,7 +53,7 @@ jobs:
           for mode in light dark; do
             extra=""
             [ "$mode" = dark ] && extra="--dark"
-            if ! perl -e 'alarm 240; exec @ARGV' ./dist/Uthon.app/Contents/MacOS/Uthon --snapshot-tour "$PWD/shots" $extra \
+            if ! perl -e 'alarm 240; exec @ARGV' ./dist/Nook.app/Contents/MacOS/Nook --snapshot-tour "$PWD/shots" $extra \
                  > "shots/log-$mode.txt" 2>&1; then
               echo "tour ($mode) did not finish cleanly" | tee -a shots/os.txt
               status=1
@@ -66,12 +66,12 @@ jobs:
         if: always()
         run: |
           mkdir -p shots/crashes
-          find ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports -name 'Uthon*' -exec cp {} shots/crashes/ \; 2>/dev/null || true
+          find ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports -name 'Nook*' -exec cp {} shots/crashes/ \; 2>/dev/null || true
           ls shots/crashes
           if [ -n "$(ls -A shots/crashes)" ]; then
             echo "CRASH REPORTS FOUND" | tee -a shots/os.txt
             # The exception reason is in the system log, not in the crash report.
-            log show --last 20m --style compact --predicate 'process == "Uthon" AND (eventMessage CONTAINS "xception" OR eventMessage CONTAINS "Terminating" OR messageType == fault)' \
+            log show --last 20m --style compact --predicate 'process == "Nook" AND (eventMessage CONTAINS "xception" OR eventMessage CONTAINS "Terminating" OR messageType == fault)' \
               > shots/crashes/system-log.txt 2>&1 || true
             tail -40 shots/crashes/system-log.txt
           fi
@@ -93,4 +93,4 @@ jobs:
           cat shots/self-test.txt || true
           if [ "${{ steps.selftest.outcome }}" != "success" ]; then echo "Self-test failed"; exit 1; fi
           if [ "${{ steps.tour.outcome }}" != "success" ]; then echo "Snapshot tour failed"; exit 1; fi
-          if [ -n "$(ls -A shots/crashes 2>/dev/null)" ]; then echo "Uthon crashed"; exit 1; fi
+          if [ -n "$(ls -A shots/crashes 2>/dev/null)" ]; then echo "Nook crashed"; exit 1; fi

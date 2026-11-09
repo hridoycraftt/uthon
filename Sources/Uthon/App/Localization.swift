@@ -4,7 +4,7 @@ import Foundation
 /// Strings without a translation (names, file names...) are shown as they are.
 func L(_ english: String) -> String {
     guard Localization.isBangla else { return english }
-    return Localization.bangla[english] ?? english
+    return Localization.bangla[english] ?? Localization.banglaNew[english] ?? english
 }
 
 enum Localization {
@@ -84,7 +84,7 @@ enum Localization {
         // Island tabs content
         "This page is empty": "এই পেজ খালি", "Page full: remove one to add more": "পেজ ভর্তি: আরও যোগ করতে একটা সরাও",
         "Everything is already added": "সব আগেই যোগ করা আছে", "Open the full widget gallery": "পুরো উইজেট গ্যালারি খোলো",
-        "Uthon Widgets": "উঠোন উইজেট", "Apps on this Mac": "এই Mac-এর অ্যাপ", "Search apps": "অ্যাপ খোঁজো",
+        "Nook Widgets": "Nook উইজেট", "Apps on this Mac": "এই Mac-এর অ্যাপ", "Search apps": "অ্যাপ খোঁজো",
         "New Folder": "নতুন ফোল্ডার", "Folder name": "ফোল্ডারের নাম", "Create Folder": "ফোল্ডার বানাও",
         "Tap apps to put them in the folder": "ফোল্ডারে রাখতে অ্যাপে চাপো", "Slots used on this page": "এই পেজে ব্যবহৃত জায়গা",
         "No room: remove a widget first": "জায়গা নেই: আগে একটা উইজেট সরাও", "No room: remove something first": "জায়গা নেই: আগে কিছু সরাও",
@@ -109,7 +109,7 @@ enum Localization {
         "Caps Lock on": "ক্যাপস লক চালু", "Caps Lock off": "ক্যাপস লক বন্ধ", "Charging": "চার্জ হচ্ছে", "Connected": "যুক্ত হয়েছে",
         "Downloaded": "ডাউনলোড হয়েছে", "Join": "যোগ দাও", "Dismiss": "বাদ দাও", "Time's up!": "সময় শেষ!",
         "Your timer has finished": "তোমার টাইমার শেষ হয়েছে", "+1 min": "+১ মিনিট", "is available": "এসেছে",
-        "New features and fixes": "নতুন ফিচার আর সমাধান", "Don't forget to celebrate!": "উদযাপন করতে ভুলো না!", "Uthon": "উঠোন",
+        "New features and fixes": "নতুন ফিচার আর সমাধান", "Don't forget to celebrate!": "উদযাপন করতে ভুলো না!", "Nook": "Nook",
 
         // Settings
         "Startup & shortcut": "চালু হওয়া ও শর্টকাট", "Open at login": "লগইনে চালু হবে",
@@ -120,7 +120,7 @@ enum Localization {
         "Updates": "আপডেট", "Check for updates automatically": "নিজে থেকে আপডেট খোঁজো", "This version": "এই ভার্সন",
         "Installing…": "ইনস্টল হচ্ছে…", "Up to date ✓": "সর্বশেষ ভার্সন ✓", "Check now": "এখন খোঁজো", "Wallpaper": "ওয়ালপেপার",
         "Change wallpaper": "ওয়ালপেপার বদলাও", "No folder chosen": "কোনো ফোল্ডার বাছা হয়নি", "A new wallpaper every day": "প্রতিদিন নতুন ওয়ালপেপার",
-        "Change wallpaper now": "এখনই ওয়ালপেপার বদলাও", "Uthon gradients": "উঠোনের রঙিন ওয়ালপেপার", "My folder": "আমার ফোল্ডার",
+        "Change wallpaper now": "এখনই ওয়ালপেপার বদলাও", "Nook gradients": "Nook-এর রঙিন ওয়ালপেপার", "My folder": "আমার ফোল্ডার",
         "Privacy": "গোপনীয়তা",
         "Everything stays on this Mac: no account, no tracking, no cloud. Clipboard history skips passwords, and only pinned text is saved.": "সবকিছু এই Mac-এই থাকে: কোনো অ্যাকাউন্ট, ট্র্যাকিং বা ক্লাউড নেই। ক্লিপবোর্ড পাসওয়ার্ড রাখে না, শুধু পিন করা লেখা সেভ হয়।",
         "Theme color": "থিমের রং", "Custom color": "নিজের রং", "Tint the glass with the theme color": "গ্লাসে থিমের রঙের আভা দাও",
@@ -140,7 +140,7 @@ enum Localization {
         "Hanafi Asr (later Asr time)": "হানাফি আসর (একটু পরের সময়)", "Show an alert on the island at each prayer time": "প্রতি নামাজের সময় আইল্যান্ডে জানাও",
         "Birthdays & special days": "জন্মদিন ও বিশেষ দিন", "e.g. Ammu's birthday": "যেমন আম্মুর জন্মদিন",
         "Show it on the island on the day": "সেদিন আইল্যান্ডে দেখাও", "To-do list": "করণীয় তালিকা", "Keep to-dos in": "করণীয় রাখো",
-        "Uthon (this Mac only)": "উঠোন (শুধু এই Mac)", "Apple Reminders (syncs with iPhone)": "Apple Reminders (iPhone-এর সাথে মিলবে)",
+        "Nook (this Mac only)": "Nook (শুধু এই Mac)", "Apple Reminders (syncs with iPhone)": "Apple Reminders (iPhone-এর সাথে মিলবে)",
         "Reminders list": "Reminders লিস্ট", "Default list": "ডিফল্ট লিস্ট",
         "Tip: share this list with your family in the Reminders app, and everyone sees the same to-dos.": "টিপ: Reminders অ্যাপে এই লিস্ট ফ্যামিলির সাথে শেয়ার করো, সবাই একই করণীয় দেখবে।",
         "Allow access to Reminders": "Reminders-এর অনুমতি দাও",
@@ -193,8 +193,8 @@ enum Localization {
         "No release found": "কোনো রিলিজ পাওয়া যায়নি", "Could not check for updates": "আপডেট খোঁজা গেল না", "Download manually": "নিজে ডাউনলোড করো",
         "Feel a light tap on the trackpad when the island opens": "আইল্যান্ড খুললে trackpad-এ হালকা কম্পন",
         // Onboarding
-        "Welcome to Uthon": "উঠোনে স্বাগতম",
-        "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির ছোট্ট উঠোন: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",
+        "Welcome to Nook": "Nook-এ স্বাগতম",
+        "Your family's cosy little nook on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির আরামের ছোট্ট কোণ: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",
         "The island at the top": "উপরের আইল্যান্ড",
         "Move the mouse to the top centre of the screen (or press ⌃⌥Space) to open the island. Songs, timers and alerts appear there on their own.": "আইল্যান্ড খুলতে মাউস স্ক্রিনের উপরের মাঝখানে নাও (বা ⌃⌥Space চাপো)। গান, টাইমার আর সতর্কবার্তা নিজে থেকেই সেখানে আসে।",
         "Make it yours": "নিজের মতো সাজাও",
@@ -203,6 +203,6 @@ enum Localization {
         "Move the mouse to the right edge of the screen for the side dock with more widgets. You can switch it to the left or turn it off.": "আরও উইজেটসহ সাইড ডকের জন্য মাউস স্ক্রিনের ডান কিনারায় নাও। চাইলে বাম দিকে নিতে বা বন্ধ করতে পারো।",
         "Themes, pages and profiles": "থিম, পেজ আর প্রোফাইল",
         "Pick a color theme, add up to 3 Home pages, and switch between layouts like Study, Office, Music or Family from the menu bar.": "রঙের থিম বাছো, ৩টা পর্যন্ত হোম পেজ বানাও, আর মেনু বার থেকে পড়াশোনা, অফিস, গান বা ফ্যামিলি লেআউটে যাও।",
-        "Start using Uthon": "উঠোন ব্যবহার শুরু করো",
+        "Start using Nook": "Nook ব্যবহার শুরু করো",
     ]
 }

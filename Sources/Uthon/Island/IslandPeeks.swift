@@ -68,7 +68,7 @@ struct PeekView: View {
                 }
             }
         case .update(let version):
-            PeekRow(symbol: "arrow.down.app.fill", tint: Theme.accent, title: L("Uthon") + " \(version) " + L("is available"),
+            PeekRow(symbol: "arrow.down.app.fill", tint: Theme.accent, title: L("Nook") + " \(version) " + L("is available"),
                     subtitle: L("New features and fixes")) {
                 HStack(spacing: 8) {
                     Button(L("Later")) { IslandController.shared.dismissPeek() }
@@ -94,8 +94,43 @@ struct PeekView: View {
                 Button(L("OK")) { IslandController.shared.dismissPeek() }
                     .buttonStyle(AccentButtonStyle())
             }
+        case .notification(let note):
+            NotificationPeekView(note: note)
         default:
             EmptyView()
+        }
+    }
+}
+
+/// A notification from another app: its icon, who it is from and the message.
+private struct NotificationPeekView: View {
+    let note: NotificationPeek
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Group {
+                if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: note.bundleID) {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable()
+                } else {
+                    Image(systemName: "bell.badge.fill").font(.system(size: 18)).foregroundStyle(Theme.accent)
+                }
+            }
+            .frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(note.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(note.app).font(.system(size: 10)).foregroundStyle(Color.secondary).lineLimit(1)
+                }
+                Text(note.text).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(2)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            IslandController.shared.dismissPeek()
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: note.bundleID) {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 }
@@ -147,6 +182,13 @@ struct PeekHUDContent: View {
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
             BatteryGlyph(percent: percent, charging: true)
+        case .network(let online):
+            Image(systemName: online ? "wifi" : "wifi.slash")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(online ? Color.green : Color.orange)
+            Text(L(online ? "Back online" : "Internet disconnected"))
+                .font(.system(size: 12, weight: .semibold))
+            Spacer(minLength: 0)
         default:
             EmptyView()
         }

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Visual QA. Launch with `--snapshot-tour <folder> [--dark]` and Uthon renders every
+/// Visual QA. Launch with `--snapshot-tour <folder> [--dark]` and Nook renders every
 /// island tab, pop-up, closed state and the side dock into PNGs, captures the live
 /// screen a few times (real glass), then quits. Used by the "Visual QA" CI workflow.
 enum SnapshotTour {
@@ -103,7 +103,29 @@ enum SnapshotTour {
             model.editing = false
             IslandController.shared.collapse()
         }
+        add("home-new-widgets") {
+            s.homePages[1] = ["verse", "network", "bookmarks", "countdown"]
+            model.tab = .home
+            model.homePage = 1
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-new-widgets")
+            s.language = .bangla
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-new-widgets-bangla")
+            s.language = .system
+            s.setSize(HomeItem(.verse), slots: 3)
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-new-widgets-wide")
+            s.widgetSizes = [:]
+            model.homePage = 0
+        }
+        add("bottom-dock-render") {
+            let lib = UserLibrary.shared
+            lib.bottomDockItems = BottomDockItem.allCases.map(\.rawValue)
+            let width = BottomDockController.width(items: lib.bottomDockItems, appCount: lib.bottomDockAppURLs.count, scale: 1)
+            render(BottomDockView(), size: CGSize(width: width, height: 58), shape: false, name: "bottom-dock")
+        }
         let peeks: [(String, PeekKind)] = [
+            ("notification", .notification(NotificationPeek(bundleID: "com.apple.MobileSMS", app: "Messages", title: "Ammu",
+                                                            text: "Dinner is ready, come home soon! Bring some sweets on the way."))),
+            ("network-offline", .network(online: false)),
             ("volume", .volume(level: 0.62, muted: false)),
             ("brightness", .brightness(level: 0.4)),
             ("capslock", .capsLock(true)),
@@ -186,7 +208,36 @@ enum SnapshotTour {
         add("capture-settings-look") { capture("screen-settings-look") }
         add("live-settings-widgets") { SettingsWindowController.shared.show(tab: .widgets) }
         add("capture-settings-widgets") { capture("screen-settings-widgets") }
-        add("live-onboarding") { OnboardingWindowController.shared.show() }
+        for tab in [SettingsTab.verse, .network, .notifications, .night, .bottomDock] {
+            add("live-settings-\(tab.rawValue)") { SettingsWindowController.shared.show(tab: tab) }
+            add("capture-settings-\(tab.rawValue)") { capture("screen-settings-\(tab.rawValue)") }
+        }
+        add("live-bottom-dock") {
+            SettingsWindowController.shared.hide()
+            UserLibrary.shared.bottomDockEnabled = true
+            UserLibrary.shared.bottomDockAutoHide = false
+        }
+        add("capture-bottom-dock") { capture("screen-bottom-dock") }
+        add("live-notification") {
+            UserLibrary.shared.notificationsEnabled = true
+            NotificationMirror.shared.deliver(.init(id: -1, bundleID: "com.apple.MobileSMS", appName: "Messages", title: "Ammu",
+                                                    subtitle: "", body: "Dinner is ready, come home soon!", date: Date()))
+        }
+        add("capture-notification") { capture("screen-peek-notification") }
+        add("live-night") {
+            IslandController.shared.dismissPeek()
+            UserLibrary.shared.dimTarget = .uthon
+            UserLibrary.shared.dimStrength = 0.5
+            NightDimmer.shared.start()
+            NightDimmer.shared.preview(seconds: 6)
+            IslandController.shared.expand(tab: .home, sticky: true)
+        }
+        add("capture-night") { capture("screen-night-dim") }
+        add("live-onboarding") {
+            IslandController.shared.collapse()
+            UserLibrary.shared.bottomDockEnabled = false
+            OnboardingWindowController.shared.show()
+        }
         add("capture-onboarding") { capture("screen-onboarding") }
         add("quit") { exit(0) }
 
@@ -224,6 +275,11 @@ enum SnapshotTour {
         ShelfStore.shared.add([URL(fileURLWithPath: "/System/Applications/Notes.app"),
                                URL(fileURLWithPath: "/System/Applications/Calendar.app")])
         TimerStore.shared.toggleStopwatch()
+        DailyVerseStore.shared.debugSet(DailyText(
+            isQuran: true, arabic: "إِنَّ مَعَ ٱلْعُسْرِ يُسْرًا",
+            translation: "নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।", reference: "Ash-Sharh 94:6",
+            link: "https://quran.com/94/6", day: DailyVerseStore.dayKey(), translationKey: "bangla"))
+        NetworkStore.shared.start()
     }
 
     @MainActor

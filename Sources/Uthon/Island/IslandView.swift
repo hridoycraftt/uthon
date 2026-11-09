@@ -61,6 +61,9 @@ struct IslandView: View {
                 .frame(width: size.width, height: size.height)
                 .clipShape(shape)
                 .contentShape(shape)
+            NightDimOverlay()
+                .frame(width: size.width, height: size.height)
+                .clipShape(shape)
         }
         .id(settings.lookKey)
         .environment(\.locale, Localization.locale)

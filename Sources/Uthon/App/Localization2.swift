@@ -1,0 +1,72 @@
+import Foundation
+
+extension Localization {
+    /// Bangla for the screens added in 0.6 (Quran & Hadith, Internet, Notifications,
+    /// Night Dimming, Bottom Dock). Kept apart so no key is ever listed twice.
+    static let banglaNew: [String: String] = [
+        // Settings tabs
+        "Bottom Dock": "নিচের ডক", "Quran & Hadith": "কোরআন ও হাদিস", "Internet & Wi-Fi": "ইন্টারনেট ও Wi-Fi",
+        "Notifications": "নোটিফিকেশন", "Night Dimming": "রাতে কম আলো", "Internet": "ইন্টারনেট",
+        "Show on Home": "হোমে দেখাও", "Home is full. Remove a widget or add a page in Home settings.": "হোম ভর্তি। একটা উইজেট সরাও বা হোম সেটিংসে নতুন পেজ যোগ করো।",
+        // Quran & Hadith
+        "Quran": "কোরআন", "Hadith": "হাদিস", "Quran ayah": "কোরআনের আয়াত", "Both (alternate daily)": "দুটোই (এক দিন পরপর)",
+        "Daily Quran & Hadith": "প্রতিদিনের আয়াত ও হাদিস",
+        "A new ayah or hadith every day, with its meaning. It is kept on this Mac, so it also shows without internet.": "প্রতিদিন একটা নতুন আয়াত বা হাদিস, অর্থসহ। এই Mac-এ রাখা থাকে, তাই ইন্টারনেট ছাড়াও দেখায়।",
+        "What to show": "কী দেখাবে", "Show": "দেখাও", "Meaning in": "অর্থের ভাষা", "Show the Arabic text": "আরবি লেখা দেখাও",
+        "Today": "আজ", "Show another": "আরেকটা দেখাও", "Read on the web": "ওয়েবে পড়ো", "Copy": "কপি করো", "Sources": "উৎস",
+        "Loading…": "লোড হচ্ছে…", "Try again": "আবার চেষ্টা করো",
+        "Couldn't load. Check the internet connection.": "লোড হয়নি। ইন্টারনেট সংযোগ দেখো।",
+        "Daily Quran & Hadith is off in Settings": "সেটিংসে আয়াত ও হাদিস বন্ধ আছে",
+        "Quran: Arabic (Uthmani) and translations from alquran.cloud (Bangla: Muhiuddin Khan, English: Saheeh International). Hadith: Sahih al-Bukhari and Sahih Muslim from the open hadith-api collection. Nook does not write or change any text.": "কোরআন: আরবি (উসমানি) আর অনুবাদ alquran.cloud থেকে (বাংলা: মুহিউদ্দীন খান, ইংরেজি: Saheeh International)। হাদিস: সহীহ বুখারি ও সহীহ মুসলিম, উন্মুক্ত hadith-api সংগ্রহ থেকে। Nook নিজে কোনো লেখা লেখে বা বদলায় না।",
+        // Internet
+        "Network monitor is off in Settings": "সেটিংসে ইন্টারনেট মনিটর বন্ধ আছে",
+        "Excellent": "চমৎকার", "Good": "ভালো", "Fair": "মোটামুটি", "Weak": "দুর্বল", "No signal": "সিগন্যাল নেই",
+        "Online": "অনলাইন", "Offline": "অফলাইন", "No internet": "ইন্টারনেট নেই",
+        "Speed test": "স্পিড টেস্ট", "Run speed test": "স্পিড টেস্ট চালাও", "Ping": "পিং", "Download": "ডাউনলোড", "Upload": "আপলোড",
+        "Uses about": "খরচ হবে প্রায়", "Speed test failed. Check the internet connection.": "স্পিড টেস্ট হয়নি। ইন্টারনেট সংযোগ দেখো।",
+        "Network Settings…": "নেটওয়ার্ক সেটিংস…", "Back online": "ইন্টারনেট ফিরে এসেছে", "Internet disconnected": "ইন্টারনেট চলে গেছে",
+        "Watch the internet connection": "ইন্টারনেট সংযোগ দেখো",
+        "Pop up when the internet drops or comes back": "ইন্টারনেট গেলে বা ফিরলে জানাও",
+        "Shows Wi-Fi signal and live download and upload speed. Uses almost no battery.": "Wi-Fi সিগন্যাল আর এখনকার ডাউনলোড-আপলোড গতি দেখায়। ব্যাটারি প্রায় খরচ হয় না।",
+        "Test size": "টেস্টের সাইজ", "Connection": "সংযোগ", "Signal": "সিগন্যাল", "Link speed": "লিংক স্পিড",
+        "Network name": "নেটওয়ার্কের নাম", "Hidden by macOS": "macOS লুকিয়ে রেখেছে", "Show the Wi-Fi name…": "Wi-Fi-এর নাম দেখাও…",
+        "Right now": "এখন",
+        "macOS shows the Wi-Fi name only to apps allowed to use Location. Nook never stores or sends your location.": "macOS শুধু লোকেশন অনুমতি পাওয়া অ্যাপকেই Wi-Fi-এর নাম জানায়। Nook তোমার লোকেশন কখনো রাখে বা পাঠায় না।",
+        // Notifications
+        "Show notifications on the island": "আইল্যান্ডে নোটিফিকেশন দেখাও", "Notifications on the island": "আইল্যান্ডে নোটিফিকেশন",
+        "New messages from WhatsApp, Messages, Mail and other apps appear for a moment on the island. macOS still shows its own banners as usual.": "WhatsApp, Messages, Mail আর অন্য অ্যাপের নতুন বার্তা কিছুক্ষণের জন্য আইল্যান্ডে দেখাবে। macOS-এর নিজের ব্যানারও আগের মতো আসবে।",
+        "Permission": "অনুমতি", "Full Disk Access is on": "Full Disk Access চালু আছে", "Full Disk Access is needed": "Full Disk Access লাগবে",
+        "Check again": "আবার দেখো",
+        "macOS doesn't let apps read other apps' notifications directly. With Full Disk Access, Nook reads the notification list on this Mac. Nothing leaves your Mac.": "macOS কোনো অ্যাপকে অন্য অ্যাপের নোটিফিকেশন সরাসরি পড়তে দেয় না। Full Disk Access দিলে Nook এই Mac-এর নোটিফিকেশন তালিকা পড়ে। কিছুই তোমার Mac-এর বাইরে যায় না।",
+        "Open Full Disk Access settings…": "Full Disk Access সেটিংস খোলো…",
+        "Turn on Nook in the list (use + to add it from Applications if it's missing), then come back and press Check again.": "তালিকায় Nook চালু করো (না থাকলে + চেপে Applications থেকে যোগ করো), তারপর ফিরে এসে \"আবার দেখো\" চাপো।",
+        "How they look": "কেমন দেখাবে", "Hide the message (show only the app)": "বার্তা লুকাও (শুধু অ্যাপের নাম)",
+        "Skip notifications from the app I'm using": "যে অ্যাপ ব্যবহার করছি তার নোটিফিকেশন দেখিও না",
+        "Show for": "দেখাবে", "seconds": "সেকেন্ড", "Show a test notification": "একটা টেস্ট নোটিফিকেশন দেখাও",
+        "Mum": "আম্মু", "Dinner is ready, come home soon!": "খাবার রেডি, তাড়াতাড়ি বাসায় আসো!",
+        "Apps appear here after they send a notification.": "কোনো অ্যাপ নোটিফিকেশন পাঠালে এখানে দেখাবে।",
+        "Turn an app off to keep its notifications off the island.": "কোনো অ্যাপ বন্ধ করলে তার নোটিফিকেশন আইল্যান্ডে আসবে না।",
+        "New notification": "নতুন নোটিফিকেশন", "Apps": "অ্যাপ",
+        // Night dimming
+        "Dim at night": "রাতে আলো কমাও",
+        "Gently darkens the screen at night, fading in and out over half an hour. Works on a MacBook, an iMac and external displays.": "রাতে স্ক্রিন ধীরে ধীরে একটু অন্ধকার করে, আধা ঘণ্টা ধরে বাড়ে আর কমে। MacBook, iMac আর বাইরের মনিটর, সবখানে চলে।",
+        "When": "কখন", "Schedule": "সময়সূচি", "Sunset to sunrise (my city)": "সূর্যাস্ত থেকে সূর্যোদয় (আমার শহর)",
+        "When macOS is in Dark Mode": "macOS ডার্ক মোডে থাকলে", "Custom hours": "নিজের ঠিক করা সময়",
+        "Sunset": "সূর্যাস্ত", "Sunrise": "সূর্যোদয়", "Set your city to follow sunset. Until then: 7 PM to 6 AM.": "সূর্যাস্ত মানতে শহর ঠিক করো। ততক্ষণ: সন্ধ্যা ৭টা থেকে সকাল ৬টা।",
+        "From": "থেকে", "Until": "পর্যন্ত", "How much": "কতটা", "Strength": "মাত্রা", "Dim": "কম আলো",
+        "Nook only (island and docks)": "শুধু Nook (আইল্যান্ড আর ডক)", "Every screen": "পুরো স্ক্রিন",
+        "Preview": "দেখে নাও", "Previewing…": "দেখাচ্ছে…", "Now": "এখন", "Not tonight (until 6 AM)": "আজ রাতে না (সকাল ৬টা পর্যন্ত)",
+        // Bottom dock
+        "Bottom dock": "নিচের ডক", "Show the bottom dock": "নিচের ডক দেখাও", "Place": "জায়গা",
+        "Left of the Dock": "Dock-এর বামে", "Right of the Dock": "Dock-এর ডানে",
+        "Hide until the mouse reaches the bottom edge": "মাউস নিচের কিনারায় না আসা পর্যন্ত লুকিয়ে রাখো",
+        "A second dock beside the macOS Dock with your apps and live info. It stays out of full-screen apps.": "macOS Dock-এর পাশে দ্বিতীয় একটা ডক, তোমার অ্যাপ আর লাইভ তথ্যসহ। ফুল-স্ক্রিন অ্যাপে এটা আসে না।",
+        "Size and position": "সাইজ আর জায়গা", "Size": "সাইজ", "Distance": "দূরত্ব",
+        "Sits right next to the macOS Dock.": "macOS Dock-এর ঠিক পাশে বসে।",
+        "Allow Accessibility so it can sit right next to the macOS Dock. Without it, it sits in the bottom corner.": "Accessibility অনুমতি দিলে এটা macOS Dock-এর ঠিক পাশে বসবে। না দিলে নিচের কোণে বসবে।",
+        "Allow…": "অনুমতি দাও…", "What it shows": "কী দেখাবে", "Clock": "ঘড়ি", "Battery": "ব্যাটারি",
+        "CPU & memory": "CPU আর মেমোরি", "Internet speed": "ইন্টারনেটের গতি", "Not playing": "কিছু বাজছে না", "Power": "বিদ্যুৎ",
+        "Add Apps…": "অ্যাপ যোগ করো…", "Bottom Dock Settings…": "নিচের ডকের সেটিংস…", "Hide Bottom Dock": "নিচের ডক লুকাও",
+        "Remove from Bottom Dock": "নিচের ডক থেকে সরাও", "Show in Finder": "Finder-এ দেখাও", "Open": "খোলো", "Settings…": "সেটিংস…",
+    ]
+}

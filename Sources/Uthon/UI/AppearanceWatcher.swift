@@ -32,6 +32,26 @@ final class AppearanceWatcher {
         guard force || dark != lastIsDark else { return }
         lastIsDark = dark
         AppSettings.shared.systemAppearanceTick += 1
+        AppIcon.apply()
         QuickActions.shared.refresh()
+    }
+}
+
+/// The app icon that matches the current appearance (dark icon in Dark Mode, light otherwise).
+enum AppIcon {
+    static var current: NSImage {
+        let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let name = dark ? "AppIcon-Dark" : "AppIcon-Light"
+        if let url = Bundle.main.url(forResource: name, withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            return image
+        }
+        return NSApp.applicationIconImage
+    }
+
+    /// Keep the Dock / app switcher icon in step with Light and Dark mode.
+    static func apply() {
+        guard Bundle.main.url(forResource: "AppIcon-Dark", withExtension: "png") != nil else { return }
+        NSApp.applicationIconImage = current
     }
 }

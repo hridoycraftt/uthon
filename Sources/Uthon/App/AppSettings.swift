@@ -112,14 +112,14 @@ struct HomeItem: CustomizableItem {
 /// Widgets that can be placed on the island's Home tab.
 enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
     case music, calendar, weather, shortcuts, system, batteries, todo, controls, notes
-    case bookmarks, worldClock, prayer, countdown
+    case bookmarks, worldClock, prayer, countdown, verse, network
 
     var id: String { rawValue }
 
     /// Default width in slots; the Home row holds 5 slots.
-    var defaultSlots: Int { self == .music ? 2 : 1 }
+    var defaultSlots: Int { self == .music || self == .verse ? 2 : 1 }
     /// Smallest width that still looks right.
-    var minSlots: Int { self == .music ? 2 : 1 }
+    var minSlots: Int { self == .music || self == .verse ? 2 : 1 }
     var slots: Int { defaultSlots }
 
     var title: String {
@@ -137,6 +137,8 @@ enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
         case .worldClock: return "World Clock"
         case .prayer: return "Prayer Times"
         case .countdown: return "Special Days"
+        case .verse: return "Quran & Hadith"
+        case .network: return "Internet"
         }
     }
 
@@ -155,6 +157,8 @@ enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
         case .worldClock: return "globe.asia.australia.fill"
         case .prayer: return "moon.stars.fill"
         case .countdown: return "gift.fill"
+        case .verse: return "book.closed.fill"
+        case .network: return "wifi"
         }
     }
 

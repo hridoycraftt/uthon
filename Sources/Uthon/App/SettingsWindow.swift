@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 import CoreBluetooth
 
 enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
-    case general, look, home, island, widgets, alerts, profiles, dock, care
+    case general, look, home, island, widgets, verse, network, notifications, night, alerts, profiles, dock, bottomDock, care
 
     var id: String { rawValue }
 
@@ -19,6 +19,11 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .alerts: return "Alerts"
         case .profiles: return "Profiles"
         case .dock: return "Side Dock"
+        case .bottomDock: return "Bottom Dock"
+        case .verse: return "Quran & Hadith"
+        case .network: return "Internet & Wi-Fi"
+        case .notifications: return "Notifications"
+        case .night: return "Night Dimming"
         case .care: return "Care"
         }
     }
@@ -33,6 +38,11 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .alerts: return "bell.badge.fill"
         case .profiles: return "person.2.crop.square.stack.fill"
         case .dock: return "sidebar.right"
+        case .bottomDock: return "dock.rectangle"
+        case .verse: return "book.closed.fill"
+        case .network: return "wifi"
+        case .notifications: return "app.badge.fill"
+        case .night: return "moon.fill"
         case .care: return "heart.fill"
         }
     }
@@ -48,12 +58,18 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .alerts: return .red
         case .profiles: return .indigo
         case .dock: return .teal
+        case .bottomDock: return .cyan
+        case .verse: return .green
+        case .network: return .blue
+        case .notifications: return .orange
+        case .night: return .indigo
         case .care: return .pink
         }
     }
 
     /// The sidebar groups, as in System Settings.
-    static let groups: [[SettingsTab]] = [[.general, .look], [.home, .island, .widgets], [.alerts, .profiles], [.dock, .care]]
+    static let groups: [[SettingsTab]] = [[.general, .look], [.home, .island, .widgets], [.verse, .network, .notifications, .night],
+                                          [.alerts, .profiles], [.dock, .bottomDock, .care]]
 }
 
 /// Which Settings tab is showing (so other parts of the app can open a specific one).
@@ -69,6 +85,10 @@ final class SettingsWindowController {
     func show(tab: SettingsTab) {
         SettingsRouter.shared.tab = tab
         show()
+    }
+
+    func hide() {
+        window?.orderOut(nil)
     }
 
     func show() {
@@ -99,7 +119,7 @@ enum LoginItem {
         do {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
         } catch {
-            NSLog("Uthon: login item change failed: \(error.localizedDescription)")
+            NSLog("Nook: login item change failed: \(error.localizedDescription)")
         }
     }
 }
@@ -123,7 +143,7 @@ struct SettingsView: View {
             .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
             .safeAreaInset(edge: .top) {
                 HStack(spacing: 10) {
-                    Image(nsImage: NSApp.applicationIconImage)
+                    Image(nsImage: AppIcon.current)
                         .resizable()
                         .frame(width: 34, height: 34)
                     VStack(alignment: .leading, spacing: 1) {
@@ -158,6 +178,11 @@ struct SettingsView: View {
         case .profiles: ProfilesSettings()
         case .dock: DockSettings()
         case .care: CareSettings()
+        case .bottomDock: BottomDockSettings()
+        case .verse: VerseSettings()
+        case .network: NetworkSettings()
+        case .notifications: NotificationSettings()
+        case .night: NightSettings()
         }
     }
 }
@@ -932,7 +957,7 @@ private struct ReorderRow: View {
     }
 }
 
-private struct LabeledSlider: View {
+struct LabeledSlider: View {
     let title: String
     @Binding var value: Double
     let range: ClosedRange<Double>

@@ -30,7 +30,7 @@ final class QuickActions: ObservableObject {
             let result = IOPMAssertionCreateWithName(
                 kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
                 IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                "Uthon: Keep awake" as CFString,
+                "Nook: Keep awake" as CFString,
                 &assertion
             )
             keepAwake = result == kIOReturnSuccess

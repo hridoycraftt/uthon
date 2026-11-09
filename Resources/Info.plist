@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Uthon</string>
+    <string>Nook</string>
     <key>CFBundleDisplayName</key>
-    <string>Uthon</string>
+    <string>Nook</string>
     <key>CFBundleIdentifier</key>
     <string>app.uthon.mac</string>
     <key>CFBundleExecutable</key>
-    <string>Uthon</string>
+    <string>Nook</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -29,24 +29,28 @@
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>Uthon shows today's events from your calendar in the side dock.</string>
+    <string>Nook shows today's events from your calendar in the side dock.</string>
     <key>NSCalendarsUsageDescription</key>
-    <string>Uthon shows today's events from your calendar in the side dock.</string>
+    <string>Nook shows today's events from your calendar in the side dock.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Uthon reads the current song from Music or Spotify so you can see and control it.</string>
+    <string>Nook reads the current song from Music or Spotify so you can see and control it.</string>
     <key>NSRemindersFullAccessUsageDescription</key>
-    <string>Uthon can show and add to-dos from a list in Apple Reminders, so your list syncs with iPhone and family.</string>
+    <string>Nook can show and add to-dos from a list in Apple Reminders, so your list syncs with iPhone and family.</string>
     <key>NSRemindersUsageDescription</key>
-    <string>Uthon can show and add to-dos from a list in Apple Reminders.</string>
+    <string>Nook can show and add to-dos from a list in Apple Reminders.</string>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Uthon reads the battery level of your Magic Keyboard, Magic Mouse, Trackpad and AirPods to show it in the Batteries widget. Nothing else is accessed.</string>
+    <string>Nook reads the battery level of your Magic Keyboard, Magic Mouse, Trackpad and AirPods to show it in the Batteries widget. Nothing else is accessed.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>macOS shares the Wi-Fi network name only with apps allowed to use Location. Nook uses it just to show which Wi-Fi you are on; your location is never stored or sent.</string>
+    <key>NSLocationUsageDescription</key>
+    <string>macOS shares the Wi-Fi network name only with apps allowed to use Location. Nook uses it just to show which Wi-Fi you are on; your location is never stored or sent.</string>
     <key>NSCameraUsageDescription</key>
     <string>The Mirror tab shows your camera so you can check your look before a call. Nothing is recorded.</string>
     <key>NSDownloadsFolderUsageDescription</key>
-    <string>Uthon lists your latest downloads for quick access.</string>
+    <string>Nook lists your latest downloads for quick access.</string>
     <key>NSDesktopFolderUsageDescription</key>
-    <string>Uthon opens files you pin to the shelf or shortcuts.</string>
+    <string>Nook opens files you pin to the shelf or shortcuts.</string>
     <key>NSDocumentsFolderUsageDescription</key>
-    <string>Uthon opens files you pin to the shelf or shortcuts.</string>
+    <string>Nook opens files you pin to the shelf or shortcuts.</string>
 </dict>
 </plist>

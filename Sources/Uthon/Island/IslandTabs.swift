@@ -207,6 +207,8 @@ struct HomeWidgetView: View {
             case .worldClock: WorldClockTile()
             case .prayer: PrayerTile()
             case .countdown: CountdownTile()
+            case .verse: VerseTile()
+            case .network: NetworkTile()
             }
         } else if let folder = item.folder {
             FolderTile(folder: folder)
@@ -289,7 +291,7 @@ struct WidgetGallery: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Picker("", selection: $model.gallerySection) {
-                    Text(L("Uthon Widgets")).tag(0)
+                    Text(L("Nook Widgets")).tag(0)
                     Text(L("Apps on this Mac")).tag(1)
                     Text(L("Presets")).tag(2)
                 }

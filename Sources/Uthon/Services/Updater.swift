@@ -74,7 +74,7 @@ final class Updater: ObservableObject {
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 20
-        config.httpAdditionalHeaders = ["User-Agent": "Uthon/\(AppInfo.version) (macOS)"]
+        config.httpAdditionalHeaders = ["User-Agent": "Nook/\(AppInfo.version) (macOS)"]
         return URLSession(configuration: config)
     }()
 
@@ -151,7 +151,7 @@ final class Updater: ObservableObject {
     }
 
     static func dmgURL(for version: String) -> URL {
-        URL(string: "https://github.com/\(repo)/releases/download/v\(version)/Uthon-\(version).dmg")!
+        URL(string: "https://github.com/\(repo)/releases/download/v\(version)/Nook-\(version).dmg")!
     }
 
     /// "0.10.0" > "0.9.3"
@@ -175,7 +175,7 @@ final class Updater: ObservableObject {
                 DispatchQueue.main.async { self?.state = .failed(error?.localizedDescription ?? "Download failed") }
                 return
             }
-            let dmg = FileManager.default.temporaryDirectory.appendingPathComponent("Uthon-update.dmg")
+            let dmg = FileManager.default.temporaryDirectory.appendingPathComponent("Nook-update.dmg")
             try? FileManager.default.removeItem(at: dmg)
             do {
                 try FileManager.default.moveItem(at: file, to: dmg)
@@ -189,18 +189,23 @@ final class Updater: ObservableObject {
 
     private func replaceAndRelaunch(dmg: URL) {
         state = .installing
-        let app = Bundle.main.bundlePath
-        let mount = FileManager.default.temporaryDirectory.appendingPathComponent("uthon-mount").path
-        let staged = FileManager.default.temporaryDirectory.appendingPathComponent("Uthon-new.app").path
+        let current = Bundle.main.bundlePath
+        // The app was renamed from Uthon to Nook: move an old "Uthon.app" to "Nook.app".
+        let app = (current as NSString).lastPathComponent == "Uthon.app"
+            ? ((current as NSString).deletingLastPathComponent as NSString).appendingPathComponent("Nook.app")
+            : current
+        let mount = FileManager.default.temporaryDirectory.appendingPathComponent("nook-mount").path
+        let staged = FileManager.default.temporaryDirectory.appendingPathComponent("Nook-new.app").path
         let script = """
         set -e
         mkdir -p "\(mount)"
         hdiutil attach -nobrowse -readonly -quiet -mountpoint "\(mount)" "\(dmg.path)"
         rm -rf "\(staged)"
-        ditto "\(mount)/Uthon.app" "\(staged)"
+        if [ -d "\(mount)/Nook.app" ]; then ditto "\(mount)/Nook.app" "\(staged)"; else ditto "\(mount)/Uthon.app" "\(staged)"; fi
         hdiutil detach -quiet "\(mount)" || true
         while kill -0 \(ProcessInfo.processInfo.processIdentifier) 2>/dev/null; do sleep 0.2; done
         rm -rf "\(app)"
+        if [ "\(current)" != "\(app)" ]; then rm -rf "\(current)"; fi
         ditto "\(staged)" "\(app)"
         rm -rf "\(staged)"
         open "\(app)"

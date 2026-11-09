@@ -4,7 +4,7 @@ import Combine
 
 enum AppInfo {
     static var name: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Uthon"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Nook"
     }
     static var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
@@ -26,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // No Dock icon: Uthon lives in the menu bar, the notch and the screen edge.
+        // No Dock icon: Nook lives in the menu bar, the notch and the screen edge.
         NSApp.setActivationPolicy(.accessory)
         MenuTracker.shared.start()
         AppearanceWatcher.shared.start()
@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if SnapshotTour.isActive {
             DockController.shared.start()
             IslandController.shared.start()
+            BottomDockController.shared.start()
             WeatherStore.shared.start()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { MainActor.assumeIsolated { SnapshotTour.run() } }
             return
@@ -65,6 +66,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MediaKeyTap.shared.update()
         Updater.shared.start()
         WallpaperChanger.shared.start()
+        NightDimmer.shared.start()
+        BottomDockController.shared.start()
+        AppIcon.apply()
+
+        // New features follow their switches in Settings right away.
+        let library = UserLibrary.shared
+        library.$networkEnabled
+            .sink { on in DispatchQueue.main.async { on ? NetworkStore.shared.start() : NetworkStore.shared.stop() } }
+            .store(in: &cancellables)
+        library.$notificationsEnabled
+            .sink { on in DispatchQueue.main.async { on ? NotificationMirror.shared.start() : NotificationMirror.shared.stop() } }
+            .store(in: &cancellables)
+        Publishers.CombineLatest3(library.$verseEnabled, library.$verseSource, library.$verseTranslation)
+            .dropFirst()
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
+            .sink { _ in DailyVerseStore.shared.refresh() }
+            .store(in: &cancellables)
         if !AppSettings.shared.onboardingDone {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { OnboardingWindowController.shared.show() }
         }
@@ -101,6 +119,9 @@ struct MenuContent: View {
                 }
             }
         }
+        Toggle(L("Bottom dock"), isOn: $library.bottomDockEnabled)
+        Toggle(L("Dim at night"), isOn: $library.dimEnabled)
+        Toggle(L("Notifications on the island"), isOn: $library.notificationsEnabled)
         Picker(L("Appearance"), selection: $settings.appearance) {
             ForEach(AppAppearance.allCases) { appearance in
                 Text(L(appearance.title)).tag(appearance)

@@ -570,6 +570,8 @@ enum SelfTest {
             AudioController.shared.setVolume(original)
         }
 
+        newFeatureChecks()
+
         // Clipboard history (async: the store polls the pasteboard)
         step("Clipboard history (async: the store polls the pasteboard)")
         let clipboard = ClipboardStore.shared
@@ -594,6 +596,224 @@ enum SelfTest {
             board.setString("secret-password", forType: .string)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 check("Clipboard skips passwords", !clipboard.items.contains { $0.text == "secret-password" })
+                onlineChecks()
+            }
+        }
+    }
+
+    // MARK: 0.6 features
+
+    private static func newFeatureChecks() {
+        let library = UserLibrary.shared
+        let settings = AppSettings.shared
+
+        step("Icons for new features")
+        for symbol in ["book.closed.fill", "wifi", "wifi.slash", "dock.rectangle", "app.badge.fill", "moon.fill",
+                       "cable.connector", "speedometer", "arrow.triangle.2.circlepath", "battery.100percent.bolt",
+                       "powerplug.fill", "arrow.up.arrow.down", "network", "bell.badge.fill", "clock.fill", "cpu"] {
+            check("SF Symbol exists: \(symbol)", NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil)
+        }
+        for tab in SettingsTab.allCases {
+            check("Settings icon exists: \(tab.title)", NSImage(systemSymbolName: tab.symbol, accessibilityDescription: nil) != nil)
+        }
+        check("Every settings page is in the sidebar", Set(SettingsTab.groups.flatMap { $0 }) == Set(SettingsTab.allCases))
+        for item in BottomDockItem.allCases {
+            check("Bottom dock icon exists: \(item.title)", NSImage(systemSymbolName: item.symbol, accessibilityDescription: nil) != nil)
+        }
+
+        step("Quran & Hadith")
+        let day = DailyVerseStore.dayIndex(Date(timeIntervalSince1970: 1_790_000_000))
+        let a = DailyVerseStore.pick(day: day, salt: 0, range: 1...6236)
+        check("Ayah pick is stable for a day", a == DailyVerseStore.pick(day: day, salt: 0, range: 1...6236))
+        check("Ayah pick changes the next day", a != DailyVerseStore.pick(day: day + 1, salt: 0, range: 1...6236))
+        check("Ayah pick stays in range", (0..<400).allSatisfy { (1...6236).contains(DailyVerseStore.pick(day: $0, salt: $0 * 3, range: 1...6236)) })
+        check("Both: alternates between Quran and Hadith",
+              DailyVerseStore.wantsQuran(.both, day: 10) != DailyVerseStore.wantsQuran(.both, day: 11))
+        check("Quran only is always Quran", DailyVerseStore.wantsQuran(.quran, day: 11))
+        let ayahJSON = #"{"code":200,"data":[{"number":262,"text":"ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ","numberInSurah":255,"surah":{"number":2,"englishName":"Al-Baqara"}},{"number":262,"text":"আল্লাহ ছাড়া অন্য কোন উপাস্য নেই","numberInSurah":255,"surah":{"number":2,"englishName":"Al-Baqara"}}]}"#
+        let ayah = DailyVerseStore.parseAyah(Data(ayahJSON.utf8), translation: .bangla)
+        check("Ayah parses reference", ayah?.reference == "Al-Baqara 2:255", ayah?.reference ?? "nil")
+        check("Ayah keeps Arabic and meaning", ayah?.arabic.isEmpty == false && ayah?.translation.hasPrefix("আল্লাহ") == true)
+        check("Ayah links to quran.com", ayah?.link == "https://quran.com/2/255")
+        let hadithJSON = #"{"metadata":{"name":"Sahih al Bukhari"},"hadiths":[{"hadithnumber":1,"text":"কাজ নিয়ত অনুযায়ী","grades":[]}]}"#
+        check("Hadith parses text", DailyVerseStore.parseHadith(Data(hadithJSON.utf8)) == "কাজ নিয়ত অনুযায়ী")
+        check("Empty hadith is rejected", DailyVerseStore.parseHadith(Data(#"{"hadiths":[]}"#.utf8)) == nil)
+        check("Hadith URL", DailyVerseStore.hadithURL(edition: "ben-bukhari", number: 1).absoluteString.hasSuffix("/editions/ben-bukhari/1.min.json"))
+        check("Quran + Bangla widget needs 2 slots", HomeWidget.verse.minSlots == 2 && HomeWidget.network.minSlots == 1)
+
+        step("Home toggles for new widgets")
+        let savedPages = settings.homePages
+        settings.homePages = [HomeWidget.defaults.map(\.rawValue)]
+        settings.removeFromHome(HomeItem(.verse))
+        check("Show on Home adds Quran & Hadith", HomeWidgetToggle.add(.verse) && settings.isOnHome(HomeItem(.verse)))
+        check("Show on Home adds Internet", HomeWidgetToggle.add(.network) && settings.isOnHome(HomeItem(.network)))
+        check("Pages never overflow", (0..<settings.pageCount).allSatisfy { settings.slotsUsed(page: $0) <= HomeWidget.maxSlots })
+        settings.homePages = savedPages
+
+        step("Internet & Wi-Fi")
+        check("Signal bars: strong", NetworkStore.bars(rssi: -50) == 4)
+        check("Signal bars: fair", NetworkStore.bars(rssi: -72) == 2)
+        check("Signal bars: none", NetworkStore.bars(rssi: nil) == 0 && NetworkStore.bars(rssi: -95) == 0)
+        check("Rate text MB/s", NetworkStore.rate(12_340_000) == "12.3 MB/s", NetworkStore.rate(12_340_000))
+        check("Rate text KB/s", NetworkStore.rate(840_000) == "840 KB/s", NetworkStore.rate(840_000))
+        check("Rate never negative", NetworkStore.rate(-5) == "0 B/s")
+        let bytes = NetworkStore.interfaceBytes()
+        info("Interface counters", "down \(bytes.down) up \(bytes.up)")
+        library.networkEnabled = true
+        NetworkStore.shared.start()
+        check("Network monitor starts", NetworkStore.shared.running)
+        library.networkEnabled = false
+        NetworkStore.shared.stop()
+        check("Network monitor stops when turned off", !NetworkStore.shared.running)
+        library.networkEnabled = true
+        NetworkStore.shared.start()
+
+        step("Notifications")
+        check("Notification database locations known", !NotificationMirror.databaseCandidates.isEmpty)
+        NotificationMirror.shared.checkAccess()
+        info("Full Disk Access", NotificationMirror.shared.hasAccess ? "yes" : "no (expected on CI)")
+        let plist: [String: Any] = ["app": "net.whatsapp.WhatsApp", "date": 800_000_000.0,
+                                    "req": ["titl": "Rahim", "body": "Are you coming?"]]
+        let data = (try? PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)) ?? Data()
+        let item = NotificationMirror.parse(id: 7, bundleID: "", data: data)
+        check("Notification record parses", item?.title == "Rahim" && item?.body == "Are you coming?" && item?.bundleID == "net.whatsapp.WhatsApp")
+        check("Empty notification is skipped", NotificationMirror.parse(id: 8, bundleID: "x", data: Data()) == nil)
+        if let item {
+            library.notificationsEnabled = true
+            library.mutedNotificationApps = []
+            check("Allowed app is shown", NotificationMirror.shouldShow(item, library: library))
+            library.mutedNotificationApps = ["net.whatsapp.WhatsApp"]
+            check("Muted app is hidden", !NotificationMirror.shouldShow(item, library: library))
+            library.mutedNotificationApps = []
+            library.notificationsEnabled = false
+            check("Nothing shows when the feature is off", !NotificationMirror.shouldShow(item, library: library))
+            let hidden = NotificationMirror.peekContent(item, hideContent: true)
+            check("Private mode hides the message", !hidden.text.contains("coming") && !hidden.title.contains("Rahim"))
+            let shown = NotificationMirror.peekContent(item, hideContent: false)
+            check("Normal mode shows sender and message", shown.title == "Rahim" && shown.text == "Are you coming?")
+            library.notificationsEnabled = true
+            settings.islandEnabled = true
+            NotificationMirror.shared.deliver(item)
+            check("Notification appears on the island", IslandModel.shared.peek?.kind.category == 15)
+            check("Notification peek is a card", IslandModel.shared.peek.map { !$0.kind.isSlim } == true)
+            IslandController.shared.dismissPeek()
+            library.notificationsEnabled = false
+        }
+        IslandController.shared.showPeek(.network(online: false))
+        check("Offline pop-up appears", IslandModel.shared.peek?.kind == .network(online: false))
+        IslandController.shared.dismissPeek()
+
+        step("Night dimming")
+        let dhaka = TimeZone(identifier: "Asia/Dhaka")!
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = dhaka
+        let june = cal.date(from: DateComponents(year: 2026, month: 6, day: 21, hour: 12))!
+        if let sun = NightDimmer.sunTimes(for: june, latitude: 23.81, longitude: 90.41, timeZone: dhaka) {
+            let rise = cal.dateComponents([.hour, .minute], from: sun.sunrise)
+            let set = cal.dateComponents([.hour, .minute], from: sun.sunset)
+            let riseMin = (rise.hour ?? 0) * 60 + (rise.minute ?? 0), setMin = (set.hour ?? 0) * 60 + (set.minute ?? 0)
+            check("Dhaka sunrise in June ≈ 5:11", abs(riseMin - 311) <= 8, "\(rise.hour ?? 0):\(rise.minute ?? 0)")
+            check("Dhaka sunset in June ≈ 18:49", abs(setMin - 1129) <= 8, "\(set.hour ?? 0):\(set.minute ?? 0)")
+        } else {
+            check("Sun times computed", false)
+        }
+        let evening = cal.date(bySettingHour: 19, minute: 0, second: 0, of: june)!
+        let morning = cal.date(bySettingHour: 6, minute: 0, second: 0, of: june)!
+        func f(_ h: Int, _ m: Int = 0) -> Double {
+            let now = cal.date(bySettingHour: h, minute: m, second: 0, of: june)!
+            return NightDimmer.factor(now: now, schedule: .sun, darkMode: false,
+                                      window: NightDimmer.window(now: now, start: evening, end: morning))
+        }
+        check("No dimming at noon", f(12) == 0)
+        check("Full dimming at midnight", f(0) == 1)
+        check("Full dimming at 23:00", f(23) == 1)
+        check("Halfway at sunset (fading in)", abs(f(19) - 0.5) < 0.01, "\(f(19))")
+        check("Fading in before sunset", f(18, 45) > 0 && f(18, 45) < 0.5)
+        check("No dimming well before sunset", f(18, 0) == 0)
+        check("Fading out after sunrise", f(6, 15) > 0 && f(6, 15) < 0.5, "\(f(6, 15))")
+        check("No dimming mid-morning", f(8) == 0)
+        check("Dark Mode schedule follows the system", NightDimmer.factor(now: june, schedule: .darkMode, darkMode: true, window: (june, june)) == 1
+              && NightDimmer.factor(now: june, schedule: .darkMode, darkMode: false, window: (june, june)) == 0)
+        let dimmer = NightDimmer.shared
+        dimmer.start()
+        library.dimEnabled = false
+        dimmer.update()
+        check("Off means no dimming", dimmer.level == 0)
+        library.dimStrength = 0.3
+        dimmer.preview(seconds: 0.5)
+        check("Preview dims at the chosen strength", abs(dimmer.level - 0.3) < 0.001, "\(dimmer.level)")
+        library.dimEnabled = true
+        library.dimSchedule = .custom
+        dimmer.pauseForTonight()
+        check("Not tonight pauses dimming", dimmer.isPaused)
+        dimmer.resume()
+        check("Resume works", !dimmer.isPaused)
+        library.dimTarget = .screen
+        dimmer.preview(seconds: 0.5)
+        check("Screen dimming layer survives a preview", true)
+        library.dimTarget = .uthon
+        library.dimEnabled = false
+        library.dimSchedule = .sun
+        dimmer.update()
+
+        step("Bottom dock")
+        let screen = CGRect(x: 0, y: 0, width: 1512, height: 982)
+        let visible = CGRect(x: 0, y: 70, width: 1512, height: 879)
+        let dock = CGRect(x: 456, y: 4, width: 600, height: 62)
+        let right = BottomDockController.frame(screen: screen, visible: visible, dock: dock, width: 300, height: 58, side: .right, offset: 0)
+        check("Sits right of the Dock", right.minX == 1066 && abs(right.midY - dock.midY) <= 1, "\(right)")
+        let left = BottomDockController.frame(screen: screen, visible: visible, dock: dock, width: 300, height: 58, side: .left, offset: 20)
+        check("Sits left of the Dock with distance", left.maxX == 426, "\(left)")
+        let corner = BottomDockController.frame(screen: screen, visible: visible, dock: nil, width: 300, height: 58, side: .right, offset: 0)
+        check("Without Accessibility: bottom-right corner", corner.maxX == 1500 && corner.minY >= 0)
+        let huge = BottomDockController.frame(screen: screen, visible: visible, dock: dock, width: 900, height: 58, side: .right, offset: 0)
+        check("Never runs off the screen", huge.maxX <= screen.maxX && huge.minX >= screen.minX)
+        let hidden = BottomDockController.frame(screen: screen, visible: screen, dock: nil, width: 300, height: 58, side: .left, offset: 0)
+        check("Auto-hidden macOS Dock: sits at the bottom", hidden.minY >= 0 && hidden.minY < 12)
+        check("Width grows with apps",
+              BottomDockController.width(items: ["apps", "clock"], appCount: 5, scale: 1) > BottomDockController.width(items: ["apps", "clock"], appCount: 2, scale: 1))
+        check("Width follows size", abs(BottomDockController.width(items: ["clock"], appCount: 0, scale: 1.2)
+              - 1.2 * BottomDockController.width(items: ["clock"], appCount: 0, scale: 1)) < 0.5)
+        let savedItems = library.bottomDockItems
+        library.bottomDockItems = ["clock"]
+        library.setBottomDockItem(.apps, true)
+        check("Turning an item on keeps the order", library.bottomDockItems == ["apps", "clock"])
+        library.setBottomDockItem(.apps, true)
+        check("No duplicates", library.bottomDockItems == ["apps", "clock"])
+        library.setBottomDockItem(.clock, false)
+        check("Turning an item off removes it", library.bottomDockItems == ["apps"])
+        library.bottomDockItems = savedItems
+        BottomDockController.shared.start()
+        library.bottomDockEnabled = true
+        library.bottomDockAutoHide = false
+        RunLoop.main.run(until: Date().addingTimeInterval(0.6))
+        check("Bottom dock appears when turned on", BottomDockController.shared.isShown)
+        library.bottomDockEnabled = false
+        RunLoop.main.run(until: Date().addingTimeInterval(0.6))
+        check("Bottom dock hides when turned off", !BottomDockController.shared.isShown)
+
+        step("New Bangla text")
+        settings.language = .bangla
+        check("Bangla for new screens", L("Night Dimming") == "রাতে কম আলো" && L("Bottom Dock") == "নিচের ডক")
+        settings.language = .english
+        check("English stays English", L("Night Dimming") == "Night Dimming")
+    }
+
+    /// Real requests to the Quran and Hadith sources (the CI Mac is online).
+    private static func onlineChecks() {
+        step("Online sources")
+        Task {
+            let ayah = await DailyVerseStore.fetchAyah(number: 262, translation: .bangla)
+            let english = await DailyVerseStore.fetchAyah(number: 1, translation: .english)
+            let hadith = await DailyVerseStore.fetchHadith(day: 0, salt: 0, translation: .bangla)
+            await MainActor.run {
+                check("Quran ayah downloads (Bangla)", ayah?.reference == "Al-Baqara 2:255" && ayah?.translation.isEmpty == false,
+                      String((ayah?.translation ?? "nil").prefix(60)))
+                check("Quran ayah downloads (English)", english?.reference == "Al-Faatiha 1:1" || english?.reference.hasSuffix("1:1") == true,
+                      english?.reference ?? "nil")
+                check("Hadith downloads (Bangla)", hadith?.translation.isEmpty == false,
+                      (hadith?.reference ?? "nil") + " " + String((hadith?.translation ?? "").prefix(60)))
+                check("Hadith has Arabic", hadith?.arabic.isEmpty == false)
                 finish()
             }
         }
@@ -601,7 +821,7 @@ enum SelfTest {
 
     private static func finish() {
         let failures = results.filter { !$0.ok }
-        var report = "Uthon self-test: \(results.count - failures.count) passed, \(failures.count) failed\n\n"
+        var report = "Nook self-test: \(results.count - failures.count) passed, \(failures.count) failed\n\n"
         for r in results {
             report += "\(r.ok ? "PASS" : "FAIL")  \(r.name)\(r.note.isEmpty ? "" : "  [\(r.note)]")\n"
         }

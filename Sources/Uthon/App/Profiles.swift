@@ -86,7 +86,7 @@ final class OnboardingWindowController {
         if window == nil {
             let hosting = NSHostingController(rootView: OnboardingView())
             let w = NSWindow(contentViewController: hosting)
-            w.title = L("Welcome to Uthon")
+            w.title = L("Welcome to Nook")
             w.styleMask = [.titled, .closable, .fullSizeContentView]
             w.titlebarAppearsTransparent = true
             w.isReleasedWhenClosed = false
@@ -108,8 +108,8 @@ private struct OnboardingView: View {
     @State private var step = 0
 
     private let steps: [(symbol: String, title: String, text: String)] = [
-        ("sparkles", "Welcome to Uthon",
-         "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away."),
+        ("sparkles", "Welcome to Nook",
+         "Your family's cosy little nook on the Mac: music, calendar, weather, files and handy controls, always one move away."),
         ("capsule.tophalf.filled", "The island at the top",
          "Move the mouse to the top centre of the screen (or press ⌃⌥Space) to open the island. Songs, timers and alerts appear there on their own."),
         ("square.grid.2x2.fill", "Make it yours",
@@ -153,7 +153,7 @@ private struct OnboardingView: View {
                     Button(L("Next")) { withAnimation { step += 1 } }
                         .keyboardShortcut(.defaultAction)
                 } else {
-                    Button(L("Start using Uthon")) {
+                    Button(L("Start using Nook")) {
                         OnboardingWindowController.shared.close()
                         IslandController.shared.expand(sticky: true)
                     }
