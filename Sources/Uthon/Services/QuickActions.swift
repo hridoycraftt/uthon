@@ -42,7 +42,10 @@ final class QuickActions: ObservableObject {
         let source = "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode"
         var error: NSDictionary?
         NSAppleScript(source: source)?.executeAndReturnError(&error)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.refresh() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            self?.refresh()
+            AppearanceWatcher.shared.changed()
+        }
     }
 
     func sleepDisplay() {

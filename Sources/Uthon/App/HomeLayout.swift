@@ -100,7 +100,9 @@ extension Color {
 
 extension AppSettings {
     /// A key that changes whenever the look changes, used to refresh every view at once.
-    var lookKey: String { "\(themeColor.rawValue)-\(customAccentHex)-\(language.rawValue)-\(tintGlass)" }
+    var lookKey: String {
+        "\(themeColor.rawValue)-\(customAccentHex)-\(language.rawValue)-\(tintGlass)-\(appearance.rawValue)-\(glassClarity.rawValue)-\(systemAppearanceTick)"
+    }
 
     var pageCount: Int { max(1, homePages.count) }
 

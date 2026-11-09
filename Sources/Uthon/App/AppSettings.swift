@@ -307,6 +307,8 @@ final class AppSettings: ObservableObject {
     @Published var language: AppLanguage { didSet { defaults.set(language.rawValue, forKey: Keys.language) } }
     @Published var homeSwipe: HomeSwipe { didSet { defaults.set(homeSwipe.rawValue, forKey: Keys.swipe) } }
     @Published var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: Keys.onboarded) } }
+    /// Bumped whenever macOS switches between light and dark (not saved).
+    @Published var systemAppearanceTick = 0
     /// Scrolling up/down on the Home tab or a pop-up changes the volume.
     @Published var scrollVolume: Bool { didSet { defaults.set(scrollVolume, forKey: Keys.scrollVolume) } }
     @Published var appFolders: [AppFolder] { didSet { Persist.save(appFolders, key: "appFolders") } }

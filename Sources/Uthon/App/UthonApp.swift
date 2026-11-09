@@ -29,9 +29,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // No Dock icon: Uthon lives in the menu bar, the notch and the screen edge.
         NSApp.setActivationPolicy(.accessory)
         MenuTracker.shared.start()
+        AppearanceWatcher.shared.start()
 
         AppSettings.shared.$appearance
-            .sink { appearance in NSApp.appearance = appearance.nsAppearance }
+            .sink { appearance in
+                NSApp.appearance = appearance.nsAppearance
+                DispatchQueue.main.async { AppearanceWatcher.shared.changed(force: true) }
+            }
             .store(in: &cancellables)
 
         if SelfTest.isActive {

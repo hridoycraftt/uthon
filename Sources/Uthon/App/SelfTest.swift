@@ -335,6 +335,21 @@ enum SelfTest {
         _ = DeviceBatteryStore.readDevices(report: &sourceReport)
         check("Every battery source runs without crashing", sourceReport.count == 5, sourceReport.joined(separator: " | "))
 
+        // Light / dark switching (bug reported in v0.5.3: glass stayed dark after switching to light)
+        step("Appearance switching")
+        let tickBefore = settings.systemAppearanceTick
+        let keyBefore = settings.lookKey
+        AppearanceWatcher.shared.changed(force: true)
+        check("System light/dark change rebuilds every surface", settings.systemAppearanceTick == tickBefore + 1 && settings.lookKey != keyBefore)
+        let keyLight = { settings.appearance = .light; return settings.lookKey }()
+        let keyDark = { settings.appearance = .dark; return settings.lookKey }()
+        settings.appearance = .system
+        check("App appearance setting changes the look key", keyLight != keyDark)
+        let glassBefore = settings.lookKey
+        settings.glassClarity = .frosted
+        check("Glass setting changes the look key", settings.lookKey != glassBefore)
+        settings.glassClarity = .automatic
+
         // Home presets
         step("Home presets")
         check("At least 6 presets", HomePreset.all.count >= 6, "\(HomePreset.all.count)")

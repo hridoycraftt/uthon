@@ -65,6 +65,7 @@ final class AudioController {
     }
 
     private func volumeChanged() {
+        QuickActions.shared.objectWillChange.send()
         let fromScroll = Date().timeIntervalSince(IslandController.shared.lastScrollVolume) < 1
         guard AppSettings.shared.hudEnabled || fromScroll else { return }
         IslandController.shared.showPeek(.volume(level: volume, muted: isMuted), duration: 1.6)
