@@ -230,6 +230,24 @@ enum SnapshotTour {
         add("capture-home") { capture("screen-island-home") }
         add("live-controls") { model.tab = .controls }
         add("capture-controls") { capture("screen-island-controls") }
+        // Opening animation: frames taken while the island grows, to check it grows out of
+        // the middle (the island's centre must stay on the screen's centre in every frame).
+        add("live-anim-reset") {
+            IslandController.shared.collapse()
+            model.tab = .home
+        }
+        add("live-anim-open") {
+            IslandController.shared.expand(tab: .home, sticky: true)
+            for (i, delay) in [0.0, 0.05, 0.1, 0.15, 0.22, 0.3, 0.45].enumerated() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { captureNow("anim-open-\(i)") }
+            }
+        }
+        add("live-anim-close") {
+            IslandController.shared.collapse()
+            for (i, delay) in [0.0, 0.05, 0.1, 0.18, 0.3].enumerated() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { captureNow("anim-close-\(i)") }
+            }
+        }
         add("live-peek") {
             IslandController.shared.collapse()
             IslandController.shared.showPeek(.volume(level: 0.5, muted: false), duration: 10)
@@ -375,6 +393,15 @@ enum SnapshotTour {
             return
         }
         try? png.write(to: folder.appendingPathComponent("\(name)-\(suffix).png"))
+    }
+
+    /// Screenshot without waiting, so an animation keeps running while frames are taken.
+    private static func captureNow(_ name: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        process.arguments = ["-x", "-R", "0,0,\(Int(NSScreen.main?.frame.width ?? 1024)),360",
+                             folder.appendingPathComponent("\(name)-\(suffix).png").path]
+        try? process.run()
     }
 
     private static func capture(_ name: String) {
