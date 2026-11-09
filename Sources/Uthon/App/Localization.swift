@@ -169,6 +169,8 @@ enum Localization {
         "Gestures (scroll for volume, swipe for pages or songs) are in the Island tab.": "জেসচার (স্ক্রলে ভলিউম, সোয়াইপে পেজ বা গান) আইল্যান্ড ট্যাবে আছে।",
         "Not playing": "বাজছে না",
         "No wireless devices connected": "কোনো ওয়্যারলেস ডিভাইস যুক্ত নেই", "Keyboard": "কীবোর্ড", "Mouse": "মাউস", "Trackpad": "ট্র্যাকপ্যাড",
+        "Show a pop-up when volume or brightness changes": "ভলিউম বা ব্রাইটনেস বদলালে পপ-আপ দেখাও",
+        "Turn off the second switch and scrolling never touches your volume. Swipe options are in the Island tab.": "দ্বিতীয় সুইচ বন্ধ করলে স্ক্রল কখনো ভলিউম বদলাবে না। সোয়াইপের অপশন আইল্যান্ড ট্যাবে।",
         // Onboarding
         "Welcome to Uthon": "উঠোনে স্বাগতম",
         "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির ছোট্ট উঠোন: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",

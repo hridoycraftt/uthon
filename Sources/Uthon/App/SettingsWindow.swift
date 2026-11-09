@@ -548,7 +548,8 @@ private struct AlertsSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle(L("Volume and brightness"), isOn: $settings.hudEnabled)
+                Toggle(L("Show a pop-up when volume or brightness changes"), isOn: $settings.hudEnabled)
+                Toggle(L("Scroll up/down on the island changes the volume"), isOn: $settings.scrollVolume)
                 Toggle(L("Replace the macOS volume/brightness popup"), isOn: $settings.replaceSystemHUD)
                     .disabled(!settings.hudEnabled)
                     .onChange(of: settings.replaceSystemHUD) { _, on in
@@ -565,7 +566,7 @@ private struct AlertsSettings: View {
             } header: {
                 Text(L("Island pop-ups"))
             } footer: {
-                Text(L("Gestures (scroll for volume, swipe for pages or songs) are in the Island tab."))
+                Text(L("Turn off the second switch and scrolling never touches your volume. Swipe options are in the Island tab."))
             }
             Section {
                 Toggle(L("New song"), isOn: $settings.peekTrack)
