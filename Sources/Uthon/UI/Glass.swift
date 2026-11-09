@@ -254,3 +254,45 @@ struct EqualizerBars: View {
         }
     }
 }
+
+// MARK: Content inside the system glass
+
+extension View {
+    /// Puts this view *inside* the system's Liquid Glass (macOS 26), the way the Dock is
+    /// built: macOS then picks the glass, its light/dark look and the colour of the text
+    /// and icons on it from what is behind, live. On macOS 14/15 the native material sits
+    /// behind the view instead.
+    func nookGlass<S: Shape>(_ shape: S) -> some View {
+        modifier(NookGlass(shape: shape))
+    }
+}
+
+struct NookGlass<S: Shape>: ViewModifier {
+    var shape: S
+    @ObservedObject private var settings = AppSettings.shared
+
+    /// True where Apple's Liquid Glass is available to this build and this Mac.
+    static var isSystemGlass: Bool {
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) { return true }
+        #endif
+        return false
+    }
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            content
+                .background {
+                    if settings.tintGlass { shape.fill(Theme.accent.opacity(0.12)) }
+                }
+                .glassEffect(settings.glassClarity == .clear ? .clear : .regular, in: shape)
+        } else {
+            content.background(LiquidGlass(shape: shape))
+        }
+        #else
+        content.background(LiquidGlass(shape: shape))
+        #endif
+    }
+}

@@ -46,21 +46,28 @@ struct IslandView: View {
         let glass = settings.islandStyle == .automatic && (mode != .closed || !model.hasNotch)
         let visible = mode != .closed || model.hasNotch || activity != nil
 
+        // macOS 26 with the automatic style: the content sits inside the system's own
+        // Liquid Glass, so macOS styles the glass and its text exactly like the Dock.
+        let systemGlass = settings.islandStyle == .automatic && NookGlass<NotchShape>.isSystemGlass
+
         ZStack(alignment: .top) {
             ZStack {
                 LiquidGlass(shape: shape)
-                    .opacity(glass ? 1 : 0)
+                    .opacity(glass && !systemGlass ? 1 : 0)
                 shape
                     .fill(Color.black)
-                    .opacity(glass ? 0 : 1)
+                    .opacity(glass || systemGlass ? 0 : 1)
             }
             .frame(width: size.width, height: size.height)
-            .shadow(color: .black.opacity(mode == .closed ? 0 : 0.3), radius: 20, y: 10)
+            .shadow(color: .black.opacity(mode == .closed || systemGlass ? 0 : 0.3), radius: 20, y: 10)
 
             content(mode)
                 .frame(width: size.width, height: size.height)
+                // Over the notch the closed island stays black, inside the same glass.
+                .background(shape.fill(Color.black).opacity(systemGlass && !glass ? 1 : 0))
                 .clipShape(shape)
                 .contentShape(shape)
+                .modifier(IslandGlass(on: systemGlass, shape: shape))
             NightDimOverlay()
                 .frame(width: size.width, height: size.height)
                 .clipShape(shape)
@@ -475,5 +482,17 @@ private struct BlurFade: ViewModifier {
 extension AnyTransition {
     static var blurFade: AnyTransition {
         .modifier(active: BlurFade(active: true), identity: BlurFade(active: false))
+    }
+}
+
+/// Applies the system glass only when it is in use (the choice is stable while the island
+/// animates, so its transitions are not disturbed).
+private struct IslandGlass: ViewModifier {
+    let on: Bool
+    let shape: NotchShape
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on { content.nookGlass(shape) } else { content }
     }
 }

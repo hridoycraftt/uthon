@@ -15,7 +15,7 @@ struct DockRootView: View {
         .id(settings.lookKey)
         .environment(\.locale, Localization.locale)
         // The glass stays outside the scaled content so the blur keeps its real size.
-        .background(LiquidGlass(shape: RoundedRectangle(cornerRadius: Theme.panelRadius * DockController.scale, style: .continuous)))
+        .nookGlass(RoundedRectangle(cornerRadius: Theme.panelRadius * DockController.scale, style: .continuous))
         .overlay(NightDimOverlay().clipShape(RoundedRectangle(cornerRadius: Theme.panelRadius * DockController.scale, style: .continuous)))
     }
 }

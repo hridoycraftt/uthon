@@ -407,7 +407,7 @@ struct BottomDockView: View {
         }
         .id(settings.lookKey)
         .environment(\.locale, Localization.locale)
-        .background(BottomDockBackground(radius: 16 * scale))
+        .nookGlass(RoundedRectangle(cornerRadius: 16 * scale, style: .continuous))
         .overlay(NightDimOverlay().clipShape(RoundedRectangle(cornerRadius: 16 * scale, style: .continuous)))
     }
 
@@ -633,22 +633,5 @@ private struct BottomNetwork: View {
         .monospacedDigit()
         .lineLimit(1)
         .onAppear { net.start() }
-    }
-}
-
-/// Glass with a light or dark layer that follows the system theme, like the macOS Dock,
-/// so text stays readable over any wallpaper (dark text on light glass in Light mode,
-/// light text on dark glass in Dark mode).
-private struct BottomDockBackground: View {
-    let radius: CGFloat
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        ZStack {
-            LiquidGlass(shape: shape)
-            shape.fill(scheme == .dark ? Color.black.opacity(0.32) : Color.white.opacity(0.55))
-            shape.strokeBorder(scheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08), lineWidth: 0.5)
-        }
     }
 }
