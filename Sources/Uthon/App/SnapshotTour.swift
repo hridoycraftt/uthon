@@ -139,6 +139,18 @@ enum SnapshotTour {
         }
         add("live-page3") { withAnimation { model.homePage = 2 } }
         add("capture-page3") { capture("screen-island-page3") }
+        add("live-sizes") {
+            s.homePages[2] = ["system", "batteries", "controls", "notes", "weather"]
+            s.widgetSizes = [:]
+        }
+        add("capture-sizes-small") { capture("screen-sizes-small") }
+        add("live-sizes-medium") {
+            s.setSize(HomeItem(.system), slots: 2)
+            s.setSize(HomeItem(.batteries), slots: 2)
+        }
+        add("capture-sizes-medium") { capture("screen-sizes-medium") }
+        add("live-sizes-large") { s.setSize(HomeItem(.system), slots: 3) }
+        add("capture-sizes-large") { capture("screen-sizes-large") }
         add("live-bangla") {
             model.homePage = 0
             s.language = .bangla

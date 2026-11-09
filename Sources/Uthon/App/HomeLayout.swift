@@ -176,15 +176,34 @@ extension AppSettings {
         }
     }
 
-    /// Change a widget's size if it still fits on its page.
+    /// Change a widget's size. If the page gets too full, the other widgets on it shrink
+    /// automatically (biggest first, never below their smallest size) to make room.
+    /// Making a widget smaller frees space that the others then share automatically.
+    /// Returns false only if even the smallest sizes would not fit.
     @discardableResult
     func setSize(_ item: HomeItem, slots newSize: Int) -> Bool {
         let size = min(3, max(item.minSlots, newSize))
-        if let index = pageOf(item) {
-            let others = homeItems(page: index).filter { $0 != item }.reduce(0) { $0 + slots(of: $1) }
-            guard others + size <= HomeWidget.maxSlots else { return false }
+        guard let index = pageOf(item) else {
+            widgetSizes[item.rawValue] = size
+            return true
         }
-        widgetSizes[item.rawValue] = size
+        let others = page(index).compactMap(HomeItem.init(rawValue:)).filter { $0 != item }
+        var sizes = Dictionary(uniqueKeysWithValues: others.map { ($0.rawValue, slots(of: $0)) })
+        var total = sizes.values.reduce(0, +) + size
+        while total > HomeWidget.maxSlots {
+            // Shrink the biggest neighbour that can still get smaller.
+            guard let victim = others
+                .filter({ (sizes[$0.rawValue] ?? 1) > $0.minSlots })
+                .max(by: { (sizes[$0.rawValue] ?? 1) < (sizes[$1.rawValue] ?? 1) }) else { return false }
+            sizes[victim.rawValue, default: 1] -= 1
+            total -= 1
+        }
+        var updated = widgetSizes
+        for other in others where sizes[other.rawValue] != slots(of: other) {
+            updated[other.rawValue] = sizes[other.rawValue]
+        }
+        updated[item.rawValue] = size
+        widgetSizes = updated
         return true
     }
 

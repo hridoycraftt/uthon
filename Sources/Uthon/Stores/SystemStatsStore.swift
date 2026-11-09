@@ -15,6 +15,12 @@ final class SystemStatsStore: ObservableObject {
     let memoryTotal: UInt64 = ProcessInfo.processInfo.physicalMemory
     @Published private(set) var battery: Battery?
     @Published private(set) var diskFree: Int64?
+    @Published private(set) var diskTotal: Int64?
+
+    var diskUsedFraction: Double {
+        guard let free = diskFree, let total = diskTotal, total > 0 else { return 0 }
+        return 1 - Double(free) / Double(total)
+    }
 
     private var timer: Timer?
     private var lastTicks: (busy: UInt64, total: UInt64)?
@@ -44,8 +50,9 @@ final class SystemStatsStore: ObservableObject {
         cpu = readCPU()
         memoryUsed = readMemoryUsed()
         battery = readBattery()
-        let values = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        let values = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey])
         diskFree = values?.volumeAvailableCapacityForImportantUsage
+        diskTotal = values?.volumeTotalCapacity.map(Int64.init)
     }
 
     private func readCPU() -> Double {

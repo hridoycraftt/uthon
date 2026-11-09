@@ -135,7 +135,18 @@ enum SelfTest {
         check("Removing pages keeps what fits", settings.pageCount == 1)
         settings.homePages = [["calendar", "todo"]]
         check("Widget can be made large", settings.setSize(HomeItem(.calendar), slots: 3) && settings.slots(of: HomeItem(.calendar)) == 3)
-        check("Too big for the page is refused", !settings.setSize(HomeItem(.todo), slots: 3))
+        check("Making a widget bigger shrinks its neighbour", settings.setSize(HomeItem(.todo), slots: 3)
+              && settings.slots(of: HomeItem(.todo)) == 3 && settings.slots(of: HomeItem(.calendar)) == 2)
+        settings.homePages = [["music", "batteries"]]
+        settings.widgetSizes = ["music": 3]
+        check("Large Batteries turns a large Music player medium", settings.setSize(HomeItem(.batteries), slots: 3)
+              && settings.slots(of: HomeItem(.music)) == 2 && settings.slotsUsed(page: 0) <= 5,
+              "music \(settings.slots(of: HomeItem(.music))), batteries \(settings.slots(of: HomeItem(.batteries)))")
+        check("Every widget on the page is still shown", settings.homeItems(page: 0).count == 2)
+        settings.homePages = [["music", "calendar", "weather", "shortcuts"]]
+        settings.widgetSizes = [:]
+        check("No room even at the smallest sizes is refused", !settings.setSize(HomeItem(.weather), slots: 3))
+        settings.homePages = [["calendar", "todo"]]
         check("Music is never smaller than 2", { settings.widgetSizes["music"] = 1; return settings.slots(of: HomeItem(.music)) == 2 }())
         settings.setColor(.ocean, for: HomeItem(.calendar))
         check("Widget color is saved", settings.color(of: HomeItem(.calendar)) == .ocean)

@@ -528,43 +528,98 @@ struct WeatherTile: View {
     }
 }
 
-struct SystemTile: View {
-    @ObservedObject private var stats = SystemStatsStore.shared
+/// One ring in a ResponsiveRings row.
+struct RingItem: Identifiable {
+    let id: String
+    let progress: Double
+    let color: Color
+    var centerText: String? = nil
+    var centerSymbol: String? = nil
+    var symbolColor: Color = .primary
+    let caption: String
+    var help: String = ""
+}
+
+/// A row of rings that sizes itself to the space it gets, so small, medium and large
+/// widgets never overlap or leave rings tiny.
+struct ResponsiveRings: View {
+    let items: [RingItem]
+    var showCaptions = true
+    var maxDiameter: CGFloat = 72
 
     var body: some View {
-        WidgetTile {
-            VStack(alignment: .leading, spacing: 0) {
-                SectionLabel("System")
-                Spacer(minLength: 6)
-                HStack(spacing: 0) {
-                    gauge("CPU", stats.cpu)
-                    Spacer(minLength: 4)
-                    gauge("RAM", stats.memoryFraction)
+        GeometryReader { geo in
+            let n = CGFloat(max(1, items.count))
+            let gap: CGFloat = 10
+            let captionHeight: CGFloat = showCaptions ? 16 : 0
+            let byWidth = (geo.size.width - gap * (n - 1)) / n
+            let byHeight = geo.size.height - captionHeight - 4
+            let d = max(24, min(maxDiameter, byWidth, byHeight))
+            HStack(spacing: gap) {
+                ForEach(items) { item in
+                    VStack(spacing: 4) {
+                        ZStack {
+                            RingProgress(progress: item.progress, lineWidth: max(3, d * 0.1), color: item.color)
+                            if let symbol = item.centerSymbol {
+                                Image(systemName: symbol)
+                                    .font(.system(size: d * 0.3, weight: .medium))
+                                    .foregroundStyle(item.symbolColor)
+                            } else if let text = item.centerText {
+                                Text(text)
+                                    .font(.system(size: max(9, d * 0.22), weight: .semibold, design: .rounded))
+                                    .monospacedDigit()
+                                    .minimumScaleFactor(0.6)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, d * 0.12)
+                            }
+                        }
+                        .frame(width: d, height: d)
+                        if showCaptions {
+                            Text(item.caption)
+                                .font(.system(size: max(8, min(11, d * 0.17)), weight: .semibold))
+                                .foregroundStyle(Color.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .frame(maxWidth: max(d, byWidth))
+                        }
+                    }
+                    .help(item.help)
                 }
-                Spacer(minLength: 0)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+}
+
+struct SystemTile: View {
+    @ObservedObject private var stats = SystemStatsStore.shared
+    @ObservedObject private var settings = AppSettings.shared
+
+    private static func color(_ value: Double) -> Color {
+        value > 0.85 ? .red : (value > 0.65 ? .orange : Theme.accent)
+    }
+
+    var body: some View {
+        let large = settings.slots(of: HomeItem(.system)) >= 3
+        var items = [
+            RingItem(id: "cpu", progress: stats.cpu, color: Self.color(stats.cpu),
+                     centerText: "\(Int((stats.cpu * 100).rounded()))%", caption: "CPU"),
+            RingItem(id: "ram", progress: stats.memoryFraction, color: Self.color(stats.memoryFraction),
+                     centerText: "\(Int((stats.memoryFraction * 100).rounded()))%", caption: "RAM"),
+        ]
+        if large {
+            let used = stats.diskUsedFraction
+            items.append(RingItem(id: "disk", progress: used, color: Self.color(used),
+                                  centerText: "\(Int((used * 100).rounded()))%", caption: L("Disk")))
+        }
+        return WidgetTile {
+            VStack(alignment: .leading, spacing: 6) {
+                SectionLabel("System")
+                ResponsiveRings(items: items)
             }
         }
         .onAppear { SystemStatsStore.shared.setActive(true) }
         .onDisappear { SystemStatsStore.shared.setActive(false) }
-    }
-}
-
-extension SystemTile {
-    fileprivate func gauge(_ label: String, _ value: Double) -> some View {
-        let color: Color = value > 0.85 ? .red : (value > 0.65 ? .orange : Theme.accent)
-        return VStack(spacing: 4) {
-            ZStack {
-                RingProgress(progress: value, lineWidth: 6, color: color)
-                Text("\(Int((value * 100).rounded()))%")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-            }
-            .frame(width: 54, height: 54)
-            Text(L(label))
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
@@ -615,11 +670,13 @@ struct BatteriesTile: View {
                     Spacer(minLength: 0)
                 } else {
                     Spacer(minLength: 4)
-                    HStack(alignment: .top, spacing: 0) {
-                        ForEach(list.prefix(size >= 2 ? 4 : 2)) { entry in
-                            gauge(entry, showName: size >= 2)
-                        }
-                    }
+                    ResponsiveRings(items: list.prefix(size >= 2 ? 4 : 2).map { entry in
+                        RingItem(id: entry.id, progress: Double(entry.percent) / 100, color: Self.color(for: entry.percent),
+                                 centerSymbol: entry.charging ? "bolt.fill" : entry.symbol,
+                                 symbolColor: entry.charging ? .green : .primary,
+                                 caption: size >= 2 ? "\(label(entry)) \(entry.percent)%" : "\(entry.percent)%",
+                                 help: "\(entry.name): \(entry.percent)%")
+                    })
                     Spacer(minLength: 0)
                 }
             }
@@ -638,30 +695,6 @@ struct BatteriesTile: View {
 
     private func label(_ entry: Entry) -> String {
         L(DeviceBatteryStore.shortName(for: entry.name))
-    }
-
-    /// A ring with the device icon inside and the level (and name) below.
-    private func gauge(_ entry: Entry, showName: Bool) -> some View {
-        VStack(spacing: 4) {
-            ZStack {
-                RingProgress(progress: Double(entry.percent) / 100, lineWidth: 5, color: Self.color(for: entry.percent))
-                Image(systemName: entry.charging ? "bolt.fill" : entry.symbol)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(entry.charging ? Color.green : Color.primary)
-            }
-            .frame(width: 48, height: 48)
-            Text("\(entry.percent)%")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-            if showName {
-                Text(label(entry))
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .help("\(entry.name): \(entry.percent)%")
     }
 
     /// Large size: ring, full name, a status word and a level bar.
