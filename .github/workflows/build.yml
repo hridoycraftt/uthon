@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-15-intel   # builds the universal (Apple Silicon + Intel) app; Intel runners are easier to get
     steps:
       - uses: actions/checkout@v4
 
