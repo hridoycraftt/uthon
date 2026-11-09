@@ -174,7 +174,27 @@ final class IslandModel: ObservableObject {
         CGSize(width: max(740, notchSize.width + 520), height: max(notchSize.height, 40) + 176 + (pickerOpen ? Self.galleryHeight : 0))
     }
 
-    static var scale: CGFloat { CGFloat(min(max(AppSettings.shared.islandScale, 0.8), 1.5)) }
+    /// Size of the screen the island is on (set by IslandController).
+    @Published var screenSize = CGSize(width: 1512, height: 982)
+
+    /// The island's size: the user's setting, and with "fit to screen" on, never wider than
+    /// about 45% (or taller than a quarter) of the screen. Everything inside is laid out at
+    /// the base size and scaled, so icons, text and tiles all follow together.
+    static var scale: CGFloat {
+        let settings = AppSettings.shared
+        let user = CGFloat(min(max(settings.islandScale, 0.6), 1.5))
+        guard settings.islandAutoSize else { return user }
+        let fit = autoScale(screen: shared.screenSize, notch: shared.notchSize)
+        return min(max(fit * user, 0.6), 1.5)
+    }
+
+    /// 1 on big screens; less on small ones so the open island leaves most of the screen free.
+    static func autoScale(screen: CGSize, notch: CGSize) -> CGFloat {
+        guard screen.width > 100, screen.height > 100 else { return 1 }
+        let width = max(740, notch.width + 520)
+        let height = max(notch.height, 40) + 176
+        return min(1, screen.width * 0.45 / width, screen.height * 0.24 / height)
+    }
 
     var expandedSize: CGSize {
         CGSize(width: baseExpandedSize.width * Self.scale, height: baseExpandedSize.height * Self.scale)

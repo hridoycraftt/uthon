@@ -349,8 +349,15 @@ private struct LookSettings: View {
                 .pickerStyle(.segmented)
             }
             Section(L("Size")) {
-                LabeledSlider(title: L("Island size"), value: $settings.islandScale, range: 0.85...1.4, step: 0.05,
+                Toggle(L("Fit the island to this screen"), isOn: $settings.islandAutoSize)
+                LabeledSlider(title: L(settings.islandAutoSize ? "Island fine-tune" : "Island size"), value: $settings.islandScale,
+                              range: 0.6...1.5, step: 0.05,
                               format: { "\(Int(($0 * 100).rounded()))%" })
+                LabeledContent(L("Island size now"), value: "\(Int((IslandModel.scale * 100).rounded()))%")
+                    .id(settings.islandScale + (settings.islandAutoSize ? 1000 : 0))
+                Text(L("On a smaller screen (like a 13 or 14 inch MacBook) the island shrinks to fit, with all icons, text and widgets. Use the slider to make it smaller or bigger."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 LabeledSlider(title: L("Tab icon size"), value: $settings.tabIconSize, range: 11...22, step: 1,
                               format: { "\(Int($0)) pt" })
                 LabeledSlider(title: L("Dock size"), value: $settings.dockScale, range: 0.85...1.4, step: 0.05,

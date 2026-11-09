@@ -487,11 +487,20 @@ enum SelfTest {
         // Island geometry
         step("Island geometry")
         let model = IslandModel.shared
+        settings.islandAutoSize = false
         settings.islandScale = 1.2
         check("Island size setting scales the island",
               abs(model.expandedSize.width - model.baseExpandedSize.width * 1.2) < 0.5)
         settings.islandScale = 1.0
         check("Island fits a 1280-wide screen", model.expandedSize.width <= 1280)
+        settings.islandAutoSize = true
+        info("Island on this screen", "screen \(model.screenSize), size \(Int(IslandModel.scale * 100))%")
+        check("Island fits this screen (auto)", model.expandedSize.width <= model.screenSize.width * 0.46 + 1
+              || IslandModel.scale == 0.6, "\(model.expandedSize.width) of \(model.screenSize.width)")
+        for (w, h) in [(1280.0, 800.0), (1440.0, 900.0), (1512.0, 982.0), (1728.0, 1117.0), (2560.0, 1440.0), (1147.0, 745.0)] {
+            let f = IslandModel.autoScale(screen: CGSize(width: w, height: h), notch: CGSize(width: 200, height: 32))
+            check("Island fits a \(Int(w))×\(Int(h)) screen", 740 * f <= w * 0.46 && f <= 1 && f > 0.5, "\(Int(f * 100))%")
+        }
 
         // Pop-ups
         step("Pop-ups")
@@ -649,6 +658,18 @@ enum SelfTest {
         let crowded = BottomDockController.fit(base: 800, screen: CGRect(x: 0, y: 0, width: 1024, height: 768),
                                                dock: CGRect(x: 37, y: 4, width: 951, height: 62), side: .right, offset: 0)
         check("Fit: reports no room", crowded.tooWide)
+        let notch = CGSize(width: 200, height: 32)
+        check("Island: big screen keeps full size", IslandModel.autoScale(screen: CGSize(width: 2240, height: 1260), notch: notch) == 1)
+        let mbp = IslandModel.autoScale(screen: CGSize(width: 1512, height: 982), notch: notch)
+        check("Island: 14-inch MacBook fits", mbp < 1 && 740 * mbp <= 1512 * 0.46, "\(mbp)")
+        let bigText = IslandModel.autoScale(screen: CGSize(width: 1147, height: 745), notch: notch)
+        check("Island: larger-text MacBook leaves half the screen free", 740 * bigText <= 1147 * 0.46 && bigText >= 0.6, "\(bigText)")
+        let savedAuto = settings.islandAutoSize, savedScale = settings.islandScale
+        settings.islandAutoSize = false
+        settings.islandScale = 0.6
+        check("Island: can be made much smaller", IslandModel.scale == 0.6)
+        settings.islandAutoSize = savedAuto
+        settings.islandScale = savedScale
         check("Match: bar exactly as tall as the Dock", abs(BottomDockController.matchedScale(dockHeight: 64, tileSize: 48, user: 1, match: true)
               * BottomDockController.baseHeight - 64) < 0.01)
         check("Match: bigger Dock, bigger bar", BottomDockController.matchedScale(dockHeight: 80, tileSize: nil, user: 1, match: true) > 1.4)

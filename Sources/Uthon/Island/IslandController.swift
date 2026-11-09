@@ -115,6 +115,7 @@ final class IslandController {
         }
         if model.hasNotch != hasNotch { model.hasNotch = hasNotch }
         if model.notchSize != notch { model.notchSize = notch }
+        if model.screenSize != s.frame.size { model.screenSize = s.frame.size }
 
         // The window never changes size while in use: it is made big enough for the largest
         // island (biggest size setting, widget gallery open) once. Resizing it while the

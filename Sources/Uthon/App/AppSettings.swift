@@ -253,6 +253,7 @@ final class AppSettings: ObservableObject {
         static let onboarded = "onboardingDone"
         static let scrollVolume = "scrollVolume"
         static let islandScale = "islandScale"
+        static let islandAutoSize = "islandAutoSize"
         static let tabIconSize = "tabIconSize"
         static let dockScale = "dockScale"
         static let controlOrder = "controlOrder"
@@ -293,6 +294,8 @@ final class AppSettings: ObservableObject {
     @Published var peekScreenshots: Bool { didSet { defaults.set(peekScreenshots, forKey: Keys.peekScreenshots) } }
     /// Overall size of the open island and its pop-ups (0.85 ... 1.4).
     @Published var islandScale: Double { didSet { defaults.set(islandScale, forKey: Keys.islandScale) } }
+    /// Fit the island to the screen (smaller on a 13–14" MacBook, as is on big screens).
+    @Published var islandAutoSize: Bool { didSet { defaults.set(islandAutoSize, forKey: Keys.islandAutoSize) } }
     /// Size of the tab icons at the top of the open island.
     @Published var tabIconSize: Double { didSet { defaults.set(tabIconSize, forKey: Keys.tabIconSize) } }
     /// Overall size of the side dock (0.85 ... 1.4).
@@ -351,6 +354,7 @@ final class AppSettings: ObservableObject {
         liveTimers = defaults.object(forKey: Keys.liveTimers) as? Bool ?? true
         peekScreenshots = defaults.object(forKey: Keys.peekScreenshots) as? Bool ?? true
         islandScale = defaults.object(forKey: Keys.islandScale) as? Double ?? 1.0
+        islandAutoSize = defaults.object(forKey: Keys.islandAutoSize) as? Bool ?? true
         tabIconSize = defaults.object(forKey: Keys.tabIconSize) as? Double ?? 15
         dockScale = defaults.object(forKey: Keys.dockScale) as? Double ?? 1.0
         controlOrder = defaults.stringArray(forKey: Keys.controlOrder) ?? ControlKind.allCases.map(\.rawValue)
