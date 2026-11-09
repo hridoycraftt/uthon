@@ -314,55 +314,106 @@ private struct IslandHeader: View {
     /// Room the notch takes in the header (in the island's own, unscaled layout).
     private var notchGap: CGFloat { model.hasNotch ? model.notchSize.width / IslandModel.scale + 24 : 16 }
 
-    /// Whether the tabs must drop their labels to leave room for the right side and the notch.
+    private var inset: CGFloat { IslandModel.expandedFlare + 12 }
+    private var iconSize: CGFloat { CGFloat(settings.tabIconSize) }
+    private func pillWidth(compact: Bool) -> CGFloat { iconSize + 6 + (compact ? 16 : 20) }
+    private var labelWidth: CGFloat { CGFloat(L(model.tab.title).count) * max(12, iconSize * 0.85) * 0.62 + 6 }
+    private func tabsWidth(_ count: Int, compact: Bool) -> CGFloat {
+        CGFloat(count) * pillWidth(compact: compact) + CGFloat(max(count - 1, 0)) * (compact ? 2 : 4)
+            + (compact ? 0 : labelWidth)
+    }
+
+    /// No notch: tabs left, everything else right; tabs drop their labels when short of room.
     private func compactTabs(width: CGFloat) -> Bool {
-        let icon = CGFloat(settings.tabIconSize)
-        let tabs = settings.visibleIslandTabs
-        let pills = CGFloat(tabs.count) * (icon + 6 + 20) + CGFloat(max(tabs.count - 1, 0)) * 4
-        let label = CGFloat(L(model.tab.title).count) * max(12, icon * 0.85) * 0.62 + 6
-        let right: CGFloat = 220
-        let available = width - 2 * (IslandModel.expandedFlare + 12) - notchGap - right
-        return pills + label > available
+        let available = width - 2 * inset - 16 - 220
+        return tabsWidth(settings.visibleIslandTabs.count, compact: false) > available
     }
 
     var body: some View {
         GeometryReader { geo in
-            row(compact: compactTabs(width: geo.size.width))
-                .frame(width: geo.size.width, height: geo.size.height)
+            Group {
+                if model.hasNotch {
+                    notchRow(width: geo.size.width)
+                } else {
+                    row(compact: compactTabs(width: geo.size.width))
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
+    }
+
+    private func pill(_ tab: IslandTab, compact: Bool) -> some View {
+        TabPill(tab: tab,
+                badge: tab == .shelf && !shelf.paths.isEmpty ? shelf.paths.count : nil,
+                selected: model.tab == tab,
+                compact: compact,
+                namespace: tabNamespace) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                model.tab = tab
+                model.editing = false
+                model.openFolder = nil
+            }
+        }
+    }
+
+    /// With a notch: the notch splits the row. Tabs fill the left side; any that do not fit
+    /// continue right of the notch, then Edit, the clock and the buttons (the clock and the
+    /// side-dock button give way first). Nothing ever sits under the notch.
+    private func notchRow(width: CGFloat) -> some View {
+        let tabs = settings.visibleIslandTabs
+        let half = max(0, (width - 2 * inset - notchGap) / 2)
+        let labelled = tabsWidth(tabs.count, compact: false) <= half
+        let compact = !labelled
+        let fitLeft = labelled ? tabs.count
+            : max(1, Int((half + 2) / (pillWidth(compact: true) + 2)))
+        let left = Array(tabs.prefix(fitLeft))
+        let right = Array(tabs.dropFirst(fitLeft))
+        return HStack(spacing: 0) {
+            HStack(spacing: compact ? 2 : 4) {
+                ForEach(left) { pill($0, compact: compact) }
+            }
+            .frame(width: half, alignment: .leading)
+            Color.clear.frame(width: notchGap)
+            HStack(spacing: 6) {
+                HStack(spacing: 2) {
+                    ForEach(right) { pill($0, compact: true) }
+                }
+                .fixedSize()
+                Spacer(minLength: 0)
+                ViewThatFits(in: .horizontal) {
+                    rightGroup(weather: true, batteries: true)
+                    rightGroup(weather: true, batteries: false)
+                    rightGroup(weather: false, batteries: false)
+                    rightGroup(weather: false, batteries: false, clock: false)
+                    rightGroup(weather: false, batteries: false, clock: false, dockButton: false)
+                }
+            }
+            .frame(width: half, alignment: .trailing)
+        }
+        .padding(.horizontal, inset)
     }
 
     private func row(compact: Bool) -> some View {
         HStack(spacing: 0) {
             HStack(spacing: compact ? 2 : 4) {
-                ForEach(settings.visibleIslandTabs) { tab in
-                    TabPill(tab: tab,
-                            badge: tab == .shelf && !shelf.paths.isEmpty ? shelf.paths.count : nil,
-                            selected: model.tab == tab,
-                            compact: compact,
-                            namespace: tabNamespace) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            model.tab = tab
-                            model.editing = false
-                            model.openFolder = nil
-                        }
-                    }
-                }
+                ForEach(settings.visibleIslandTabs) { pill($0, compact: compact) }
             }
-            Spacer(minLength: notchGap)
+            Spacer(minLength: 16)
             // When space is short, drop the battery chips first, then the weather.
             // Nothing ever wraps onto two lines.
             ViewThatFits(in: .horizontal) {
                 rightGroup(weather: true, batteries: true)
                 rightGroup(weather: true, batteries: false)
                 rightGroup(weather: false, batteries: false)
+                rightGroup(weather: false, batteries: false, clock: false)
             }
             .layoutPriority(1)
         }
-        .padding(.horizontal, IslandModel.expandedFlare + 12)
+        .padding(.horizontal, inset)
     }
 
-    private func rightGroup(weather showWeather: Bool, batteries showBatteries: Bool) -> some View {
+    private func rightGroup(weather showWeather: Bool, batteries showBatteries: Bool,
+                            clock: Bool = true, dockButton: Bool = true) -> some View {
         HStack(spacing: 8) {
             if model.tab == .home || model.tab == .controls {
                 Button {
@@ -400,14 +451,16 @@ private struct IslandHeader: View {
                     .help("\(device.name): \(device.percent)%")
                 }
             }
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                Text(context.date, format: .dateTime.hour().minute())
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize()
+            if clock {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(context.date, format: .dateTime.hour().minute())
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .fixedSize()
+                }
             }
-            if settings.sideDockEnabled {
+            if settings.sideDockEnabled && dockButton {
                 IconButton(symbol: settings.edge == .right ? "sidebar.right" : "sidebar.left", help: "Open the side dock", size: 14) {
                     IslandController.shared.collapse()
                     DockController.shared.show(sticky: true)
