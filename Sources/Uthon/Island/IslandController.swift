@@ -19,6 +19,8 @@ final class IslandController {
     private var timer: Timer?
     private var slowTimer: Timer?
     private var outsideSince: Date?
+    private var hoverSince: Date?
+    static let hoverDelay: TimeInterval = 0.07
     private var peekDeadline: Date?
     private var peekHovered = false
     private var stickyOpen = false
@@ -148,13 +150,14 @@ final class IslandController {
         if screen == nil { layout() }
         panel.ignoresMouseEvents = false
         outsideSince = nil
-        withAnimation(IslandModel.spring) {
-            model.expanded = true
-            if let peek = model.peek, peek.kind.isSlim == false, peek.kind != .timerDone {
-                model.peek = nil
-            }
+        // The view animates the shape itself (IslandView), so no competing animation here.
+        model.expanded = true
+        if let peek = model.peek, peek.kind.isSlim == false, peek.kind != .timerDone {
+            model.peek = nil
         }
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        if AppSettings.shared.hapticOnOpen {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        }
         NowPlayingStore.shared.setActive(true)
         CalendarStore.shared.refresh()
     }
@@ -167,13 +170,11 @@ final class IslandController {
             return
         }
         stickyOpen = false
-        withAnimation(IslandModel.spring) {
-            model.expanded = false
-            model.dropTargeted = false
-            model.editing = false
-            model.pickerOpen = false
-            model.openFolder = nil
-        }
+        model.expanded = false
+        model.dropTargeted = false
+        model.editing = false
+        model.pickerOpen = false
+        model.openFolder = nil
         panel?.ignoresMouseEvents = true
         if panel?.isKeyWindow == true { panel?.resignKey() }
         NowPlayingStore.shared.setActive(false)
@@ -266,7 +267,15 @@ final class IslandController {
         let hot = CGSize(width: max(compact.width, 220), height: invisible ? 4 : compact.height)
         if Self.contains(rect(for: hot, on: s), mouse) {
             let draggingFiles = pressed && (NSPasteboard(name: .drag).types ?? []).contains(.fileURL)
-            expand(tab: draggingFiles ? .shelf : nil)
+            // Open only when the pointer rests for a moment, so passing over the menu bar
+            // never flicks the island open and shut.
+            if hoverSince == nil { hoverSince = Date() }
+            if draggingFiles || Date().timeIntervalSince(hoverSince ?? Date()) >= Self.hoverDelay {
+                hoverSince = nil
+                expand(tab: draggingFiles ? .shelf : nil)
+            }
+        } else {
+            hoverSince = nil
         }
     }
 
@@ -433,7 +442,9 @@ final class IslandController {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                     model.homePage = min(settings.pageCount - 1, max(0, model.homePage + direction))
                 }
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                if AppSettings.shared.hapticOnOpen {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                }
             } else {
                 NowPlayingStore.shared.command(direction > 0 ? "next track" : "previous track")
             }

@@ -159,6 +159,10 @@ final class IslandModel: ObservableObject {
     static let compactFlare: CGFloat = 6
     static let expandedFlare: CGFloat = 14
     static let spring = Animation.spring(response: 0.42, dampingFraction: 0.8)
+    /// Opening: a soft, slightly lively spring like the Dynamic Island.
+    static let openSpring = Animation.spring(response: 0.5, dampingFraction: 0.78, blendDuration: 0.15)
+    /// Closing: quicker and without bounce, so it tucks away calmly.
+    static let closeSpring = Animation.spring(response: 0.36, dampingFraction: 0.95, blendDuration: 0.1)
     static let peekSpring = Animation.spring(response: 0.36, dampingFraction: 0.76)
 
     /// Layout size of the open island before the user's size setting is applied.

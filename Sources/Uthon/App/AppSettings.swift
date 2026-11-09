@@ -309,6 +309,8 @@ final class AppSettings: ObservableObject {
     @Published var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: Keys.onboarded) } }
     /// Bumped whenever macOS switches between light and dark (not saved).
     @Published var systemAppearanceTick = 0
+    /// A small trackpad tap when the island opens (off by default).
+    @Published var hapticOnOpen: Bool { didSet { defaults.set(hapticOnOpen, forKey: "hapticOnOpen") } }
     /// Scrolling up/down on the Home tab or a pop-up changes the volume.
     @Published var scrollVolume: Bool { didSet { defaults.set(scrollVolume, forKey: Keys.scrollVolume) } }
     @Published var appFolders: [AppFolder] { didSet { Persist.save(appFolders, key: "appFolders") } }
@@ -369,6 +371,7 @@ final class AppSettings: ObservableObject {
         homeSwipe = HomeSwipe(rawValue: defaults.string(forKey: Keys.swipe) ?? "") ?? .pages
         onboardingDone = defaults.bool(forKey: Keys.onboarded)
         scrollVolume = defaults.object(forKey: Keys.scrollVolume) as? Bool ?? true
+        hapticOnOpen = defaults.bool(forKey: "hapticOnOpen")
         appFolders = Persist.load([AppFolder].self, key: "appFolders") ?? []
     }
 

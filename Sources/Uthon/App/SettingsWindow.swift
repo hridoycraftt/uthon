@@ -534,6 +534,7 @@ private struct IslandSettings: View {
             }
             Section {
                 Toggle(L("Scroll up/down on the island changes the volume"), isOn: $settings.scrollVolume)
+                Toggle(L("Feel a light tap on the trackpad when the island opens"), isOn: $settings.hapticOnOpen)
                 Picker(L("Swipe left/right on the island"), selection: $settings.homeSwipe) {
                     ForEach(HomeSwipe.allCases) { Text(L($0.title)).tag($0) }
                 }

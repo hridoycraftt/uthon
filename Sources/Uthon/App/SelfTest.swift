@@ -418,6 +418,9 @@ enum SelfTest {
         }
         check("Every settings section is in the sidebar", Set(SettingsTab.groups.flatMap { $0 }) == Set(SettingsTab.allCases))
 
+        check("No vibration on open by default", !UserDefaults.standard.bool(forKey: "hapticOnOpen") || settings.hapticOnOpen)
+        check("Hover waits a moment before opening", IslandController.hoverDelay > 0 && IslandController.hoverDelay < 0.2)
+
         // Home presets
         step("Home presets")
         check("At least 6 presets", HomePreset.all.count >= 6, "\(HomePreset.all.count)")

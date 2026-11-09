@@ -64,11 +64,11 @@ struct IslandView: View {
         }
         .id(settings.lookKey)
         .environment(\.locale, Localization.locale)
-        .scaleEffect(visible ? 1 : 0.6, anchor: .top)
+        .scaleEffect(visible ? 1 : 0.92, anchor: .top)
         .opacity(visible ? 1 : 0)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.colorScheme, glass ? systemScheme : .dark)
-        .animation(IslandModel.spring, value: mode)
+        .animation(mode == .open ? IslandModel.openSpring : IslandModel.closeSpring, value: mode)
         .animation(IslandModel.spring, value: activity)
         .animation(IslandModel.peekSpring, value: model.peek?.id)
     }
@@ -85,8 +85,9 @@ struct IslandView: View {
                 .scaleEffect(scale, anchor: .top)
                 .frame(width: base.width * scale, height: base.height * scale, alignment: .top)
                 .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .scale(scale: 0.92, anchor: .top)).animation(IslandModel.spring.delay(0.05)),
-                    removal: .opacity.animation(.easeOut(duration: 0.12))
+                    insertion: .blurFade.combined(with: .scale(scale: 0.97, anchor: .top))
+                        .animation(.easeOut(duration: 0.3).delay(0.08)),
+                    removal: .opacity.animation(.easeIn(duration: 0.1))
                 ))
         case .peek:
             if let peek = model.peek {
@@ -454,5 +455,22 @@ private struct InlineHUD: View {
         .frame(width: 280)
         .background(Capsule().fill(Color.black.opacity(0.55)))
         .environment(\.colorScheme, .dark)
+    }
+}
+
+/// Content appears out of a soft blur (as on iPhone), instead of popping in.
+private struct BlurFade: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: active ? 10 : 0)
+            .opacity(active ? 0 : 1)
+    }
+}
+
+extension AnyTransition {
+    static var blurFade: AnyTransition {
+        .modifier(active: BlurFade(active: true), identity: BlurFade(active: false))
     }
 }
