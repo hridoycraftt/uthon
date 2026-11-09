@@ -74,6 +74,10 @@ final class BottomDockController: ObservableObject {
     @Published private(set) var tooWide = false
     /// The Dock's size came from Accessibility (exact) rather than an estimate.
     @Published private(set) var exactDock = false
+    /// The items that fit beside the Dock (the last ones drop off first when space is tight).
+    @Published private(set) var visibleItems: [BottomDockItem] = []
+    /// How many items were left out for lack of room.
+    @Published private(set) var droppedCount = 0
 
     var effectiveScale: CGFloat { Self.scale * fitScale }
 
@@ -202,6 +206,20 @@ final class BottomDockController: ObservableObject {
         return (max(ratio, 0.6), ratio < 0.6)
     }
 
+    /// Which items to show and how big, so the bar never covers the macOS Dock: first it
+    /// shrinks (down to 60%), then the last items drop off one by one.
+    static func plan(items: [BottomDockItem], appCount: Int, scale: CGFloat, screen: CGRect, dock: CGRect?,
+                     side: BottomDockSide, offset: CGFloat) -> (items: [BottomDockItem], scale: CGFloat, tooWide: Bool, dropped: Int) {
+        var shown = items
+        while !shown.isEmpty {
+            let base = width(items: shown.map(\.rawValue), appCount: appCount, scale: scale)
+            let f = fit(base: base, screen: screen, dock: dock, side: side, offset: offset)
+            if !f.tooWide { return (shown, f.scale, false, items.count - shown.count) }
+            shown.removeLast()
+        }
+        return ([], 1, !items.isEmpty, items.count)
+    }
+
     /// Without Accessibility: the Dock's width worked out from its settings (icon size and
     /// the apps in it), centred on the screen. Good to a few points.
     static func estimatedDockFrame(on screen: NSScreen) -> CGRect? {
@@ -239,11 +257,20 @@ final class BottomDockController: ObservableObject {
             lastDockCheck = Date()
         }
         let offset = CGFloat(library.bottomDockOffset)
-        let fit = Self.fit(base: contentWidth, screen: screen.frame, dock: dockFrame, side: library.bottomDockSide, offset: offset)
-        if abs(fit.scale - fitScale) > 0.005 { fitScale = fit.scale }
-        if fit.tooWide != tooWide { tooWide = fit.tooWide }
+        let plan = Self.plan(items: library.bottomDockItems.compactMap(BottomDockItem.init(rawValue:)),
+                             appCount: library.bottomDockAppURLs.count, scale: Self.scale,
+                             screen: screen.frame, dock: dockFrame, side: library.bottomDockSide, offset: offset)
+        if plan.items != visibleItems { visibleItems = plan.items }
+        if plan.dropped != droppedCount { droppedCount = plan.dropped }
+        if abs(plan.scale - fitScale) > 0.005 { fitScale = plan.scale }
+        if plan.tooWide != tooWide { tooWide = plan.tooWide }
+        guard !plan.items.isEmpty else {
+            hide()
+            return
+        }
+        let width = Self.width(items: plan.items.map(\.rawValue), appCount: library.bottomDockAppURLs.count, scale: Self.scale)
         let target = Self.frame(screen: screen.frame, visible: screen.visibleFrame, dock: dockFrame,
-                                width: contentWidth * fit.scale, height: Self.height * fit.scale,
+                                width: width * plan.scale, height: Self.height * plan.scale,
                                 side: library.bottomDockSide, offset: offset)
         if target != lastFrame || force {
             lastFrame = target
@@ -321,9 +348,11 @@ struct BottomDockView: View {
     @ObservedObject private var library = UserLibrary.shared
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var controller = BottomDockController.shared
+    /// Screenshots: show these items at full size instead of what fits on this screen.
+    var forcedItems: [BottomDockItem]?
 
     var body: some View {
-        let scale = controller.effectiveScale
+        let scale = forcedItems == nil ? controller.effectiveScale : BottomDockController.scale
         GeometryReader { geo in
             content
                 .frame(width: geo.size.width / scale, height: geo.size.height / scale)
@@ -336,7 +365,7 @@ struct BottomDockView: View {
         .overlay(NightDimOverlay().clipShape(RoundedRectangle(cornerRadius: 18 * scale, style: .continuous)))
     }
 
-    private var items: [BottomDockItem] { library.bottomDockItems.compactMap(BottomDockItem.init(rawValue:)) }
+    private var items: [BottomDockItem] { forcedItems ?? controller.visibleItems }
 
     private var content: some View {
         HStack(spacing: 0) {

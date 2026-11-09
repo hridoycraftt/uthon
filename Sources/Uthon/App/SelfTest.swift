@@ -649,6 +649,15 @@ enum SelfTest {
         let crowded = BottomDockController.fit(base: 800, screen: CGRect(x: 0, y: 0, width: 1024, height: 768),
                                                dock: CGRect(x: 37, y: 4, width: 951, height: 62), side: .right, offset: 0)
         check("Fit: reports no room", crowded.tooWide)
+        let tight = BottomDockController.plan(items: BottomDockItem.allCases, appCount: 3, scale: 1,
+                                              screen: CGRect(x: 0, y: 0, width: 1024, height: 768),
+                                              dock: CGRect(x: 160, y: 4, width: 700, height: 50), side: .right, offset: 0)
+        check("Plan: drops the last items when tight", tight.dropped > 0 && !tight.items.isEmpty && tight.items.first == .apps,
+              tight.items.map(\.rawValue).joined(separator: ","))
+        let roomy = BottomDockController.plan(items: [.apps, .clock], appCount: 3, scale: 1,
+                                              screen: CGRect(x: 0, y: 0, width: 2560, height: 1440),
+                                              dock: CGRect(x: 980, y: 4, width: 600, height: 62), side: .left, offset: 0)
+        check("Plan: keeps everything when there is room", roomy.dropped == 0 && roomy.scale == 1)
         if let screen = BottomDockController.dockScreen() {
             let estimate = BottomDockController.estimatedDockFrame(on: screen)
             let exact = BottomDockController.readDockFrame()

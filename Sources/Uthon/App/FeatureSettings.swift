@@ -378,8 +378,9 @@ struct BottomDockSettings: View {
                         Button(L("Check again")) { trusted = AXIsProcessTrusted() }
                     }
                 }
-                if library.bottomDockEnabled, bottom.tooWide {
-                    Label(L("Not enough room beside the Dock. Turn some items off, make it smaller, or make the macOS Dock smaller."),
+                if library.bottomDockEnabled, bottom.droppedCount > 0 {
+                    Label(L("Not enough room beside the Dock, so the last items are hidden. Turn some items off, make it smaller, or make the macOS Dock smaller.")
+                          + " (\(bottom.droppedCount) " + L("hidden") + ")",
                           systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
