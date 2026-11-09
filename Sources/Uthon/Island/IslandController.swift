@@ -148,6 +148,10 @@ final class IslandController {
         if let tab { model.tab = tab }
         if sticky { stickyOpen = true }
         guard !model.expanded else { return }
+        // The open island stays loaded between openings, so freshen what it shows.
+        if !AppSettings.shared.visibleIslandTabs.contains(model.tab) { model.tab = .home }
+        QuickActions.shared.refresh()
+        DownloadsStore.shared.refresh()
         if screen == nil { layout() }
         panel.ignoresMouseEvents = false
         outsideSince = nil

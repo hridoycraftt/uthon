@@ -91,10 +91,11 @@ struct IslandView: View {
     @ViewBuilder
     private func content(_ mode: Mode) -> some View {
         let scale = IslandModel.scale
-        switch mode {
-        case .open:
-            // Laid out at the base size, then scaled to the user's chosen island size.
-            let base = model.baseExpandedSize
+        let base = model.baseExpandedSize
+        ZStack(alignment: .top) {
+            // The open island's content is always there, centred at its final spot; opening
+            // and closing only fade it in and out. It is never inserted or removed, so it can
+            // never slide in from a side (it used to, for the first few frames).
             ExpandedIsland()
                 .frame(width: base.width, height: base.height)
                 .overlay(alignment: .center) {
@@ -104,14 +105,21 @@ struct IslandView: View {
                 }
                 .scaleEffect(scale, anchor: .top)
                 .frame(width: base.width * scale, height: base.height * scale, alignment: .top)
-                // Nothing inside moves while the island opens: the content is placed at its
-                // final, centred spot at once and only fades in (no slide from either side).
-                // (Only for the open/close change: tab switches and editing keep their animations.)
-                .animation(nil, value: mode)
-                .transition(.asymmetric(
-                    insertion: .blurFade.animation(.easeOut(duration: 0.28).delay(0.06)),
-                    removal: .opacity.animation(.easeIn(duration: 0.1))
-                ))
+                .opacity(mode == .open ? 1 : 0)
+                .blur(radius: mode == .open ? 0 : 8)
+                .allowsHitTesting(mode == .open)
+                .accessibilityHidden(mode != .open)
+                .animation(mode == .open ? .easeOut(duration: 0.28).delay(0.05) : .easeIn(duration: 0.12), value: mode)
+            otherContent(mode)
+        }
+    }
+
+    @ViewBuilder
+    private func otherContent(_ mode: Mode) -> some View {
+        let scale = IslandModel.scale
+        switch mode {
+        case .open:
+            EmptyView()
         case .peek:
             if let peek = model.peek {
                 let base = model.basePeekSize(peek.kind)
