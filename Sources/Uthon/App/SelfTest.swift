@@ -736,6 +736,12 @@ enum SelfTest {
                                     "req": ["titl": "Rahim", "body": "Are you coming?"]]
         let data = (try? PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)) ?? Data()
         let item = NotificationMirror.parse(id: 7, bundleID: "", data: data)
+        let savedDuration = library.notificationSeconds
+        library.notificationSeconds = 0.5
+        check("Notification can show for half a second", library.notificationSeconds == 0.5)
+        library.notificationSeconds = 10
+        check("Notification can show for 10 seconds", library.notificationSeconds == 10)
+        library.notificationSeconds = savedDuration
         check("Notification record parses", item?.title == "Rahim" && item?.body == "Are you coming?" && item?.bundleID == "net.whatsapp.WhatsApp")
         check("Empty notification is skipped", NotificationMirror.parse(id: 8, bundleID: "x", data: Data()) == nil)
         if let item {

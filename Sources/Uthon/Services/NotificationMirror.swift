@@ -170,7 +170,7 @@ final class NotificationMirror: ObservableObject {
         guard Self.shouldShow(item, library: library) else { return }
         lastItem = item
         IslandController.shared.showPeek(.notification(Self.peekContent(item, hideContent: library.notificationHideContent)),
-                                         duration: TimeInterval(library.notificationSeconds))
+                                         duration: library.notificationSeconds)
     }
 
     static func shouldShow(_ item: Item, library: UserLibrary) -> Bool {

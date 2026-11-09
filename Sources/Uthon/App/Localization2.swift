@@ -42,7 +42,7 @@ extension Localization {
         "Turn on Nook in the list (use + to add it from Applications if it's missing), then come back and press Check again.": "তালিকায় Nook চালু করো (না থাকলে + চেপে Applications থেকে যোগ করো), তারপর ফিরে এসে \"আবার দেখো\" চাপো।",
         "How they look": "কেমন দেখাবে", "Hide the message (show only the app)": "বার্তা লুকাও (শুধু অ্যাপের নাম)",
         "Skip notifications from the app I'm using": "যে অ্যাপ ব্যবহার করছি তার নোটিফিকেশন দেখিও না",
-        "Show for": "দেখাবে", "seconds": "সেকেন্ড", "Show a test notification": "একটা টেস্ট নোটিফিকেশন দেখাও",
+        "Show for": "দেখাবে", "seconds": "সেকেন্ড", "sec": "সে.", "Show a test notification": "একটা টেস্ট নোটিফিকেশন দেখাও",
         "Mum": "আম্মু", "Dinner is ready, come home soon!": "খাবার রেডি, তাড়াতাড়ি বাসায় আসো!",
         "Apps appear here after they send a notification.": "কোনো অ্যাপ নোটিফিকেশন পাঠালে এখানে দেখাবে।",
         "Turn an app off to keep its notifications off the island.": "কোনো অ্যাপ বন্ধ করলে তার নোটিফিকেশন আইল্যান্ডে আসবে না।",

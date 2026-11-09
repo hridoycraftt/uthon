@@ -127,7 +127,8 @@ final class UserLibrary: ObservableObject {
     // Notifications on the island
     @Published var notificationsEnabled: Bool { didSet { d.set(notificationsEnabled, forKey: "notificationsEnabled") } }
     @Published var notificationHideContent: Bool { didSet { d.set(notificationHideContent, forKey: "notificationHideContent") } }
-    @Published var notificationSeconds: Int { didSet { d.set(notificationSeconds, forKey: "notificationSeconds") } }
+    /// How long a notification stays on the island, 0.5 to 10 seconds.
+    @Published var notificationSeconds: Double { didSet { d.set(notificationSeconds, forKey: "notificationDuration") } }
     @Published var notificationQuietWhenFocused: Bool { didSet { d.set(notificationQuietWhenFocused, forKey: "notificationQuietWhenFocused") } }
     @Published var mutedNotificationApps: [String] { didSet { d.set(mutedNotificationApps, forKey: "mutedNotificationApps") } }
     // Night dimming
@@ -182,7 +183,8 @@ final class UserLibrary: ObservableObject {
         speedTestMB = d.object(forKey: "speedTestMB") as? Int ?? 25
         notificationsEnabled = d.object(forKey: "notificationsEnabled") as? Bool ?? false
         notificationHideContent = d.object(forKey: "notificationHideContent") as? Bool ?? false
-        notificationSeconds = d.object(forKey: "notificationSeconds") as? Int ?? 4
+        notificationSeconds = min(max(d.object(forKey: "notificationDuration") as? Double
+            ?? (d.object(forKey: "notificationSeconds") as? Int).map(Double.init) ?? 4, 0.5), 10)
         notificationQuietWhenFocused = d.object(forKey: "notificationQuietWhenFocused") as? Bool ?? true
         mutedNotificationApps = d.stringArray(forKey: "mutedNotificationApps") ?? []
         dimEnabled = d.object(forKey: "dimEnabled") as? Bool ?? false

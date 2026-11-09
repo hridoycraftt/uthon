@@ -219,8 +219,9 @@ struct NotificationSettings: View {
             Section(L("How they look")) {
                 Toggle(L("Hide the message (show only the app)"), isOn: $library.notificationHideContent)
                 Toggle(L("Skip notifications from the app I'm using"), isOn: $library.notificationQuietWhenFocused)
-                Stepper(L("Show for") + " \(library.notificationSeconds) " + L("seconds"),
-                        value: $library.notificationSeconds, in: 2...12)
+                LabeledSlider(title: "Show for", value: $library.notificationSeconds, range: 0.5...10, step: 0.5) {
+                    ($0.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int($0))" : String(format: "%.1f", $0)) + " " + L("sec")
+                }
                 Button(L("Show a test notification")) {
                     NotificationMirror.shared.deliver(.init(
                         id: -1, bundleID: "com.apple.MobileSMS", appName: "Messages",
