@@ -49,6 +49,9 @@ jobs:
         run: |
           mkdir -p shots
           sw_vers > shots/os.txt
+          # A typical Dock size (the CI screen is only 1024 wide), so the bottom dock has room beside it.
+          defaults write com.apple.dock tilesize -int 30 && killall Dock || true
+          sleep 3
           status=0
           for mode in light dark; do
             extra=""
