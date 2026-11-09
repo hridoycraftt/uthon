@@ -12,7 +12,28 @@ final class Updater: ObservableObject {
     @Published private(set) var state: State = .idle
     private var dmgURL: URL?
     private var timer: Timer?
-    private let apiURL = URL(string: "https://api.github.com/repos/hridoycraftt/uthon/releases/latest")!
+
+    static let repo = "hridoycraftt/uthon"
+    static let releasesPage = URL(string: "https://github.com/\(repo)/releases/latest")!
+    private static let apiURL = URL(string: "https://api.github.com/repos/\(repo)/releases/latest")!
+
+    struct Release: Equatable {
+        let version: String
+        let dmg: URL
+    }
+
+    enum CheckError: Error, Equatable {
+        case offline, rateLimited, notFound, unexpected(String)
+
+        var message: String {
+            switch self {
+            case .offline: return L("No internet connection")
+            case .rateLimited: return L("GitHub is busy, try again later")
+            case .notFound: return L("No release found")
+            case .unexpected(let detail): return L("Could not check for updates") + (detail.isEmpty ? "" : " (\(detail))")
+            }
+        }
+    }
 
     func start() {
         let t = Timer(timeInterval: 6 * 3600, repeats: true) { [weak self] _ in
@@ -25,31 +46,112 @@ final class Updater: ObservableObject {
         }
     }
 
+    func openReleasesPage() {
+        NSWorkspace.shared.open(Self.releasesPage)
+    }
+
     func check(silent: Bool = false) {
         state = .checking
-        var request = URLRequest(url: apiURL)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+        Self.latestRelease { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
-                guard let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let tag = json["tag_name"] as? String else {
-                    self.state = .failed(error?.localizedDescription ?? "Could not reach GitHub")
-                    return
-                }
-                let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-                let assets = json["assets"] as? [[String: Any]] ?? []
-                self.dmgURL = assets.compactMap { $0["browser_download_url"] as? String }
-                    .first { $0.hasSuffix(".dmg") }
-                    .flatMap(URL.init(string:))
-                if Self.isNewer(version, than: AppInfo.version), self.dmgURL != nil {
-                    self.state = .available(version: version)
-                    if silent { IslandController.shared.showPeek(.update(version: version), duration: 12) }
-                } else {
-                    self.state = .upToDate
+                switch result {
+                case .failure(let error):
+                    self.state = .failed(error.message)
+                case .success(let release):
+                    self.dmgURL = release.dmg
+                    if Self.isNewer(release.version, than: AppInfo.version) {
+                        self.state = .available(version: release.version)
+                        if silent { IslandController.shared.showPeek(.update(version: release.version), duration: 12) }
+                    } else {
+                        self.state = .upToDate
+                    }
                 }
             }
+        }
+    }
+
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 20
+        config.httpAdditionalHeaders = ["User-Agent": "Uthon/\(AppInfo.version) (macOS)"]
+        return URLSession(configuration: config)
+    }()
+
+    /// Finds the newest release. Tries the GitHub API first; if that is blocked or
+    /// rate-limited, reads the normal releases page (which has no limit) instead.
+    /// Calls back on a background queue.
+    static func latestRelease(completion: @escaping (Result<Release, CheckError>) -> Void) {
+        fromAPI { apiResult in
+            if case .success = apiResult {
+                completion(apiResult)
+                return
+            }
+            fromReleasesPage { pageResult in
+                if case .success = pageResult {
+                    completion(pageResult)
+                } else if case .failure(.offline) = apiResult {
+                    completion(apiResult)
+                } else {
+                    completion(pageResult)
+                }
+            }
+        }
+    }
+
+    static func fromAPI(completion: @escaping (Result<Release, CheckError>) -> Void) {
+        var request = URLRequest(url: apiURL)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        session.dataTask(with: request) { data, response, error in
+            if let error = error as? URLError {
+                completion(.failure(error.code == .notConnectedToInternet || error.code == .networkConnectionLost ? .offline
+                                    : .unexpected(error.localizedDescription)))
+                return
+            }
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 403 || status == 429 { completion(.failure(.rateLimited)); return }
+            if status == 404 { completion(.failure(.notFound)); return }
+            guard let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tag = json["tag_name"] as? String else {
+                completion(.failure(.unexpected("HTTP \(status)")))
+                return
+            }
+            let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+            let assets = json["assets"] as? [[String: Any]] ?? []
+            let dmg = assets.compactMap { $0["browser_download_url"] as? String }
+                .first { $0.hasSuffix(".dmg") }
+                .flatMap(URL.init(string:)) ?? dmgURL(for: version)
+            completion(.success(Release(version: version, dmg: dmg)))
         }.resume()
+    }
+
+    /// github.com/<repo>/releases/latest redirects to .../releases/tag/v1.2.3.
+    static func fromReleasesPage(completion: @escaping (Result<Release, CheckError>) -> Void) {
+        var request = URLRequest(url: releasesPage)
+        request.httpMethod = "HEAD"
+        session.dataTask(with: request) { _, response, error in
+            if let error = error as? URLError {
+                completion(.failure(error.code == .notConnectedToInternet ? .offline : .unexpected(error.localizedDescription)))
+                return
+            }
+            guard let finalURL = response?.url, let version = version(fromTagURL: finalURL) else {
+                completion(.failure(.notFound))
+                return
+            }
+            completion(.success(Release(version: version, dmg: dmgURL(for: version))))
+        }.resume()
+    }
+
+    static func version(fromTagURL url: URL) -> String? {
+        let parts = url.pathComponents
+        guard let index = parts.firstIndex(of: "tag"), index + 1 < parts.count else { return nil }
+        let tag = parts[index + 1]
+        let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        return version.range(of: "^[0-9]+(\\.[0-9]+)*$", options: .regularExpression) != nil ? version : nil
+    }
+
+    static func dmgURL(for version: String) -> URL {
+        URL(string: "https://github.com/\(repo)/releases/download/v\(version)/Uthon-\(version).dmg")!
     }
 
     /// "0.10.0" > "0.9.3"
