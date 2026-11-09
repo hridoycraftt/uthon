@@ -59,10 +59,15 @@ struct IslandView: View {
             .frame(width: size.width, height: size.height)
             .shadow(color: .black.opacity(mode == .closed ? 0 : 0.3), radius: 20, y: 10)
 
+            // The content never moves: it stays centred at its final size, and the island
+            // shape opens over it like a window, from the middle out (as on iPhone).
+            // (Sizing the content to the animating island made it ride along the island's
+            // left edge, so it slid in from the right while the glass grew from the middle.)
             content(mode)
-                .frame(width: size.width, height: size.height)
-                .clipShape(shape)
-                .contentShape(shape)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .mask(alignment: .top) {
+                    shape.frame(width: size.width, height: size.height)
+                }
             NightDimOverlay()
                 .frame(width: size.width, height: size.height)
                 .clipShape(shape)
@@ -106,7 +111,9 @@ struct IslandView: View {
             }
         case .closed:
             if let activity {
+                let closed = size(for: .closed)
                 CompactActivity(activity: activity)
+                    .frame(width: closed.width, height: closed.height)
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
