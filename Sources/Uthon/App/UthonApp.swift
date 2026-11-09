@@ -137,6 +137,15 @@ struct MenuContent: View {
             Divider()
             Button(L("Manage profiles…")) { SettingsWindowController.shared.show(tab: .profiles) }
         }
+        Menu(L("Island size")) {
+            ForEach(IslandSizePreset.allCases) { preset in
+                Button((IslandSizePreset.matching(settings.islandScale) == preset ? "✓ " : "") + L(preset.title)) {
+                    settings.islandScale = preset.value
+                }
+            }
+            Divider()
+            Toggle(L("Fit the island to this screen"), isOn: $settings.islandAutoSize)
+        }
         Menu(L("Theme")) {
             ForEach(ThemeColor.allCases.filter { $0 != .custom }) { theme in
                 Button((settings.themeColor == theme ? "✓ " : "") + L(theme.title)) { settings.themeColor = theme }

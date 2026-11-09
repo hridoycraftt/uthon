@@ -71,6 +71,7 @@ extension Localization {
         "Open Accessibility settings…": "Accessibility সেটিংস খোলো…",
         "Same height as the macOS Dock; it grows and shrinks with it.": "macOS Dock-এর সমান উচ্চতা; Dock ছোট-বড় হলে এটাও হয়।",
         "Fit the island to this screen": "আইল্যান্ড এই স্ক্রিন অনুযায়ী মাপো", "Island fine-tune": "আইল্যান্ডের সূক্ষ্ম মাপ",
+        "Quick size": "এক ক্লিকে সাইজ", "Small": "ছোট", "Medium": "মাঝারি", "Large": "বড়", "Custom": "নিজের মতো",
         "Island size now": "এখন আইল্যান্ডের মাপ",
         "On a smaller screen (like a 13 or 14 inch MacBook) the island shrinks to fit, with all icons, text and widgets. Use the slider to make it smaller or bigger.": "ছোট স্ক্রিনে (যেমন ১৩ বা ১৪ ইঞ্চি MacBook) আইল্যান্ড নিজে থেকে ছোট হয়, সব আইকন, লেখা আর উইজেটসহ। স্লাইডার দিয়ে আরও ছোট বা বড় করতে পারো।",
         "Match the macOS Dock's size": "macOS Dock-এর সাইজের সাথে মিলিয়ে চলো", "Fine-tune": "সূক্ষ্ম ঠিক করা",

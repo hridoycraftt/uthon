@@ -353,6 +353,14 @@ private struct LookSettings: View {
                 LabeledSlider(title: L(settings.islandAutoSize ? "Island fine-tune" : "Island size"), value: $settings.islandScale,
                               range: 0.6...1.5, step: 0.05,
                               format: { "\(Int(($0 * 100).rounded()))%" })
+                Picker(L("Quick size"), selection: Binding(
+                    get: { IslandSizePreset.matching(settings.islandScale) },
+                    set: { if let p = $0 { settings.islandScale = p.value } }
+                )) {
+                    ForEach(IslandSizePreset.allCases) { Text(L($0.title)).tag(Optional($0)) }
+                    if IslandSizePreset.matching(settings.islandScale) == nil { Text(L("Custom")).tag(IslandSizePreset?.none) }
+                }
+                .pickerStyle(.segmented)
                 LabeledContent(L("Island size now"), value: "\(Int((IslandModel.scale * 100).rounded()))%")
                     .id(settings.islandScale + (settings.islandAutoSize ? 1000 : 0))
                 Text(L("On a smaller screen (like a 13 or 14 inch MacBook) the island shrinks to fit, with all icons, text and widgets. Use the slider to make it smaller or bigger."))
@@ -980,5 +988,28 @@ struct LabeledSlider: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 48, alignment: .trailing)
         }
+    }
+}
+
+/// One-click island sizes (on top of fitting the screen, when that is on).
+enum IslandSizePreset: String, CaseIterable, Identifiable {
+    case small, medium, large
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Large"
+        }
+    }
+    var value: Double {
+        switch self {
+        case .small: return 0.8
+        case .medium: return 1.0
+        case .large: return 1.2
+        }
+    }
+    static func matching(_ value: Double) -> IslandSizePreset? {
+        allCases.first { abs($0.value - value) < 0.001 }
     }
 }
