@@ -120,8 +120,8 @@ final class DailyVerseStore: ObservableObject {
                 let text = quran
                     ? await Self.fetchAyah(number: Self.pick(day: day, salt: salt + attempt, range: 1...6236), translation: translation)
                     : await Self.fetchHadith(day: day, salt: salt + attempt, translation: translation)
-                if let text, text.translation.count <= 700 { result = text }
-                else if let text, attempt == 4 { result = text }
+                guard let text, Self.isMostly(text.translation, in: translation) else { continue }
+                if text.translation.count <= 700 || attempt == 4 { result = text }
             }
             await MainActor.run {
                 guard let self else { return }
@@ -135,6 +135,17 @@ final class DailyVerseStore: ObservableObject {
                 }
             }
         }
+    }
+
+    /// True when most letters are in the chosen language's script (Bangla or Latin), so a
+    /// passage that is mostly Arabic is never shown as the "meaning".
+    static func isMostly(_ text: String, in translation: VerseTranslation) -> Bool {
+        let letters = text.unicodeScalars.filter { CharacterSet.letters.contains($0) }
+        guard letters.count >= 8 else { return false }
+        let matching = letters.filter { scalar in
+            translation == .bangla ? (0x0980...0x09FF).contains(scalar.value) : scalar.isASCII
+        }.count
+        return Double(matching) / Double(letters.count) >= 0.6
     }
 
     // MARK: Sources
@@ -281,14 +292,14 @@ struct VerseTile: View {
     @ViewBuilder private func content(_ text: DailyText) -> some View {
         if library.verseShowArabic, !text.arabic.isEmpty {
             Text(text.arabic)
-                .font(.system(size: wide ? 16 : 14, weight: .regular))
+                .font(.system(size: wide ? 18 : 16, weight: .regular))
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .lineLimit(wide ? 3 : 2)
                 .environment(\.layoutDirection, .rightToLeft)
         }
         Text(text.translation)
-            .font(.system(size: wide ? 12 : 11))
+            .font(.system(size: wide ? 13 : 12))
             .lineLimit(library.verseShowArabic && !text.arabic.isEmpty ? 3 : 5)
             .truncationMode(.tail)
             .frame(maxWidth: .infinity, alignment: .topLeading)

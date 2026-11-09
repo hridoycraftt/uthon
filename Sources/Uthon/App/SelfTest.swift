@@ -637,6 +637,27 @@ enum SelfTest {
         check("Ayah links to quran.com", ayah?.link == "https://quran.com/2/255")
         let hadithJSON = #"{"metadata":{"name":"Sahih al Bukhari"},"hadiths":[{"hadithnumber":1,"text":"কাজ নিয়ত অনুযায়ী","grades":[]}]}"#
         check("Hadith parses text", DailyVerseStore.parseHadith(Data(hadithJSON.utf8)) == "কাজ নিয়ত অনুযায়ী")
+        check("Bangla text is recognised", DailyVerseStore.isMostly("নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে", in: .bangla))
+        check("Arabic is not taken for Bangla", !DailyVerseStore.isMostly("إِنَّ مَعَ ٱلْعُسْرِ يُسْرًا وَقَوْلُ اللهِ", in: .bangla))
+        check("English text is recognised", DailyVerseStore.isMostly("Indeed, with hardship comes ease", in: .english))
+        check("Fit: room beside the Dock = full size",
+              BottomDockController.fit(base: 300, screen: CGRect(x: 0, y: 0, width: 1512, height: 982),
+                                       dock: CGRect(x: 456, y: 4, width: 600, height: 62), side: .right, offset: 0) == (1, false))
+        let squeezed = BottomDockController.fit(base: 600, screen: CGRect(x: 0, y: 0, width: 1512, height: 982),
+                                                dock: CGRect(x: 456, y: 4, width: 600, height: 62), side: .right, offset: 0)
+        check("Fit: shrinks when tight", squeezed.scale < 1 && squeezed.scale >= 0.6 && !squeezed.tooWide, "\(squeezed)")
+        let crowded = BottomDockController.fit(base: 800, screen: CGRect(x: 0, y: 0, width: 1024, height: 768),
+                                               dock: CGRect(x: 37, y: 4, width: 951, height: 62), side: .right, offset: 0)
+        check("Fit: reports no room", crowded.tooWide)
+        if let screen = BottomDockController.dockScreen() {
+            let estimate = BottomDockController.estimatedDockFrame(on: screen)
+            let exact = BottomDockController.readDockFrame()
+            info("Dock frame", "exact \(exact.map { "\($0)" } ?? "n/a"), estimate \(estimate.map { "\($0)" } ?? "n/a")")
+            if let estimate, let exact {
+                check("Dock width estimate is close (±15%)", abs(estimate.width - exact.width) <= exact.width * 0.15,
+                      "estimate \(Int(estimate.width)) vs \(Int(exact.width))")
+            }
+        }
         check("Empty hadith is rejected", DailyVerseStore.parseHadith(Data(#"{"hadiths":[]}"#.utf8)) == nil)
         check("Hadith URL", DailyVerseStore.hadithURL(edition: "ben-bukhari", number: 1).absoluteString.hasSuffix("/editions/ben-bukhari/1.min.json"))
         check("Quran + Bangla widget needs 2 slots", HomeWidget.verse.minSlots == 2 && HomeWidget.network.minSlots == 1)
@@ -814,6 +835,7 @@ enum SelfTest {
                 check("Hadith downloads (Bangla)", hadith?.translation.isEmpty == false,
                       (hadith?.reference ?? "nil") + " " + String((hadith?.translation ?? "").prefix(60)))
                 check("Hadith has Arabic", hadith?.arabic.isEmpty == false)
+                check("Hadith meaning is in Bangla", hadith.map { DailyVerseStore.isMostly($0.translation, in: .bangla) } == true)
                 finish()
             }
         }

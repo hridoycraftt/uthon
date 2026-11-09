@@ -54,7 +54,7 @@ enum BottomDockSide: String, CaseIterable, Identifiable {
 /// macOS does not tell other apps where its Dock is. With Accessibility permission Uthon
 /// reads the Dock's real frame and sits right next to it; without it, the bar sits in the
 /// chosen bottom corner, as high as the Dock, at a distance the user can set.
-final class BottomDockController {
+final class BottomDockController: ObservableObject {
     static let shared = BottomDockController()
 
     static let appSize: CGFloat = 40
@@ -68,8 +68,17 @@ final class BottomDockController {
     private var activeStores = false
     /// Where the macOS Dock was found last (Cocoa coordinates), if we may read it.
     private(set) var dockFrame: CGRect?
+    /// Shrinks the bar when there is not enough room beside the Dock (1 = full size).
+    @Published private(set) var fitScale: CGFloat = 1
+    /// Even at the smallest size the bar does not fit beside the Dock.
+    @Published private(set) var tooWide = false
+    /// The Dock's size came from Accessibility (exact) rather than an estimate.
+    @Published private(set) var exactDock = false
+
+    var effectiveScale: CGFloat { Self.scale * fitScale }
 
     func start() {
+        guard panel == nil else { return }
         let p = DockPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 60),
                           styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         p.isFloatingPanel = true
@@ -180,6 +189,42 @@ final class BottomDockController {
     private var lastFrame: CGRect = .zero
     private var lastDockCheck = Date.distantPast
 
+    /// How much to shrink a bar of width `base` so it fits beside the Dock.
+    static func fit(base: CGFloat, screen: CGRect, dock: CGRect?, side: BottomDockSide, offset: CGFloat) -> (scale: CGFloat, tooWide: Bool) {
+        let room: CGFloat
+        if let dock, dock.width > dock.height {
+            room = side == .left ? dock.minX - screen.minX - 14 - offset : screen.maxX - dock.maxX - 14 - offset
+        } else {
+            room = screen.width - 24 - offset
+        }
+        guard base > room else { return (1, false) }
+        let ratio = max(room, 0) / max(base, 1)
+        return (max(ratio, 0.6), ratio < 0.6)
+    }
+
+    /// Without Accessibility: the Dock's width worked out from its settings (icon size and
+    /// the apps in it), centred on the screen. Good to a few points.
+    static func estimatedDockFrame(on screen: NSScreen) -> CGRect? {
+        let height = screen.visibleFrame.minY - screen.frame.minY
+        guard height > 10 else { return nil }          // hidden, or on the side
+        func pref(_ key: String) -> Any? { CFPreferencesCopyAppValue(key as CFString, "com.apple.dock" as CFString) }
+        let tile = CGFloat((pref("tilesize") as? NSNumber)?.doubleValue ?? 48)
+        let persistent = (pref("persistent-apps") as? [[String: Any]]) ?? []
+        let pinnedIDs = Set(persistent.compactMap { (($0["tile-data"] as? [String: Any])?["bundle-identifier"] as? String) })
+        let others = (pref("persistent-others") as? [Any])?.count ?? 1
+        let showRecents = (pref("show-recents") as? NSNumber)?.boolValue ?? true
+        let recents = showRecents ? min((pref("recent-apps") as? [Any])?.count ?? 0, 3) : 0
+        let running = NSWorkspace.shared.runningApplications.filter {
+            $0.activationPolicy == .regular && $0.bundleIdentifier != "com.apple.finder"
+                && !pinnedIDs.contains($0.bundleIdentifier ?? "")
+        }.count
+        let icons = CGFloat(1 + persistent.count + running + recents + others + 1)   // Finder ... Trash
+        let separators: CGFloat = recents > 0 ? 2 : 1
+        let width = icons * tile * 0.98 + separators * tile * 0.45 + tile * 0.4
+        let f = screen.frame
+        return CGRect(x: f.midX - width / 2, y: f.minY, width: min(width, f.width), height: height)
+    }
+
     private func layout(force: Bool = false) {
         guard let panel else { return }
         let library = UserLibrary.shared
@@ -188,12 +233,18 @@ final class BottomDockController {
             return
         }
         if force || Date().timeIntervalSince(lastDockCheck) > 1.5 {
-            dockFrame = Self.readDockFrame()
+            let exact = Self.readDockFrame()
+            dockFrame = exact ?? Self.estimatedDockFrame(on: screen)
+            if exactDock != (exact != nil) { exactDock = exact != nil }
             lastDockCheck = Date()
         }
+        let offset = CGFloat(library.bottomDockOffset)
+        let fit = Self.fit(base: contentWidth, screen: screen.frame, dock: dockFrame, side: library.bottomDockSide, offset: offset)
+        if abs(fit.scale - fitScale) > 0.005 { fitScale = fit.scale }
+        if fit.tooWide != tooWide { tooWide = fit.tooWide }
         let target = Self.frame(screen: screen.frame, visible: screen.visibleFrame, dock: dockFrame,
-                                width: contentWidth, height: Self.height,
-                                side: library.bottomDockSide, offset: CGFloat(library.bottomDockOffset))
+                                width: contentWidth * fit.scale, height: Self.height * fit.scale,
+                                side: library.bottomDockSide, offset: offset)
         if target != lastFrame || force {
             lastFrame = target
             panel.setFrame(target, display: true)
@@ -269,9 +320,10 @@ final class BottomDockController {
 struct BottomDockView: View {
     @ObservedObject private var library = UserLibrary.shared
     @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var controller = BottomDockController.shared
 
     var body: some View {
-        let scale = BottomDockController.scale
+        let scale = controller.effectiveScale
         GeometryReader { geo in
             content
                 .frame(width: geo.size.width / scale, height: geo.size.height / scale)

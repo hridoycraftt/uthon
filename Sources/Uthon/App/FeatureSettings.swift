@@ -344,6 +344,7 @@ struct NightSettings: View {
 
 struct BottomDockSettings: View {
     @ObservedObject private var library = UserLibrary.shared
+    @ObservedObject private var bottom = BottomDockController.shared
     @State private var trusted = AXIsProcessTrusted()
 
     var body: some View {
@@ -366,7 +367,7 @@ struct BottomDockSettings: View {
                 HStack {
                     Image(systemName: trusted ? "checkmark.circle.fill" : "info.circle.fill")
                         .foregroundStyle(trusted ? .green : .secondary)
-                    Text(trusted ? L("Sits right next to the macOS Dock.") : L("Allow Accessibility so it can sit right next to the macOS Dock. Without it, it sits in the bottom corner."))
+                    Text(trusted ? L("Sits right next to the macOS Dock.") : L("Allow Accessibility so it knows exactly where the macOS Dock ends. Without it, Nook works it out from the Dock's settings."))
                         .font(.caption)
                     Spacer()
                     if !trusted {
@@ -376,6 +377,16 @@ struct BottomDockSettings: View {
                         }
                         Button(L("Check again")) { trusted = AXIsProcessTrusted() }
                     }
+                }
+                if library.bottomDockEnabled, bottom.tooWide {
+                    Label(L("Not enough room beside the Dock. Turn some items off, make it smaller, or make the macOS Dock smaller."),
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                } else if library.bottomDockEnabled, bottom.fitScale < 0.99 {
+                    Text(L("Made a little smaller to fit beside the Dock."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .disabled(!library.bottomDockEnabled)
