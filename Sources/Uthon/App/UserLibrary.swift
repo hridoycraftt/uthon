@@ -145,6 +145,7 @@ final class UserLibrary: ObservableObject {
     @Published var bottomDockScale: Double { didSet { d.set(bottomDockScale, forKey: "bottomDockScale") } }
     @Published var bottomDockOffset: Double { didSet { d.set(bottomDockOffset, forKey: "bottomDockOffset") } }
     @Published var bottomDockAutoHide: Bool { didSet { d.set(bottomDockAutoHide, forKey: "bottomDockAutoHide") } }
+    @Published var bottomDockMatchDock: Bool { didSet { d.set(bottomDockMatchDock, forKey: "bottomDockMatchDock") } }
 
     private init() {
         bookmarks = Persist.load([Bookmark].self, key: "bookmarks") ?? [
@@ -199,6 +200,7 @@ final class UserLibrary: ObservableObject {
         bottomDockScale = d.object(forKey: "bottomDockScale") as? Double ?? 1.0
         bottomDockOffset = d.object(forKey: "bottomDockOffset") as? Double ?? 0
         bottomDockAutoHide = d.object(forKey: "bottomDockAutoHide") as? Bool ?? false
+        bottomDockMatchDock = d.object(forKey: "bottomDockMatchDock") as? Bool ?? true
     }
 }
 

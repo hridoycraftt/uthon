@@ -67,6 +67,7 @@ extension Localization {
         "Not enough room beside the Dock, so the last items are hidden. Turn some items off, make it smaller, or make the macOS Dock smaller.": "Dock-এর পাশে যথেষ্ট জায়গা নেই, তাই শেষের আইটেমগুলো লুকানো আছে। কিছু আইটেম বন্ধ করো, এটা ছোট করো, বা macOS Dock ছোট করো।",
         "hidden": "লুকানো",
         "Made a little smaller to fit beside the Dock.": "Dock-এর পাশে আঁটাতে একটু ছোট করা হয়েছে।",
+        "Match the macOS Dock's size": "macOS Dock-এর সাইজের সাথে মিলিয়ে চলো", "Fine-tune": "সূক্ষ্ম ঠিক করা",
         "Allow…": "অনুমতি দাও…", "What it shows": "কী দেখাবে", "Clock": "ঘড়ি", "Battery": "ব্যাটারি",
         "CPU & memory": "CPU আর মেমোরি", "Internet speed": "ইন্টারনেটের গতি", "Not playing": "কিছু বাজছে না", "Power": "বিদ্যুৎ",
         "Add Apps…": "অ্যাপ যোগ করো…", "Bottom Dock Settings…": "নিচের ডকের সেটিংস…", "Hide Bottom Dock": "নিচের ডক লুকাও",

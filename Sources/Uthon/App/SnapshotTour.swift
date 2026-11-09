@@ -219,6 +219,19 @@ enum SnapshotTour {
             UserLibrary.shared.bottomDockAutoHide = false
         }
         add("capture-bottom-dock") { capture("screen-bottom-dock") }
+        // The bar follows the macOS Dock: make the Dock bigger, then smaller again.
+        add("live-dock-bigger") { setDockTileSize(44) }
+        add("live-dock-bigger-wait") { }
+        add("capture-dock-bigger") {
+            print("bottom dock scale with big Dock: \(BottomDockController.shared.baseScale)")
+            capture("screen-bottom-dock-bigger")
+        }
+        add("live-dock-smaller") { setDockTileSize(30) }
+        add("live-dock-smaller-wait") { }
+        add("capture-dock-smaller") {
+            print("bottom dock scale with small Dock: \(BottomDockController.shared.baseScale)")
+            capture("screen-bottom-dock-smaller")
+        }
         add("live-notification") {
             UserLibrary.shared.notificationsEnabled = true
             NotificationMirror.shared.deliver(.init(id: -1, bundleID: "com.apple.MobileSMS", appName: "Messages", title: "Ammu",
@@ -243,6 +256,13 @@ enum SnapshotTour {
         add("quit") { exit(0) }
 
         next(0)
+    }
+
+    private static func setDockTileSize(_ size: Int) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", "defaults write com.apple.dock tilesize -int \(size); killall Dock"]
+        try? p.run()
     }
 
     private static func add(_ name: String, _ action: @escaping @MainActor () -> Void) {

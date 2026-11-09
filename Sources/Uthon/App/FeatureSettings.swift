@@ -362,7 +362,9 @@ struct BottomDockSettings: View {
                 Text(L("A second dock beside the macOS Dock with your apps and live info. It stays out of full-screen apps."))
             }
             Section(L("Size and position")) {
-                LabeledSlider(title: "Size", value: $library.bottomDockScale, range: 0.7...1.4, step: 0.05) { "\(Int(($0 * 100).rounded()))%" }
+                Toggle(L("Match the macOS Dock's size"), isOn: $library.bottomDockMatchDock)
+                LabeledSlider(title: library.bottomDockMatchDock ? "Fine-tune" : "Size", value: $library.bottomDockScale,
+                              range: 0.7...1.4, step: 0.05) { "\(Int(($0 * 100).rounded()))%" }
                 LabeledSlider(title: "Distance", value: $library.bottomDockOffset, range: 0...400, step: 4) { "\(Int($0)) pt" }
                 HStack {
                     Image(systemName: trusted ? "checkmark.circle.fill" : "info.circle.fill")

@@ -58,7 +58,16 @@ final class BottomDockController: ObservableObject {
     static let shared = BottomDockController()
 
     static let appSize: CGFloat = 40
-    static var scale: CGFloat { CGFloat(min(max(UserLibrary.shared.bottomDockScale, 0.7), 1.4)) }
+    /// The user's size setting (with "match the Dock" on, a fine-tune on top of the Dock's size).
+    static var userScale: CGFloat { CGFloat(min(max(UserLibrary.shared.bottomDockScale, 0.7), 1.4)) }
+    /// Size before squeezing: follows the macOS Dock's height when "match" is on.
+    static var scale: CGFloat { shared.baseScale }
+
+    /// Bar size for a Dock of this height: the bar is as tall as the Dock.
+    static func matchedScale(dockHeight: CGFloat?, user: CGFloat, match: Bool) -> CGFloat {
+        guard match, let dockHeight, dockHeight > 10 else { return user }
+        return min(max(dockHeight / 58, 0.55), 1.8) * user
+    }
 
     private var panel: DockPanel?
     private var timer: Timer?
@@ -79,7 +88,10 @@ final class BottomDockController: ObservableObject {
     /// How many items were left out for lack of room.
     @Published private(set) var droppedCount = 0
 
-    var effectiveScale: CGFloat { Self.scale * fitScale }
+    /// Follows the macOS Dock's size (or the user's size when matching is off).
+    @Published private(set) var baseScale: CGFloat = 1
+
+    var effectiveScale: CGFloat { baseScale * fitScale }
 
     func start() {
         guard panel == nil else { return }
@@ -110,7 +122,8 @@ final class BottomDockController: ObservableObject {
             library.$bottomDockSide.map { _ in () }.eraseToAnyPublisher(),
             library.$bottomDockScale.map { _ in () }.eraseToAnyPublisher(),
             library.$bottomDockOffset.map { _ in () }.eraseToAnyPublisher(),
-            library.$bottomDockAutoHide.map { _ in () }.eraseToAnyPublisher()
+            library.$bottomDockAutoHide.map { _ in () }.eraseToAnyPublisher(),
+            library.$bottomDockMatchDock.map { _ in () }.eraseToAnyPublisher()
         )
         .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
         .sink { [weak self] in self?.layout(force: true) }
@@ -250,12 +263,17 @@ final class BottomDockController: ObservableObject {
             hide()
             return
         }
-        if force || Date().timeIntervalSince(lastDockCheck) > 1.5 {
+        if force || Date().timeIntervalSince(lastDockCheck) > 0.5 {
             let exact = Self.readDockFrame()
             dockFrame = exact ?? Self.estimatedDockFrame(on: screen)
             if exactDock != (exact != nil) { exactDock = exact != nil }
             lastDockCheck = Date()
         }
+        // Track the Dock's size: when it grows or shrinks, so does the bar.
+        let dockHeight = dockFrame.map { exactDock ? $0.height : $0.height * 0.9 }
+        let atBottom = dockFrame.map { $0.width > $0.height } ?? false
+        let wanted = Self.matchedScale(dockHeight: atBottom ? dockHeight : nil, user: Self.userScale, match: library.bottomDockMatchDock)
+        if abs(wanted - baseScale) > 0.01 { baseScale = wanted }
         let offset = CGFloat(library.bottomDockOffset)
         let plan = Self.plan(items: library.bottomDockItems.compactMap(BottomDockItem.init(rawValue:)),
                              appCount: library.bottomDockAppURLs.count, scale: Self.scale,
@@ -273,8 +291,16 @@ final class BottomDockController: ObservableObject {
                                 width: width * plan.scale, height: Self.height * plan.scale,
                                 side: library.bottomDockSide, offset: offset)
         if target != lastFrame || force {
+            let animate = !force && isShown && lastFrame != .zero
             lastFrame = target
-            panel.setFrame(target, display: true)
+            if animate {
+                NSAnimationContext.runAnimationGroup { ctx in
+                    ctx.duration = 0.2
+                    panel.animator().setFrame(target, display: true)
+                }
+            } else {
+                panel.setFrame(target, display: true)
+            }
         }
         if !library.bottomDockAutoHide { show() }
     }
@@ -320,7 +346,7 @@ final class BottomDockController: ObservableObject {
             if isShown { hide() }
             return
         }
-        if Date().timeIntervalSince(lastDockCheck) > 1.5 { layout() }
+        if Date().timeIntervalSince(lastDockCheck) > 0.5 { layout() }
         guard library.bottomDockAutoHide else { return }
         // Auto-hide: appear when the mouse touches the bottom edge below the bar.
         let mouse = NSEvent.mouseLocation
@@ -352,7 +378,7 @@ struct BottomDockView: View {
     var forcedItems: [BottomDockItem]?
 
     var body: some View {
-        let scale = forcedItems == nil ? controller.effectiveScale : BottomDockController.scale
+        let scale = forcedItems == nil ? controller.effectiveScale : BottomDockController.userScale
         GeometryReader { geo in
             content
                 .frame(width: geo.size.width / scale, height: geo.size.height / scale)
