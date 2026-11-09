@@ -65,9 +65,9 @@ struct IslandView: View {
             // left edge, so it slid in from the right while the glass grew from the middle.)
             content(mode)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .mask(alignment: .top) {
-                    shape.frame(width: size.width, height: size.height)
-                }
+                // An animatable clip that grows from the middle together with the glass.
+                .clipShape(CentredIslandShape(width: size.width, height: size.height,
+                                              topRadius: shape.topRadius, bottomRadius: shape.bottomRadius))
             NightDimOverlay()
                 .frame(width: size.width, height: size.height)
                 .clipShape(shape)
@@ -94,9 +94,12 @@ struct IslandView: View {
                 .frame(width: base.width, height: base.height)
                 .scaleEffect(scale, anchor: .top)
                 .frame(width: base.width * scale, height: base.height * scale, alignment: .top)
+                // Nothing inside moves while the island opens: the content is placed at its
+                // final, centred spot at once and only fades in (no slide from either side).
+                // (Only for the open/close change: tab switches and editing keep their animations.)
+                .animation(nil, value: mode)
                 .transition(.asymmetric(
-                    insertion: .blurFade.combined(with: .scale(scale: 0.97, anchor: .top))
-                        .animation(.easeOut(duration: 0.3).delay(0.08)),
+                    insertion: .blurFade.animation(.easeOut(duration: 0.28).delay(0.06)),
                     removal: .opacity.animation(.easeIn(duration: 0.1))
                 ))
         case .peek:
@@ -561,5 +564,29 @@ private struct BlurFade: ViewModifier {
 extension AnyTransition {
     static var blurFade: AnyTransition {
         .modifier(active: BlurFade(active: true), identity: BlurFade(active: false))
+    }
+}
+
+/// The island outline drawn centred in whatever space it is given, at an animatable size,
+/// so content clipped by it is revealed from the middle outwards as the island grows.
+struct CentredIslandShape: Shape {
+    var width: CGFloat
+    var height: CGFloat
+    var topRadius: CGFloat
+    var bottomRadius: CGFloat
+
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<CGFloat, CGFloat>> {
+        get { AnimatablePair(AnimatablePair(width, height), AnimatablePair(topRadius, bottomRadius)) }
+        set {
+            width = newValue.first.first
+            height = newValue.first.second
+            topRadius = newValue.second.first
+            bottomRadius = newValue.second.second
+        }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let box = CGRect(x: rect.midX - width / 2, y: rect.minY, width: width, height: height)
+        return NotchShape(topRadius: topRadius, bottomRadius: bottomRadius).path(in: box)
     }
 }
