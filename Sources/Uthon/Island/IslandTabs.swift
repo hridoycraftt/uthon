@@ -623,7 +623,7 @@ struct BatteriesTile: View {
                 let wide = settings.slots(of: HomeItem(.batteries)) > 1
                 // MacBooks show their own battery first; iMacs have none, so it never appears there.
                 if let mac = DeviceBatteryStore.internalBattery() {
-                    row(symbol: mac.pluggedIn ? "laptopcomputer.and.bolt" : "laptopcomputer", name: "Mac",
+                    row(symbol: mac.pluggedIn ? "battery.100percent.bolt" : "laptopcomputer", name: "Mac",
                         percent: mac.percent, wide: wide)
                 }
                 ForEach(store.devices.prefix(wide ? 5 : 3)) { device in

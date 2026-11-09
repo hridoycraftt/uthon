@@ -315,7 +315,7 @@ enum SelfTest {
         check("Music app gets a player tile", NowPlayingStore.playerName(for: URL(fileURLWithPath: "/System/Applications/Music.app")) == "Music")
         check("Other apps stay normal tiles", NowPlayingStore.playerName(for: URL(fileURLWithPath: "/System/Applications/Calculator.app")) == nil)
         check("Spotify is supported", NowPlayingStore.musicPlayers["com.spotify.client"] == "Spotify")
-        for symbol in ["laptopcomputer.and.bolt", "gamecontroller.fill", "applepencil", "battery.75percent"] {
+        for symbol in ["battery.100percent.bolt", "gamecontroller.fill", "applepencil", "battery.75percent"] {
             check("SF Symbol exists: \(symbol)", NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil)
         }
 
