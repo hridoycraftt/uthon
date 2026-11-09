@@ -166,6 +166,9 @@ struct GlassChip: ViewModifier {
     var radius: CGFloat
     @Environment(\.colorScheme) private var scheme
 
+    /// Cards always stand apart from the glass behind them: in Light mode a brighter card
+    /// with a hairline edge and a soft shadow (white on white would vanish), in Dark mode a
+    /// lighter card with a faint rim, like widgets in Control Center.
     func body(content: Content) -> some View {
         let dark = scheme == .dark
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -173,16 +176,15 @@ struct GlassChip: ViewModifier {
             shape
                 .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(dark ? 0.11 : 0.55), Color.white.opacity(dark ? 0.04 : 0.30)],
+                        colors: dark ? [Color.white.opacity(0.12), Color.white.opacity(0.06)]
+                                     : [Color.white.opacity(0.85), Color.white.opacity(0.65)],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
+                .shadow(color: .black.opacity(dark ? 0.25 : 0.08), radius: dark ? 6 : 5, y: 2)
                 .overlay(
                     shape.strokeBorder(
-                        LinearGradient(
-                            colors: [Color.white.opacity(dark ? 0.18 : 0.9), Color.white.opacity(dark ? 0.03 : 0.3)],
-                            startPoint: .top, endPoint: .bottom
-                        ),
+                        dark ? Color.white.opacity(0.14) : Color.black.opacity(0.09),
                         lineWidth: 0.75
                     )
                 )
