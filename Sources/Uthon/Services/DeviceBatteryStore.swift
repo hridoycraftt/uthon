@@ -10,10 +10,25 @@ final class DeviceBatteryStore: ObservableObject {
     static let shared = DeviceBatteryStore()
 
     struct Device: Identifiable, Equatable {
-        let name: String
+        var name: String
         let percent: Int
-        var id: String { name }
+        /// Bluetooth address, normalised ("10:cf:0f:e5:d4:da"), when known.
+        var address: String? = nil
+        /// True when the name is only a guess ("Keyboard") because macOS did not give one.
+        var nameIsGuess = false
+        var id: String { address ?? name }
         var symbol: String { DeviceBatteryStore.symbol(for: name) }
+    }
+
+    /// "10-CF-0F-E5-D4-DA" / "10:cf:0f:e5:d4:da" -> "10:cf:0f:e5:d4:da"
+    static func normalizeAddress(_ text: String?) -> String? {
+        guard let text else { return nil }
+        let cleaned = text.lowercased().replacingOccurrences(of: "-", with: ":").trimmingCharacters(in: .whitespaces)
+        return looksLikeAddress(cleaned) ? cleaned : nil
+    }
+
+    static func looksLikeAddress(_ text: String) -> Bool {
+        text.range(of: "^[0-9a-fA-F]{2}([:-][0-9a-fA-F]{2}){5}$", options: .regularExpression) != nil
     }
 
     @Published private(set) var devices: [Device] = []
@@ -105,9 +120,19 @@ final class DeviceBatteryStore: ObservableObject {
     static func readDevices(report: inout [String]) -> [Device] {
         var result: [Device] = []
         func merge(_ found: [Device], source: String) {
-            report.append("\(source): " + (found.isEmpty ? "nothing" : found.map { "\($0.name) \($0.percent)%" }.joined(separator: ", ")))
-            for device in found where !result.contains(where: { sameDevice($0.name, device.name) }) {
-                result.append(device)
+            report.append("\(source): " + (found.isEmpty ? "nothing" : found.map {
+                "\($0.name)\($0.address.map { " [\($0)]" } ?? "") \($0.percent)%"
+            }.joined(separator: ", ")))
+            for device in found {
+                if let index = result.firstIndex(where: { existing in
+                    (existing.address != nil && existing.address == device.address) || sameDevice(existing.name, device.name)
+                }) {
+                    // Same device: keep the level we have, but take a real name over a guess.
+                    if result[index].nameIsGuess && !device.nameIsGuess { result[index].name = device.name; result[index].nameIsGuess = false }
+                    if result[index].address == nil { result[index].address = device.address }
+                } else {
+                    result.append(device)
+                }
             }
         }
         merge(bluetoothDevices(), source: "Bluetooth")
@@ -115,6 +140,14 @@ final class DeviceBatteryStore: ObservableObject {
         merge(parseRegistry(run("/usr/sbin/ioreg", ["-r", "-l", "-a", "-k", "BatteryPercent"])), source: "ioreg")
         merge(parseBluetooth(run("/usr/sbin/system_profiler", ["SPBluetoothDataType", "-json"])), source: "System Information")
         merge(powerSourceAccessories(), source: "Power sources")
+        // Last chance for a real name: System Information lists every paired device by address.
+        let names = bluetoothNames(run("/usr/sbin/system_profiler", ["SPBluetoothDataType", "-json"]))
+        for index in result.indices where result[index].nameIsGuess {
+            if let address = result[index].address, let name = names[address] {
+                result[index].name = name
+                result[index].nameIsGuess = false
+            }
+        }
         return result.sorted { order($0.name) < order($1.name) }
     }
 
@@ -130,17 +163,33 @@ final class DeviceBatteryStore: ObservableObject {
         let paired = (IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice]) ?? []
         var result: [Device] = []
         for device in paired where device.isConnected() {
-            let name = device.name ?? device.nameOrAddress ?? ""
-            guard !name.isEmpty else { continue }
+            let address = normalizeAddress(device.addressString)
+            let rawName = (device.name ?? "").trimmingCharacters(in: .whitespaces)
+            let hasName = !rawName.isEmpty && !looksLikeAddress(rawName)
+            let name = hasName ? rawName : guessName(major: device.deviceClassMajor, minor: device.deviceClassMinor)
             var levels: [Int] = []
             for key in ["batteryPercentSingle", "batteryPercentLeft", "batteryPercentRight", "batteryPercentCombined"] {
                 guard device.responds(to: NSSelectorFromString(key)),
                       let value = (device.value(forKey: key) as? NSNumber)?.intValue, value > 0, value <= 100 else { continue }
                 levels.append(value)
             }
-            if let level = levels.min() { result.append(Device(name: name, percent: level)) }
+            if let level = levels.min() {
+                result.append(Device(name: name, percent: level, address: address, nameIsGuess: !hasName))
+            }
         }
         return result
+    }
+
+    /// A readable name from the Bluetooth device class when macOS gives none.
+    static func guessName(major: UInt32, minor: UInt32) -> String {
+        // Major class 0x05 = peripheral; minor bits 0x10 keyboard, 0x20 pointing device.
+        if major == 0x05 {
+            if minor & 0x10 != 0 && minor & 0x20 != 0 { return "Keyboard & Mouse" }
+            if minor & 0x10 != 0 { return "Keyboard" }
+            if minor & 0x20 != 0 { return "Mouse" }
+        }
+        if major == 0x04 { return "Headphones" }   // audio/video
+        return "Bluetooth device"
     }
 
     /// Bluetooth needs the user's OK once; the Batteries widget asks for it.
@@ -167,7 +216,8 @@ final class DeviceBatteryStore: ObservableObject {
                 let name = (IORegistryEntrySearchCFProperty(service, kIOServicePlane, "Product" as CFString, kCFAllocatorDefault, options) as? String)
                 guard let value = percent?.intValue, (1...100).contains(value), let name, !name.isEmpty,
                       !result.contains(where: { sameDevice($0.name, name) }) else { continue }
-                result.append(Device(name: name, percent: value))
+                let address = IORegistryEntrySearchCFProperty(service, kIOServicePlane, "DeviceAddress" as CFString, kCFAllocatorDefault, options) as? String
+                result.append(Device(name: name, percent: value, address: normalizeAddress(address), nameIsGuess: looksLikeAddress(name)))
             }
         }
         return result
@@ -222,7 +272,8 @@ final class DeviceBatteryStore: ObservableObject {
             if !ioClass.contains("AppleSmartBattery"),
                let percent = (entry["BatteryPercent"] as? NSNumber)?.intValue, (1...100).contains(percent),
                let name, !name.isEmpty, !result.contains(where: { sameDevice($0.name, name) }) {
-                result.append(Device(name: name, percent: percent))
+                let address = normalizeAddress(entry["DeviceAddress"] as? String) ?? normalizeAddress(entry["SerialNumber"] as? String)
+                result.append(Device(name: name, percent: percent, address: address, nameIsGuess: looksLikeAddress(name)))
             }
             for child in entry["IORegistryEntryChildren"] as? [[String: Any]] ?? [] {
                 visit(child, inheritedName: name)
@@ -230,6 +281,27 @@ final class DeviceBatteryStore: ObservableObject {
         }
         for entry in list { visit(entry, inheritedName: nil) }
         return result
+    }
+
+    /// Every paired device's name by address, from `system_profiler SPBluetoothDataType -json`.
+    static func bluetoothNames(_ data: Data) -> [String: String] {
+        guard !data.isEmpty, let json = try? JSONSerialization.jsonObject(with: data) else { return [:] }
+        var names: [String: String] = [:]
+        func visit(_ object: Any) {
+            if let dict = object as? [String: Any] {
+                for (key, value) in dict {
+                    if let info = value as? [String: Any], let address = normalizeAddress(info["device_address"] as? String),
+                       !looksLikeAddress(key) {
+                        names[address] = key
+                    }
+                    visit(value)
+                }
+            } else if let array = object as? [Any] {
+                array.forEach(visit)
+            }
+        }
+        visit(json)
+        return names
     }
 
     /// `system_profiler SPBluetoothDataType -json`: connected devices that report a battery level.
@@ -249,7 +321,9 @@ final class DeviceBatteryStore: ObservableObject {
                                       percent(info["device_batteryLevelLeft"]),
                                       percent(info["device_batteryLevelRight"])].compactMap { $0 }
                         if let level = levels.min(), !result.contains(where: { $0.name == key }) {
-                            result.append(Device(name: key, percent: level))
+                            result.append(Device(name: key, percent: level,
+                                                 address: normalizeAddress(info["device_address"] as? String),
+                                                 nameIsGuess: looksLikeAddress(key)))
                             continue
                         }
                     }

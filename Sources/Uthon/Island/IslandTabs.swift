@@ -568,25 +568,37 @@ extension SystemTile {
     }
 }
 
+/// Batteries of the Mac (MacBooks only) and wireless devices, as rings like the System widget.
+/// Small: two rings. Medium: up to four rings with names. Large: rings with full names and status.
 struct BatteriesTile: View {
     @ObservedObject private var store = DeviceBatteryStore.shared
     @ObservedObject private var settings = AppSettings.shared
 
+    struct Entry: Identifiable {
+        let id: String
+        let name: String
+        let symbol: String
+        let percent: Int
+        let charging: Bool
+    }
+
+    private var entries: [Entry] {
+        var list: [Entry] = []
+        if let mac = DeviceBatteryStore.internalBattery() {
+            list.append(Entry(id: "mac", name: "Mac", symbol: "laptopcomputer", percent: mac.percent, charging: mac.pluggedIn))
+        }
+        list += store.devices.map { Entry(id: $0.id, name: $0.name, symbol: $0.symbol, percent: $0.percent, charging: false) }
+        return list
+    }
+
     var body: some View {
+        let size = settings.slots(of: HomeItem(.batteries))
+        let list = entries
         WidgetTile {
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 0) {
                 SectionLabel("Batteries")
-                Spacer(minLength: 0)
-                let wide = settings.slots(of: HomeItem(.batteries)) > 1
-                // MacBooks show their own battery first; iMacs have none, so it never appears there.
-                if let mac = DeviceBatteryStore.internalBattery() {
-                    row(symbol: mac.pluggedIn ? "battery.100percent.bolt" : "laptopcomputer", name: "Mac",
-                        percent: mac.percent, wide: wide)
-                }
-                ForEach(store.devices.prefix(wide ? 5 : 3)) { device in
-                    row(symbol: device.symbol, name: device.name, percent: device.percent, wide: wide)
-                }
-                if store.devices.isEmpty && !store.hasInternalBattery {
+                if list.isEmpty {
+                    Spacer(minLength: 0)
                     Text(L(store.lastChecked == nil ? "Looking for devices…" : "No wireless devices connected"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
@@ -594,8 +606,22 @@ struct BatteriesTile: View {
                         .buttonStyle(.plain)
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Theme.accent)
+                    Spacer(minLength: 0)
+                } else if size >= 3 {
+                    Spacer(minLength: 6)
+                    VStack(spacing: 8) {
+                        ForEach(list.prefix(4)) { entry in largeRow(entry) }
+                    }
+                    Spacer(minLength: 0)
+                } else {
+                    Spacer(minLength: 4)
+                    HStack(alignment: .top, spacing: 0) {
+                        ForEach(list.prefix(size >= 2 ? 4 : 2)) { entry in
+                            gauge(entry, showName: size >= 2)
+                        }
+                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
             }
         }
         .onAppear {
@@ -606,19 +632,67 @@ struct BatteriesTile: View {
         }
     }
 
-    private func row(symbol: String, name: String, percent: Int, wide: Bool) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: symbol).font(.system(size: 12)).frame(width: 18)
-            Text(wide ? name : L(DeviceBatteryStore.shortName(for: name)))
-                .font(.system(size: 11))
-                .lineLimit(1)
-            Spacer(minLength: 4)
-            Text("\(percent)%")
-                .font(.system(size: 11, weight: .semibold))
+    static func color(for percent: Int) -> Color {
+        percent < 20 ? .red : (percent <= 50 ? .orange : .green)
+    }
+
+    private func label(_ entry: Entry) -> String {
+        L(DeviceBatteryStore.shortName(for: entry.name))
+    }
+
+    /// A ring with the device icon inside and the level (and name) below.
+    private func gauge(_ entry: Entry, showName: Bool) -> some View {
+        VStack(spacing: 4) {
+            ZStack {
+                RingProgress(progress: Double(entry.percent) / 100, lineWidth: 5, color: Self.color(for: entry.percent))
+                Image(systemName: entry.charging ? "bolt.fill" : entry.symbol)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(entry.charging ? Color.green : Color.primary)
+            }
+            .frame(width: 48, height: 48)
+            Text("\(entry.percent)%")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(percent <= 15 ? Color.red : Color.primary)
+            if showName {
+                Text(label(entry))
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+            }
         }
-        .help("\(name): \(percent)%")
+        .frame(maxWidth: .infinity)
+        .help("\(entry.name): \(entry.percent)%")
+    }
+
+    /// Large size: ring, full name, a status word and a level bar.
+    private func largeRow(_ entry: Entry) -> some View {
+        HStack(spacing: 10) {
+            ZStack {
+                RingProgress(progress: Double(entry.percent) / 100, lineWidth: 3.5, color: Self.color(for: entry.percent))
+                Image(systemName: entry.charging ? "bolt.fill" : entry.symbol)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(entry.charging ? Color.green : Color.primary)
+            }
+            .frame(width: 32, height: 32)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(entry.name)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text("\(entry.percent)%")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                }
+                HStack(spacing: 6) {
+                    LevelBar(level: Float(entry.percent) / 100, color: Self.color(for: entry.percent))
+                    Text(L(entry.charging ? "Charging" : (entry.percent < 20 ? "Charge soon" : (entry.percent <= 50 ? "OK" : "Good"))))
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(entry.charging ? Color.green : Self.color(for: entry.percent))
+                        .fixedSize()
+                }
+            }
+        }
     }
 }
 

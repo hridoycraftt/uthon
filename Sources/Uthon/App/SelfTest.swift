@@ -316,6 +316,20 @@ enum SelfTest {
         ]]
         let nestedData = (try? PropertyListSerialization.data(fromPropertyList: nested, format: .xml, options: 0)) ?? Data()
         check("Battery on a child entry uses the parent's name", DeviceBatteryStore.parseRegistry(nestedData).first.map { "\($0.name) \($0.percent)" } == "Magic Mouse 77")
+        check("Bluetooth addresses are recognised", DeviceBatteryStore.normalizeAddress("10-CF-0F-E5-D4-DA") == "10:cf:0f:e5:d4:da")
+        check("Real names are not mistaken for addresses", DeviceBatteryStore.normalizeAddress("Magic Mouse") == nil)
+        check("Keyboard guessed from Bluetooth class", DeviceBatteryStore.guessName(major: 0x05, minor: 0x10) == "Keyboard")
+        check("Mouse guessed from Bluetooth class", DeviceBatteryStore.guessName(major: 0x05, minor: 0x20) == "Mouse")
+        let namesJSON = """
+        {"SPBluetoothDataType":[{"device_connected":[
+          {"Magic Keyboard":{"device_address":"10:CF:0F:E5:D4:DA"}},
+          {"Magic Mouse":{"device_address":"64:0B:D7:1A:62:45"}}]}]}
+        """
+        let names = DeviceBatteryStore.bluetoothNames(Data(namesJSON.utf8))
+        check("Address is turned into the device's real name",
+              names["10:cf:0f:e5:d4:da"] == "Magic Keyboard" && names["64:0b:d7:1a:62:45"] == "Magic Mouse",
+              names.map { "\($0.key)=\($0.value)" }.joined(separator: ", "))
+        check("Battery colors", BatteriesTile.color(for: 10) == .red && BatteriesTile.color(for: 40) == .orange && BatteriesTile.color(for: 80) == .green)
         check("Same device from two sources is listed once", DeviceBatteryStore.sameDevice("Magic Mouse", "magic mouse"))
         var sourceReport: [String] = []
         _ = DeviceBatteryStore.readDevices(report: &sourceReport)

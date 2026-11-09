@@ -162,13 +162,14 @@ struct PeekHUDContent: View {
 
 struct LevelBar: View {
     let level: Float
+    var color: Color = .primary
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.primary.opacity(0.18))
                 Capsule()
-                    .fill(Color.primary)
+                    .fill(color)
                     .frame(width: max(6, geo.size.width * CGFloat(max(0, min(1, level)))))
                     .shadow(color: Color.white.opacity(0.35), radius: 4)
             }
