@@ -73,6 +73,8 @@ struct IslandView: View {
                 // An animatable clip that grows from the middle together with the glass.
                 .clipShape(CentredIslandShape(width: size.width, height: size.height,
                                               topRadius: shape.topRadius, bottomRadius: shape.bottomRadius))
+                // Same spring as the glass, so the clip and the glass grow together.
+                .animation(mode == .open ? IslandModel.openSpring : IslandModel.closeSpring, value: mode)
             NightDimOverlay()
                 .frame(width: size.width, height: size.height)
                 .clipShape(shape)
@@ -109,7 +111,9 @@ struct IslandView: View {
                 .blur(radius: mode == .open ? 0 : 8)
                 .allowsHitTesting(mode == .open)
                 .accessibilityHidden(mode != .open)
-                .animation(mode == .open ? .easeOut(duration: 0.28).delay(0.05) : .easeIn(duration: 0.12), value: mode)
+                // Fade in only once the glass has mostly opened, so nothing (the bright app icons
+                // on the right especially) shows before the island shape is there.
+                .animation(mode == .open ? .easeOut(duration: 0.22).delay(0.12) : .easeIn(duration: 0.1), value: mode)
             otherContent(mode)
         }
     }
