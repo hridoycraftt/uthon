@@ -250,6 +250,75 @@ enum SelfTest {
         }
         check("Edit → Add Widget → close five times without crashing", true)
 
+        // Scrolling and gestures (bugs reported in v0.5)
+        step("Scrolling and gestures")
+        typealias SC = IslandController.ScrollContext
+        let base = SC(expanded: true, tab: .home, editing: false, pickerOpen: false, scrollVolume: true,
+                      swipe: .pages, pageCount: 2, hasTrack: true)
+        check("Home: scroll changes volume", IslandController.scrollPolicy(base, horizontal: false) == .volume)
+        var c = base; c.scrollVolume = false
+        check("Volume scrolling can be turned off", IslandController.scrollPolicy(c, horizontal: false) == .pass)
+        c = base; c.editing = true
+        check("Editing: scroll is left to the lists", IslandController.scrollPolicy(c, horizontal: false) == .pass
+              && IslandController.scrollPolicy(c, horizontal: true) == .pass)
+        c = base; c.pickerOpen = true
+        check("Widget gallery: scroll is left to the gallery", IslandController.scrollPolicy(c, horizontal: false) == .pass)
+        c = base; c.tab = .clipboard
+        check("Other tabs: scroll is left to their lists", IslandController.scrollPolicy(c, horizontal: false) == .pass)
+        check("Swipe changes page", IslandController.scrollPolicy(base, horizontal: true) == .page)
+        c = base; c.pageCount = 1
+        check("One page: swipe changes song", IslandController.scrollPolicy(c, horizontal: true) == .song)
+        c = base; c.swipe = .off
+        check("Swipe can be turned off", IslandController.scrollPolicy(c, horizontal: true) == .pass)
+        c = base; c.swipe = .songs
+        check("Swipe can change songs", IslandController.scrollPolicy(c, horizontal: true) == .song)
+        var tracker = IslandController.SwipeTracker()
+        let t0 = Date()
+        var fired: [Int] = []
+        for i in 0..<20 { fired.append(tracker.add(-4, at: t0.addingTimeInterval(Double(i) * 0.01), gestureBegan: i == 0)) }
+        check("Small swipe steps add up to one page change", fired.filter { $0 != 0 } == [1], "\(fired.filter { $0 != 0 })")
+        let late = tracker.add(-40, at: t0.addingTimeInterval(1.0), gestureBegan: true)
+        check("A new swipe works again", late == 1)
+        check("Gallery is tall enough for two full rows", IslandModel.galleryHeight >= 280)
+
+        // Batteries (bug reported in v0.5: only "50%" without a name)
+        step("Batteries")
+        let registry: [[String: Any]] = [
+            ["Product": "Magic Keyboard with Touch ID", "BatteryPercent": 82, "IOClass": "AppleDeviceManagementHIDEventService"],
+            ["Product": "Magic Mouse", "BatteryPercent": 9, "IOClass": "AppleDeviceManagementHIDEventService"],
+            ["Product": "Battery", "BatteryPercent": 50, "IOClass": "AppleSmartBattery"],
+            ["BatteryPercent": 50, "IOClass": "Unknown"],
+        ]
+        let plist = (try? PropertyListSerialization.data(fromPropertyList: registry, format: .xml, options: 0)) ?? Data()
+        let parsed = DeviceBatteryStore.parseRegistry(plist)
+        check("Keyboard and mouse are found with names", parsed.map(\.name) == ["Magic Keyboard with Touch ID", "Magic Mouse"],
+              parsed.map { "\($0.name) \($0.percent)%" }.joined(separator: ", "))
+        check("Nameless and Mac batteries are not listed as devices", !parsed.contains { $0.percent == 50 })
+        let bluetoothJSON = """
+        {"SPBluetoothDataType":[{"device_connected":[
+          {"Rahim's AirPods Pro":{"device_batteryLevelLeft":"80%","device_batteryLevelRight":"74%","device_batteryLevelCase":"40%"}},
+          {"Magic Trackpad":{"device_batteryLevelMain":"63%"}}],
+          "device_not_connected":[{"Old Speaker":{"device_batteryLevelMain":"10%"}}]}]}
+        """
+        let bt = DeviceBatteryStore.parseBluetooth(Data(bluetoothJSON.utf8))
+        check("AirPods battery found (lowest earbud)", bt.contains { $0.name == "Rahim's AirPods Pro" && $0.percent == 74 })
+        check("Trackpad battery found", bt.contains { $0.name == "Magic Trackpad" && $0.percent == 63 })
+        check("Disconnected devices are not shown", !bt.contains { $0.name == "Old Speaker" })
+        check("Keyboard icon", DeviceBatteryStore.symbol(for: "Magic Keyboard with Touch ID") == "keyboard.fill")
+        check("Unknown device gets a battery icon (not headphones)", DeviceBatteryStore.symbol(for: "Some Gadget") == "battery.75percent")
+        check("Short names", DeviceBatteryStore.shortName(for: "Magic Keyboard with Touch ID") == "Keyboard")
+        let live = DeviceBatteryStore.readDevices()
+        info("Devices on this Mac", live.isEmpty ? "none connected" : live.map { "\($0.name) \($0.percent)%" }.joined(separator: ", "))
+
+        // Music app tiles (bug reported in v0.5: Spotify tile had no controls)
+        step("Music app tiles")
+        check("Music app gets a player tile", NowPlayingStore.playerName(for: URL(fileURLWithPath: "/System/Applications/Music.app")) == "Music")
+        check("Other apps stay normal tiles", NowPlayingStore.playerName(for: URL(fileURLWithPath: "/System/Applications/Calculator.app")) == nil)
+        check("Spotify is supported", NowPlayingStore.musicPlayers["com.spotify.client"] == "Spotify")
+        for symbol in ["laptopcomputer.and.bolt", "gamecontroller.fill", "applepencil", "battery.75percent"] {
+            check("SF Symbol exists: \(symbol)", NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil)
+        }
+
         // Crash guard: the island must not close while a menu is open
         step("Crash guard: the island must not close while a menu is open")
         IslandController.shared.expand(tab: .home)

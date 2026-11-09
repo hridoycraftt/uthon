@@ -200,8 +200,87 @@ struct HomeWidgetView: View {
         } else if let folder = item.folder {
             FolderTile(folder: folder)
         } else if let url = item.appURL {
-            AppTile(url: url)
+            if let player = NowPlayingStore.playerName(for: url) {
+                MusicAppTile(url: url, player: player)
+            } else {
+                AppTile(url: url)
+            }
         }
+    }
+}
+
+/// Spotify or Music placed on Home: a mini player with the song and controls.
+struct MusicAppTile: View {
+    let url: URL
+    let player: String
+    @ObservedObject private var nowPlaying = NowPlayingStore.shared
+    @ObservedObject private var settings = AppSettings.shared
+
+    private var track: NowPlayingStore.Track? {
+        guard let t = nowPlaying.track, t.player == player else { return nil }
+        return t
+    }
+
+    var body: some View {
+        WidgetTile {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                        .resizable()
+                        .frame(width: 18, height: 18)
+                    Text(player)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.secondary)
+                    Spacer(minLength: 0)
+                    if track?.isPlaying == true {
+                        EqualizerBars(playing: true).frame(width: 14, height: 10)
+                    }
+                }
+                if let track {
+                    HStack(spacing: 8) {
+                        if settings.slots(of: HomeItem(app: url)) > 1 {
+                            ArtworkView(image: nowPlaying.artwork, bundleID: track.bundleID, size: 40)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(track.title)
+                                .font(.system(size: 12, weight: .semibold))
+                                .lineLimit(1)
+                            Text(track.artist)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                } else {
+                    Text(L("Not playing"))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.secondary)
+                }
+                Spacer(minLength: 0)
+                HStack(spacing: 0) {
+                    control("backward.fill", size: 12) { nowPlaying.command("previous track", player: player) }
+                    control(track?.isPlaying == true ? "pause.fill" : "play.fill", size: 17) {
+                        nowPlaying.command(track == nil ? "play" : "playpause", player: player)
+                    }
+                    control("forward.fill", size: 12) { nowPlaying.command("next track", player: player) }
+                }
+            }
+        }
+        .onAppear { nowPlaying.refresh() }
+        .contextMenu {
+            MenuButton("Open") { NSWorkspace.shared.open(url) }
+        }
+    }
+
+    private func control(_ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.primary)
     }
 }
 
@@ -534,39 +613,46 @@ extension SystemTile {
 
 struct BatteriesTile: View {
     @ObservedObject private var store = DeviceBatteryStore.shared
+    @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
         WidgetTile {
             VStack(alignment: .leading, spacing: 7) {
                 SectionLabel("Batteries")
                 Spacer(minLength: 0)
+                let wide = settings.slots(of: HomeItem(.batteries)) > 1
+                // MacBooks show their own battery first; iMacs have none, so it never appears there.
                 if let mac = DeviceBatteryStore.internalBattery() {
-                    row(symbol: "laptopcomputer", name: "Mac", percent: mac.percent)
+                    row(symbol: mac.pluggedIn ? "laptopcomputer.and.bolt" : "laptopcomputer", name: "Mac",
+                        percent: mac.percent, wide: wide)
                 }
-                ForEach(store.devices.prefix(3)) { device in
-                    row(symbol: device.symbol, name: device.name, percent: device.percent)
+                ForEach(store.devices.prefix(wide ? 5 : 3)) { device in
+                    row(symbol: device.symbol, name: device.name, percent: device.percent, wide: wide)
                 }
                 if store.devices.isEmpty && !store.hasInternalBattery {
-                    Text(L("No wireless devices"))
+                    Text(L("No wireless devices connected"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
                 }
+                Spacer(minLength: 0)
             }
         }
         .onAppear { store.refreshDevices() }
     }
 
-    private func row(symbol: String, name: String, percent: Int) -> some View {
+    private func row(symbol: String, name: String, percent: Int, wide: Bool) -> some View {
         HStack(spacing: 6) {
             Image(systemName: symbol).font(.system(size: 12)).frame(width: 18)
-            Text(name).font(.system(size: 11)).lineLimit(1)
+            Text(wide ? name : L(DeviceBatteryStore.shortName(for: name)))
+                .font(.system(size: 11))
+                .lineLimit(1)
             Spacer(minLength: 4)
             Text("\(percent)%")
                 .font(.system(size: 11, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(percent <= 15 ? Color.red : Color.primary)
         }
-        .help(name)
+        .help("\(name): \(percent)%")
     }
 }
 

@@ -67,9 +67,16 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
 /// What a sideways swipe on Home does.
 enum HomeSwipe: String, CaseIterable, Identifiable {
-    case pages, songs
+    case pages, songs, off
     var id: String { rawValue }
-    var title: String { self == .pages ? "Change page" : "Change song" }
+
+    var title: String {
+        switch self {
+        case .pages: return "Change page"
+        case .songs: return "Change song"
+        case .off: return "Do nothing"
+        }
+    }
 }
 
 extension Color {

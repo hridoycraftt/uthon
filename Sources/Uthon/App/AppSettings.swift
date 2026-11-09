@@ -245,6 +245,7 @@ final class AppSettings: ObservableObject {
         static let language = "language"
         static let swipe = "homeSwipe"
         static let onboarded = "onboardingDone"
+        static let scrollVolume = "scrollVolume"
         static let islandScale = "islandScale"
         static let tabIconSize = "tabIconSize"
         static let dockScale = "dockScale"
@@ -304,6 +305,8 @@ final class AppSettings: ObservableObject {
     @Published var language: AppLanguage { didSet { defaults.set(language.rawValue, forKey: Keys.language) } }
     @Published var homeSwipe: HomeSwipe { didSet { defaults.set(homeSwipe.rawValue, forKey: Keys.swipe) } }
     @Published var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: Keys.onboarded) } }
+    /// Scrolling up/down on the Home tab or a pop-up changes the volume.
+    @Published var scrollVolume: Bool { didSet { defaults.set(scrollVolume, forKey: Keys.scrollVolume) } }
     @Published var appFolders: [AppFolder] { didSet { Persist.save(appFolders, key: "appFolders") } }
 
     private init() {
@@ -361,6 +364,7 @@ final class AppSettings: ObservableObject {
         language = AppLanguage(rawValue: defaults.string(forKey: Keys.language) ?? "") ?? .system
         homeSwipe = HomeSwipe(rawValue: defaults.string(forKey: Keys.swipe) ?? "") ?? .pages
         onboardingDone = defaults.bool(forKey: Keys.onboarded)
+        scrollVolume = defaults.object(forKey: Keys.scrollVolume) as? Bool ?? true
         appFolders = Persist.load([AppFolder].self, key: "appFolders") ?? []
     }
 

@@ -341,12 +341,12 @@ private struct IslandHeader: View {
                     .help("\(w.city)")
                 }
                 ForEach(batteries.devices.prefix(2)) { device in
-                    HStack(spacing: 2) {
-                        Image(systemName: device.symbol).font(.system(size: 9))
+                    HStack(spacing: 3) {
+                        Image(systemName: device.symbol).font(.system(size: 10))
                         Text("\(device.percent)%").font(.system(size: 10, weight: .semibold)).monospacedDigit()
                     }
                     .foregroundStyle(device.percent <= 15 ? Color.red : Color.secondary)
-                    .help(device.name)
+                    .help("\(device.name): \(device.percent)%")
                 }
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Text(context.date, format: .dateTime.hour().minute())

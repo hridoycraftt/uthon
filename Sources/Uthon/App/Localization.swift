@@ -163,6 +163,12 @@ enum Localization {
         "Keep visible (pinned)": "সবসময় দেখাও (পিন করা)", "Turn widgets on or off and change their order.": "উইজেট চালু/বন্ধ করো আর ক্রম বদলাও।",
         "Care reminders": "যত্নের রিমাইন্ডার", "Drink water": "পানি খাও", "Posture & stretch": "বসার ভঙ্গি ও শরীর টানা",
 
+        "Gestures": "জেসচার", "Scroll up/down on the island changes the volume": "আইল্যান্ডে উপর-নিচ স্ক্রল করলে ভলিউম বদলাবে",
+        "Swipe left/right on the island": "আইল্যান্ডে ডানে-বামে সোয়াইপ", "Do nothing": "কিছু না",
+        "While editing or in the widget gallery, scrolling always scrolls the list.": "এডিট বা উইজেট গ্যালারি খোলা থাকলে স্ক্রল সবসময় তালিকাই স্ক্রল করবে।",
+        "Gestures (scroll for volume, swipe for pages or songs) are in the Island tab.": "জেসচার (স্ক্রলে ভলিউম, সোয়াইপে পেজ বা গান) আইল্যান্ড ট্যাবে আছে।",
+        "Not playing": "বাজছে না",
+        "No wireless devices connected": "কোনো ওয়্যারলেস ডিভাইস যুক্ত নেই", "Keyboard": "কীবোর্ড", "Mouse": "মাউস", "Trackpad": "ট্র্যাকপ্যাড",
         // Onboarding
         "Welcome to Uthon": "উঠোনে স্বাগতম",
         "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির ছোট্ট উঠোন: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",

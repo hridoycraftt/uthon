@@ -120,7 +120,7 @@ final class IslandController {
         // an endless layout loop and crashed. Clicks outside the island still pass through
         // (see tick: the window only takes the mouse while it is over the island).
         let base = model.baseExpandedSize
-        let galleryExtra: CGFloat = model.pickerOpen ? 0 : 210
+        let galleryExtra: CGFloat = model.pickerOpen ? 0 : IslandModel.galleryHeight
         let maxScale: CGFloat = 1.5
         let width = base.width * maxScale + 80
         let height = (base.height + galleryExtra) * maxScale + 40
@@ -334,11 +334,69 @@ final class IslandController {
     // MARK: Scroll gestures
 
     /// Over the open Home tab or a peek: scroll up/down = volume, swipe sideways = next/previous song.
+    enum ScrollAction: Equatable { case pass, volume, page, song }
+
+    struct ScrollContext {
+        var expanded: Bool
+        var tab: IslandTab
+        var editing: Bool
+        var pickerOpen: Bool
+        var scrollVolume: Bool
+        var swipe: HomeSwipe
+        var pageCount: Int
+        var hasTrack: Bool
+    }
+
+    /// What a scroll over the island should do. Anything that is not ours is passed on,
+    /// so lists, the widget gallery and the suggestion chips scroll normally.
+    static func scrollPolicy(_ c: ScrollContext, horizontal: Bool) -> ScrollAction {
+        if c.expanded && (c.editing || c.pickerOpen || c.tab != .home) { return .pass }
+        if horizontal {
+            switch c.swipe {
+            case .off:
+                return .pass
+            case .pages:
+                if c.expanded && c.pageCount > 1 { return .page }
+                return c.hasTrack ? .song : .pass
+            case .songs:
+                return c.hasTrack ? .song : .pass
+            }
+        }
+        return c.scrollVolume ? .volume : .pass
+    }
+
+    /// Sideways swipes arrive as many small steps; add them up over one gesture.
+    struct SwipeTracker {
+        var total: CGFloat = 0
+        var lastEvent = Date.distantPast
+        var fired = false
+        static let threshold: CGFloat = 36
+
+        /// Returns -1 / +1 once per gesture when the swipe is long enough, otherwise 0.
+        mutating func add(_ dx: CGFloat, at time: Date, gestureBegan: Bool) -> Int {
+            if gestureBegan || time.timeIntervalSince(lastEvent) > 0.35 {
+                total = 0
+                fired = false
+            }
+            lastEvent = time
+            guard !fired else { return 0 }
+            total += dx
+            if abs(total) >= Self.threshold {
+                fired = true
+                return total < 0 ? 1 : -1
+            }
+            return 0
+        }
+    }
+
+    private var swipe = SwipeTracker()
+    /// Volume changes made by scrolling always show the bar, even if pop-ups are off.
+    private(set) var lastScrollVolume = Date.distantPast
+
     private func handleScroll(_ event: NSEvent) -> Bool {
         guard let s = screen else { return false }
         let size: CGSize
         if model.expanded {
-            guard model.tab == .home else { return false }
             size = model.expandedSize
         } else if let peek = model.peek {
             size = model.peekSize(peek.kind)
@@ -357,30 +415,39 @@ final class IslandController {
             dx = -dx
             dy = -dy
         }
+        let settings = AppSettings.shared
+        let context = ScrollContext(expanded: model.expanded, tab: model.tab, editing: model.editing,
+                                    pickerOpen: model.pickerOpen, scrollVolume: settings.scrollVolume,
+                                    swipe: settings.homeSwipe, pageCount: settings.pageCount,
+                                    hasTrack: NowPlayingStore.shared.track != nil)
+        let horizontal = abs(dx) > abs(dy) * 1.2
+        let action = Self.scrollPolicy(context, horizontal: horizontal)
 
-        if abs(dx) > abs(dy) * 1.5 {
-            guard abs(dx) > 14, Date().timeIntervalSince(lastSwipe) > 0.7 else { return true }
-            let settings = AppSettings.shared
-            if model.expanded, settings.homeSwipe == .pages, settings.pageCount > 1 {
-                lastSwipe = Date()
-                let next = model.homePage + (dx < 0 ? 1 : -1)
+        switch action {
+        case .pass:
+            return false
+        case .page, .song:
+            let direction = swipe.add(dx, at: Date(), gestureBegan: event.phase == .began)
+            guard direction != 0 else { return true }
+            if action == .page {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                    model.homePage = min(settings.pageCount - 1, max(0, next))
+                    model.homePage = min(settings.pageCount - 1, max(0, model.homePage + direction))
                 }
-            } else if NowPlayingStore.shared.track != nil {
-                lastSwipe = Date()
-                NowPlayingStore.shared.command(dx < 0 ? "next track" : "previous track")
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            } else {
+                NowPlayingStore.shared.command(direction > 0 ? "next track" : "previous track")
+            }
+            return true
+        case .volume:
+            scrollAccumulator += dy
+            let step: CGFloat = 10
+            while abs(scrollAccumulator) >= step {
+                let up = scrollAccumulator > 0
+                lastScrollVolume = Date()
+                AudioController.shared.nudge(up ? 1.0 / 32.0 : -1.0 / 32.0)
+                scrollAccumulator += up ? -step : step
             }
             return true
         }
-
-        scrollAccumulator += dy
-        let step: CGFloat = 10
-        while abs(scrollAccumulator) >= step {
-            let up = scrollAccumulator > 0
-            AudioController.shared.nudge(up ? 1.0 / 32.0 : -1.0 / 32.0)
-            scrollAccumulator += up ? -step : step
-        }
-        return true
     }
 }

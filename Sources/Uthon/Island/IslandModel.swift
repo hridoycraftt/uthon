@@ -152,6 +152,8 @@ final class IslandModel: ObservableObject {
         }
     }
 
+    /// Extra height the island grows by when the widget gallery is open.
+    static let galleryHeight: CGFloat = 290
     static let compactFlare: CGFloat = 6
     static let expandedFlare: CGFloat = 14
     static let spring = Animation.spring(response: 0.42, dampingFraction: 0.8)
@@ -159,7 +161,7 @@ final class IslandModel: ObservableObject {
 
     /// Layout size of the open island before the user's size setting is applied.
     var baseExpandedSize: CGSize {
-        CGSize(width: max(740, notchSize.width + 520), height: max(notchSize.height, 40) + 176 + (pickerOpen ? 210 : 0))
+        CGSize(width: max(740, notchSize.width + 520), height: max(notchSize.height, 40) + 176 + (pickerOpen ? Self.galleryHeight : 0))
     }
 
     static var scale: CGFloat { CGFloat(min(max(AppSettings.shared.islandScale, 0.8), 1.5)) }

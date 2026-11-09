@@ -29,7 +29,8 @@ enum SnapshotTour {
         s.sideDockEnabled = true
         s.pinned = false
         s.hotkeyEnabled = false
-        s.homePages = [HomeWidget.defaults.map(\.rawValue), ["bookmarks", "worldClock", "prayer", "countdown", "todo"]]
+        s.homePages = [HomeWidget.defaults.map(\.rawValue), ["bookmarks", "worldClock", "prayer", "countdown", "todo"],
+                       ["app:/System/Applications/Music.app", "batteries", "system", "controls", "notes"]]
         s.weatherCity = "Dhaka"
         UserLibrary.shared.specialDays = [SpecialDay(name: "Ammu's birthday", date: Calendar.current.date(byAdding: .day, value: 12, to: Date())!)]
         seed()
@@ -124,6 +125,8 @@ enum SnapshotTour {
             print("state before page-2 capture: homePage=\(model.homePage) pages=\(s.pageCount) expanded=\(model.expanded) tab=\(model.tab)")
             capture("screen-island-page2")
         }
+        add("live-page3") { withAnimation { model.homePage = 2 } }
+        add("capture-page3") { capture("screen-island-page3") }
         add("live-bangla") {
             model.homePage = 0
             s.language = .bangla

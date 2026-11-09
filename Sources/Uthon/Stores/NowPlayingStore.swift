@@ -179,6 +179,20 @@ final class NowPlayingStore: ObservableObject {
         }
     }
 
+    static let musicPlayers: [String: String] = ["com.spotify.client": "Spotify", "com.apple.Music": "Music"]
+
+    /// The player name ("Spotify", "Music") for an app bundle, if it is a supported music app.
+    static func playerName(for appURL: URL) -> String? {
+        guard let id = Bundle(url: appURL)?.bundleIdentifier else { return nil }
+        return musicPlayers[id]
+    }
+
+    /// Send a command to one specific player (launches it if needed).
+    func command(_ command: String, player: String) {
+        _ = run("tell application \"\(player)\" to \(command)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.refresh() }
+    }
+
     /// "playpause", "next track" or "previous track"
     func command(_ command: String) {
         guard let player = track?.player ?? runningPlayer()?.name else { return }

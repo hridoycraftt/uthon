@@ -408,6 +408,17 @@ private struct IslandSettings: View {
             } header: {
                 Text(L("Controls") + " · \(settings.controls.count)/\(ControlKind.maxSlots)")
             }
+            Section {
+                Toggle(L("Scroll up/down on the island changes the volume"), isOn: $settings.scrollVolume)
+                Picker(L("Swipe left/right on the island"), selection: $settings.homeSwipe) {
+                    ForEach(HomeSwipe.allCases) { Text(L($0.title)).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text(L("Gestures"))
+            } footer: {
+                Text(L("While editing or in the widget gallery, scrolling always scrolls the list."))
+            }
             Section(L("Live activities (closed island)")) {
                 Toggle(L("Music: artwork and equalizer"), isOn: $settings.liveMusic)
                 Toggle(L("Timer and stopwatch countdown"), isOn: $settings.liveTimers)
@@ -554,7 +565,7 @@ private struct AlertsSettings: View {
             } header: {
                 Text(L("Island pop-ups"))
             } footer: {
-                Text(L("Scroll on the open island to change volume; swipe sideways to change page or song."))
+                Text(L("Gestures (scroll for volume, swipe for pages or songs) are in the Island tab."))
             }
             Section {
                 Toggle(L("New song"), isOn: $settings.peekTrack)
