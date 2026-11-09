@@ -57,6 +57,11 @@ struct IslandView: View {
                     .opacity(glass ? 0 : 1)
             }
             .frame(width: size.width, height: size.height)
+            .overlay(alignment: .bottom) {
+                if model.debugMarkers {
+                    Rectangle().fill(Color(red: 0, green: 1, blue: 0)).frame(width: 6, height: 10)
+                }
+            }
             .shadow(color: .black.opacity(mode == .closed ? 0 : 0.3), radius: 20, y: 10)
 
             // The content never moves: it stays centred at its final size, and the island
@@ -92,6 +97,11 @@ struct IslandView: View {
             let base = model.baseExpandedSize
             ExpandedIsland()
                 .frame(width: base.width, height: base.height)
+                .overlay(alignment: .center) {
+                    if model.debugMarkers {
+                        Rectangle().fill(Color(red: 1, green: 0, blue: 0)).frame(width: 6, height: 40)
+                    }
+                }
                 .scaleEffect(scale, anchor: .top)
                 .frame(width: base.width * scale, height: base.height * scale, alignment: .top)
                 // Nothing inside moves while the island opens: the content is placed at its

@@ -43,6 +43,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if AnimTest.isActive {
+            IslandController.shared.start()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { AnimTest.run() }
+            return
+        }
+
         if SnapshotTour.isActive {
             DockController.shared.start()
             IslandController.shared.start()

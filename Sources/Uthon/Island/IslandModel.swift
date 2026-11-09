@@ -177,6 +177,9 @@ final class IslandModel: ObservableObject {
         return CGSize(width: max(740, notchWidth + 540), height: headerHeight + 176 + (pickerOpen ? Self.galleryHeight : 0))
     }
 
+    /// Animation test only: draw centre markers on the glass (green) and the content (red).
+    var debugMarkers = false
+
     /// Size of the screen the island is on (set by IslandController).
     @Published var screenSize = CGSize(width: 1512, height: 982)
 

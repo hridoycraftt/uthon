@@ -55,6 +55,21 @@ jobs:
           mkdir -p shots
           perl -e 'alarm 120; exec @ARGV' ./dist/Nook.app/Contents/MacOS/Nook --self-test "$PWD/shots/self-test.txt"
 
+      # Records the island opening and closing (video) with centre markers, to measure
+      # frame by frame that it grows out of the middle.
+      - name: Animation recording
+        continue-on-error: true
+        run: |
+          mkdir -p shots
+          for mode in light dark; do
+            extra=""
+            [ "$mode" = dark ] && extra="--dark"
+            perl -e 'alarm 60; exec @ARGV' ./dist/Nook.app/Contents/MacOS/Nook --anim-test "$PWD/shots" $extra \
+              > "shots/anim-run-$mode.txt" 2>&1 || echo "anim test ($mode) did not finish" >> shots/anim-run-$mode.txt
+            sleep 2
+          done
+          ls -la shots/anim-*.mov || true
+
       - name: Snapshot tour (light and dark)
         id: tour
         continue-on-error: true
