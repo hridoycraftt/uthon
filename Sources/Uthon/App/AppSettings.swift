@@ -93,8 +93,10 @@ struct HomeItem: CustomizableItem {
     /// Width in slots: the user's chosen size (small/medium/large), within what the widget allows.
     var slots: Int { AppSettings.shared.slots(of: self) }
 
-    var defaultSlots: Int { widget?.defaultSlots ?? 1 }
-    var minSlots: Int { widget?.minSlots ?? 1 }
+    /// Music app tiles (Spotify, Music) are full players, so they need two slots like the Music widget.
+    var isMusicApp: Bool { appURL.flatMap(NowPlayingStore.playerName(for:)) != nil }
+    var defaultSlots: Int { widget?.defaultSlots ?? (isMusicApp ? 2 : 1) }
+    var minSlots: Int { widget?.minSlots ?? (isMusicApp ? 2 : 1) }
 
     /// Built-in widgets plus every app and folder the user has placed.
     static var allCases: [HomeItem] {

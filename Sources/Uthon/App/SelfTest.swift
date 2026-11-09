@@ -346,6 +346,10 @@ enum SelfTest {
         check("Music app gets a player tile", NowPlayingStore.playerName(for: URL(fileURLWithPath: "/System/Applications/Music.app")) == "Music")
         check("Other apps stay normal tiles", NowPlayingStore.playerName(for: URL(fileURLWithPath: "/System/Applications/Calculator.app")) == nil)
         check("Spotify is supported", NowPlayingStore.musicPlayers["com.spotify.client"] == "Spotify")
+        let musicTile = HomeItem(app: URL(fileURLWithPath: "/System/Applications/Music.app"))
+        check("Music app tile is a full player (2 slots)", musicTile.isMusicApp && settings.slots(of: musicTile) == 2)
+        check("Music app tile can't be shrunk below 2 slots", { settings.widgetSizes[musicTile.rawValue] = 1; defer { settings.widgetSizes[musicTile.rawValue] = nil }; return settings.slots(of: musicTile) == 2 }())
+        check("Other app tiles stay 1 slot", settings.slots(of: HomeItem(app: URL(fileURLWithPath: "/System/Applications/Calculator.app"))) == 1)
         for symbol in ["battery.100percent.bolt", "gamecontroller.fill", "applepencil", "battery.75percent"] {
             check("SF Symbol exists: \(symbol)", NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil)
         }

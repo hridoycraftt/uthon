@@ -220,78 +220,18 @@ struct HomeWidgetView: View {
     }
 }
 
-/// Spotify or Music placed on Home: a mini player with the song and controls.
+/// Spotify or Music placed on Home: the same full player as the Music widget
+/// (artwork, song, artist, progress, controls), but only for that app.
 struct MusicAppTile: View {
     let url: URL
     let player: String
-    @ObservedObject private var nowPlaying = NowPlayingStore.shared
-    @ObservedObject private var settings = AppSettings.shared
-
-    private var track: NowPlayingStore.Track? {
-        guard let t = nowPlaying.track, t.player == player else { return nil }
-        return t
-    }
 
     var body: some View {
-        WidgetTile {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                        .resizable()
-                        .frame(width: 18, height: 18)
-                    Text(player)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color.secondary)
-                    Spacer(minLength: 0)
-                    if track?.isPlaying == true {
-                        EqualizerBars(playing: true).frame(width: 14, height: 10)
-                    }
-                }
-                if let track {
-                    HStack(spacing: 8) {
-                        if settings.slots(of: HomeItem(app: url)) > 1 {
-                            ArtworkView(image: nowPlaying.artwork, bundleID: track.bundleID, size: 40)
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(track.title)
-                                .font(.system(size: 12, weight: .semibold))
-                                .lineLimit(1)
-                            Text(track.artist)
-                                .font(.system(size: 10))
-                                .foregroundStyle(Color.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-                } else {
-                    Text(L("Not playing"))
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
-                }
-                Spacer(minLength: 0)
-                HStack(spacing: 0) {
-                    control("backward.fill", size: 12) { nowPlaying.command("previous track", player: player) }
-                    control(track?.isPlaying == true ? "pause.fill" : "play.fill", size: 17) {
-                        nowPlaying.command(track == nil ? "play" : "playpause", player: player)
-                    }
-                    control("forward.fill", size: 12) { nowPlaying.command("next track", player: player) }
-                }
+        IslandMusicTile(onlyPlayer: player, appURL: url)
+            .onAppear { NowPlayingStore.shared.refresh() }
+            .contextMenu {
+                MenuButton("Open") { NSWorkspace.shared.open(url) }
             }
-        }
-        .onAppear { nowPlaying.refresh() }
-        .contextMenu {
-            MenuButton("Open") { NSWorkspace.shared.open(url) }
-        }
-    }
-
-    private func control(_ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: size, weight: .semibold))
-                .frame(maxWidth: .infinity, minHeight: 26)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.primary)
     }
 }
 
@@ -777,11 +717,28 @@ struct NoteTile: View {
 }
 
 struct IslandMusicTile: View {
+    /// Set for a Spotify/Music app tile: show and control only that app.
+    var onlyPlayer: String? = nil
+    var appURL: URL? = nil
     @ObservedObject private var player = NowPlayingStore.shared
+
+    private var current: NowPlayingStore.Track? {
+        guard let track = player.track else { return nil }
+        if let only = onlyPlayer, track.player != only { return nil }
+        return track
+    }
+
+    private func send(_ command: String) {
+        if let only = onlyPlayer {
+            player.command(command, player: only)
+        } else {
+            player.command(command)
+        }
+    }
 
     var body: some View {
         Group {
-            if let track = player.track {
+            if let track = current {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 11) {
                         ArtworkView(image: player.artwork, bundleID: track.bundleID, size: 46)
@@ -804,24 +761,41 @@ struct IslandMusicTile: View {
                     }
                     HStack(spacing: 28) {
                         Spacer()
-                        control("backward.fill") { player.command("previous track") }
-                        control(track.isPlaying ? "pause.fill" : "play.fill", size: 19) { player.command("playpause") }
-                        control("forward.fill") { player.command("next track") }
+                        control("backward.fill") { send("previous track") }
+                        control(track.isPlaying ? "pause.fill" : "play.fill", size: 19) { send("playpause") }
+                        control("forward.fill") { send("next track") }
                         Spacer()
                     }
                 }
             } else {
                 VStack(spacing: 6) {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 20, weight: .light))
-                        .foregroundStyle(Color.secondary)
+                    if let appURL {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: appURL.path))
+                            .resizable()
+                            .frame(width: 36, height: 36)
+                    } else {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 20, weight: .light))
+                            .foregroundStyle(Color.secondary)
+                    }
                     Text(L("Nothing playing"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
-                    Button(L("Open Music")) { player.openMusic() }
+                    if let only = onlyPlayer {
+                        Button {
+                            player.command("play", player: only)
+                        } label: {
+                            Label(L("Play on") + " " + only, systemImage: "play.fill")
+                        }
                         .buttonStyle(.plain)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Theme.accent)
+                    } else {
+                        Button(L("Open Music")) { player.openMusic() }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

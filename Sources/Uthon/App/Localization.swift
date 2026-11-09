@@ -182,6 +182,7 @@ enum Localization {
         "Big player with quick controls": "বড় প্লেয়ার আর কুইক কন্ট্রোল", "To-dos, notes, calendar and countdowns": "করণীয়, নোট, ক্যালেন্ডার আর কাউন্টডাউন",
         "Music, family days, prayer and clocks": "গান, পারিবারিক দিন, নামাজ আর ঘড়ি", "Prayer times, calendar, weather and clocks": "নামাজের সময়, ক্যালেন্ডার, আবহাওয়া আর ঘড়ি",
         "CPU, memory, batteries and controls": "CPU, মেমরি, ব্যাটারি আর কন্ট্রোল", "Just the date and the weather": "শুধু তারিখ আর আবহাওয়া",
+        "Play on": "চালাও",
         // Onboarding
         "Welcome to Uthon": "উঠোনে স্বাগতম",
         "Your family's little courtyard on the Mac: music, calendar, weather, files and handy controls, always one move away.": "Mac-এ তোমার ফ্যামিলির ছোট্ট উঠোন: গান, ক্যালেন্ডার, আবহাওয়া, ফাইল আর দরকারি কন্ট্রোল, সবসময় হাতের কাছে।",
