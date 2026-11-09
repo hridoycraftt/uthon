@@ -21,7 +21,8 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
     @ViewBuilder let tile: (Item) -> Tile
 
     @State private var dragging: Item?
-    private let spacing: CGFloat = 10
+    /// Tighter gaps when many tiles share the row, so each tile keeps room for its name.
+    private var spacing: CGFloat { usedSlots >= 7 ? 6 : (usedSlots >= 6 ? 8 : 10) }
 
     private var usedSlots: Int { items.reduce(0) { $0 + $1.slots } }
     private var available: [Item] { allItems.filter { !items.contains($0) } }

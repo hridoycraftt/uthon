@@ -123,6 +123,15 @@ enum SnapshotTour {
             render(BottomDockView(forcedItems: BottomDockItem.allCases), size: CGSize(width: width, height: BottomDockController.baseHeight), shape: false, name: "bottom-dock")
             lib.bottomDockItems = ["apps", "clock", "music", "weather"]
         }
+        add("controls-full") {
+            for kind in ControlKind.allCases where s.canEnableControl(kind) { s.setControl(kind, true) }
+            model.tab = .controls
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-controls-full")
+            s.language = .bangla
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-controls-full-bangla")
+            s.language = .system
+            model.tab = .home
+        }
         let peeks: [(String, PeekKind)] = [
             ("notification", .notification(NotificationPeek(bundleID: "com.apple.MobileSMS", app: "Messages", title: "Ammu",
                                                             text: "Dinner is ready, come home soon! Bring some sweets on the way."))),
