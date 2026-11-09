@@ -140,6 +140,31 @@ enum SnapshotTour {
             s.language = .system
             model.tab = .home
         }
+        // A 14" MacBook with a notch and larger text (small screen, small island):
+        // every tab and pop-up must fit with nothing cut off, in English and Bangla.
+        add("small-notch") {
+            let saved = (model.hasNotch, model.notchSize, model.screenSize)
+            model.hasNotch = true
+            model.notchSize = CGSize(width: 185, height: 32)
+            model.screenSize = CGSize(width: 1147, height: 745)
+            print("small-notch scale: \(IslandModel.scale), base \(model.baseExpandedSize)")
+            for language in [AppLanguage.english, .bangla] {
+                s.language = language
+                let suffix = language == .bangla ? "-bn" : ""
+                for tab in IslandTab.allCases where tab != .mirror {
+                    model.tab = tab
+                    render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "small-tab-\(tab.rawValue)\(suffix)")
+                }
+                for (name, kind) in [("volume", PeekKind.volume(level: 0.6, muted: false)), ("track", .track),
+                                     ("notification", .notification(NotificationPeek(bundleID: "com.apple.MobileSMS", app: "Messages",
+                                                                                      title: "Ammu", text: "Dinner is ready, come home soon!")))] {
+                    render(PeekView(kind: kind), size: model.basePeekSize(kind), shape: true, name: "small-peek-\(name)\(suffix)")
+                }
+            }
+            s.language = .system
+            model.tab = .home
+            (model.hasNotch, model.notchSize, model.screenSize) = saved
+        }
         let peeks: [(String, PeekKind)] = [
             ("notification", .notification(NotificationPeek(bundleID: "com.apple.MobileSMS", app: "Messages", title: "Ammu",
                                                             text: "Dinner is ready, come home soon! Bring some sweets on the way."))),
@@ -330,6 +355,14 @@ enum SnapshotTour {
                 RoundedRectangle(cornerRadius: Theme.panelRadius, style: .continuous).fill(background)
             }
             view
+            // Show where the hardware notch would cover the island (red outline).
+            if shape, IslandModel.shared.hasNotch {
+                let n = IslandModel.shared.notchSize
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.black)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.red, lineWidth: 1))
+                    .frame(width: n.width / IslandModel.scale, height: n.height / IslandModel.scale)
+            }
         }
         .frame(width: size.width, height: size.height)
         .environment(\.colorScheme, dark ? .dark : .light)

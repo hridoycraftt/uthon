@@ -311,13 +311,35 @@ private struct IslandHeader: View {
     @ObservedObject private var batteries = DeviceBatteryStore.shared
     @Namespace private var tabNamespace
 
+    /// Room the notch takes in the header (in the island's own, unscaled layout).
+    private var notchGap: CGFloat { model.hasNotch ? model.notchSize.width / IslandModel.scale + 24 : 16 }
+
+    /// Whether the tabs must drop their labels to leave room for the right side and the notch.
+    private func compactTabs(width: CGFloat) -> Bool {
+        let icon = CGFloat(settings.tabIconSize)
+        let tabs = settings.visibleIslandTabs
+        let pills = CGFloat(tabs.count) * (icon + 6 + 20) + CGFloat(max(tabs.count - 1, 0)) * 4
+        let label = CGFloat(L(model.tab.title).count) * max(12, icon * 0.85) * 0.62 + 6
+        let right: CGFloat = 220
+        let available = width - 2 * (IslandModel.expandedFlare + 12) - notchGap - right
+        return pills + label > available
+    }
+
     var body: some View {
+        GeometryReader { geo in
+            row(compact: compactTabs(width: geo.size.width))
+                .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+
+    private func row(compact: Bool) -> some View {
         HStack(spacing: 0) {
-            HStack(spacing: 4) {
+            HStack(spacing: compact ? 2 : 4) {
                 ForEach(settings.visibleIslandTabs) { tab in
                     TabPill(tab: tab,
                             badge: tab == .shelf && !shelf.paths.isEmpty ? shelf.paths.count : nil,
                             selected: model.tab == tab,
+                            compact: compact,
                             namespace: tabNamespace) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             model.tab = tab
@@ -327,7 +349,7 @@ private struct IslandHeader: View {
                     }
                 }
             }
-            Spacer(minLength: model.hasNotch ? model.notchSize.width + 24 : 16)
+            Spacer(minLength: notchGap)
             // When space is short, drop the battery chips first, then the weather.
             // Nothing ever wraps onto two lines.
             ViewThatFits(in: .horizontal) {
@@ -404,6 +426,8 @@ private struct TabPill: View {
     let tab: IslandTab
     let badge: Int?
     let selected: Bool
+    /// Short on room: icons only (the name shows on hover).
+    var compact = false
     let namespace: Namespace.ID
     let action: () -> Void
     @State private var hover = false
@@ -415,7 +439,7 @@ private struct TabPill: View {
                 Image(systemName: tab.symbol)
                     .font(.system(size: icon, weight: .semibold))
                     .frame(width: icon + 6, height: icon + 6)
-                if selected {
+                if selected && !compact {
                     Text(L(tab.title))
                         .font(.system(size: max(12, icon * 0.85), weight: .semibold))
                         .fixedSize()
@@ -432,7 +456,7 @@ private struct TabPill: View {
                         .background(Capsule().fill(Theme.accent))
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, compact ? 8 : 10)
             .padding(.vertical, 4)
             .background {
                 if selected {

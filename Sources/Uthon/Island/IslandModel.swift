@@ -171,7 +171,10 @@ final class IslandModel: ObservableObject {
 
     /// Layout size of the open island before the user's size setting is applied.
     var baseExpandedSize: CGSize {
-        CGSize(width: max(740, notchSize.width + 520), height: max(notchSize.height, 40) + 176 + (pickerOpen ? Self.galleryHeight : 0))
+        // The island is laid out at this size and then scaled, so the notch takes
+        // notch / scale of it: on a small screen (small scale) it needs more room.
+        let notchWidth = hasNotch ? notchSize.width / Self.scale : 0
+        return CGSize(width: max(740, notchWidth + 540), height: headerHeight + 176 + (pickerOpen ? Self.galleryHeight : 0))
     }
 
     /// Size of the screen the island is on (set by IslandController).
@@ -201,7 +204,7 @@ final class IslandModel: ObservableObject {
     }
 
     /// Height of the tab bar row (at least the notch height so it never sits under the notch).
-    var headerHeight: CGFloat { max(notchSize.height, 40) }
+    var headerHeight: CGFloat { max(hasNotch ? notchSize.height / Self.scale : notchSize.height, 40) }
 
     func earWidth(for activity: IslandActivity) -> CGFloat {
         switch activity {
@@ -220,10 +223,12 @@ final class IslandModel: ObservableObject {
 
     func basePeekSize(_ kind: PeekKind) -> CGSize {
         let top = hasNotch ? notchSize.height / Self.scale : 0
+        // Laid out at this size, then scaled: the notch is notch / scale wide in here.
+        let notchWidth = notchSize.width / (hasNotch ? Self.scale : 1)
         if kind.isSlim {
-            return CGSize(width: max(notchSize.width + 150, 320), height: top + 46)
+            return CGSize(width: max(notchWidth + 150, 320), height: top + 46)
         }
-        return CGSize(width: max(notchSize.width + 240, 440), height: top + 78)
+        return CGSize(width: max(notchWidth + 240, 440), height: top + 78)
     }
 
     func peekSize(_ kind: PeekKind) -> CGSize {

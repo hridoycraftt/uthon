@@ -8,7 +8,7 @@ struct PeekView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Color.clear.frame(height: model.hasNotch ? model.notchSize.height : 0)
+            Color.clear.frame(height: model.hasNotch ? model.notchSize.height / IslandModel.scale : 0)
             Group {
                 if kind.isSlim {
                     HStack(spacing: 10) { PeekHUDContent(kind: kind) }
