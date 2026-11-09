@@ -8,6 +8,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      os:
+        description: 'Macs to test on, as a JSON list (e.g. ["macos-15-intel"] when Apple Silicon runners are busy)'
+        required: false
+        default: '["macos-15", "macos-26"]'
 
 permissions:
   contents: write
@@ -21,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, macos-26]
+        os: ${{ fromJSON(inputs.os || '["macos-15", "macos-26"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
