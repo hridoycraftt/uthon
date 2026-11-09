@@ -64,9 +64,23 @@ final class BottomDockController: ObservableObject {
     static var scale: CGFloat { shared.baseScale }
 
     /// Bar size for a Dock of this height: the bar is as tall as the Dock.
-    static func matchedScale(dockHeight: CGFloat?, user: CGFloat, match: Bool) -> CGFloat {
-        guard match, let dockHeight, dockHeight > 10 else { return user }
-        return min(max(dockHeight / 58, 0.55), 1.8) * user
+    /// Height of the bar at size 1 (an app icon is `appSize`, like a Dock icon of 40 pt).
+    static let baseHeight: CGFloat = 52
+
+    /// Bar size for the macOS Dock: exactly as tall as the Dock when its frame is known
+    /// (Accessibility), otherwise app icons as big as the Dock's own icons (its icon size setting).
+    static func matchedScale(dockHeight: CGFloat?, tileSize: CGFloat?, user: CGFloat, match: Bool) -> CGFloat {
+        guard match else { return user }
+        let base: CGFloat
+        if let dockHeight, dockHeight > 10 { base = dockHeight / baseHeight }
+        else if let tileSize, tileSize > 10 { base = tileSize / appSize }
+        else { return user }
+        return min(max(base, 0.5), 2.2) * user
+    }
+
+    /// The Dock's icon size setting (System Settings > Desktop & Dock > Size).
+    static var dockTileSize: CGFloat? {
+        (CFPreferencesCopyAppValue("tilesize" as CFString, "com.apple.dock" as CFString) as? NSNumber).map { CGFloat($0.doubleValue) }
     }
 
     private var panel: DockPanel?
@@ -152,7 +166,7 @@ final class BottomDockController: ObservableObject {
         return (w + 20) * scale
     }
 
-    static var height: CGFloat { 58 * scale }
+    static var height: CGFloat { baseHeight * scale }
 
     /// The screen with the macOS Dock (the primary one when unsure).
     static func dockScreen() -> NSScreen? {
@@ -166,7 +180,13 @@ final class BottomDockController: ObservableObject {
         let app = AXUIElementCreateApplication(dock.processIdentifier)
         var children: CFTypeRef?
         guard AXUIElementCopyAttributeValue(app, kAXChildrenAttribute as CFString, &children) == .success,
-              let list = (children as? [AXUIElement])?.first else { return nil }
+              let items = children as? [AXUIElement], !items.isEmpty else { return nil }
+        // The row of icons is the Dock's AXList (not always its first child).
+        let list = items.first { element in
+            var role: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+            return (role as? String) == (kAXListRole as String)
+        } ?? items[0]
         var posRef: CFTypeRef?, sizeRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(list, kAXPositionAttribute as CFString, &posRef) == .success,
               AXUIElementCopyAttributeValue(list, kAXSizeAttribute as CFString, &sizeRef) == .success,
@@ -270,9 +290,9 @@ final class BottomDockController: ObservableObject {
             lastDockCheck = Date()
         }
         // Track the Dock's size: when it grows or shrinks, so does the bar.
-        let dockHeight = dockFrame.map { exactDock ? $0.height : $0.height * 0.9 }
         let atBottom = dockFrame.map { $0.width > $0.height } ?? false
-        let wanted = Self.matchedScale(dockHeight: atBottom ? dockHeight : nil, user: Self.userScale, match: library.bottomDockMatchDock)
+        let wanted = Self.matchedScale(dockHeight: exactDock && atBottom ? dockFrame?.height : nil,
+                                       tileSize: Self.dockTileSize, user: Self.userScale, match: library.bottomDockMatchDock)
         if abs(wanted - baseScale) > 0.01 { baseScale = wanted }
         let offset = CGFloat(library.bottomDockOffset)
         let plan = Self.plan(items: library.bottomDockItems.compactMap(BottomDockItem.init(rawValue:)),
@@ -387,8 +407,8 @@ struct BottomDockView: View {
         }
         .id(settings.lookKey)
         .environment(\.locale, Localization.locale)
-        .background(LiquidGlass(shape: RoundedRectangle(cornerRadius: 18 * scale, style: .continuous)))
-        .overlay(NightDimOverlay().clipShape(RoundedRectangle(cornerRadius: 18 * scale, style: .continuous)))
+        .background(BottomDockBackground(radius: 16 * scale))
+        .overlay(NightDimOverlay().clipShape(RoundedRectangle(cornerRadius: 16 * scale, style: .continuous)))
     }
 
     private var items: [BottomDockItem] { forcedItems ?? controller.visibleItems }
@@ -613,5 +633,22 @@ private struct BottomNetwork: View {
         .monospacedDigit()
         .lineLimit(1)
         .onAppear { net.start() }
+    }
+}
+
+/// Glass with a light or dark layer that follows the system theme, like the macOS Dock,
+/// so text stays readable over any wallpaper (dark text on light glass in Light mode,
+/// light text on dark glass in Dark mode).
+private struct BottomDockBackground: View {
+    let radius: CGFloat
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        ZStack {
+            LiquidGlass(shape: shape)
+            shape.fill(scheme == .dark ? Color.black.opacity(0.32) : Color.white.opacity(0.55))
+            shape.strokeBorder(scheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08), lineWidth: 0.5)
+        }
     }
 }

@@ -380,6 +380,20 @@ struct BottomDockSettings: View {
                         Button(L("Check again")) { trusted = AXIsProcessTrusted() }
                     }
                 }
+                if !trusted {
+                    Text(L("Already turned on for Nook but still not working? macOS ties the permission to each version. In System Settings > Privacy & Security > Accessibility, select Nook (or the old Uthon), press − to remove it, then press Allow… here again."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button(L("Open Accessibility settings…")) {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                } else if library.bottomDockMatchDock {
+                    Text(L("Same height as the macOS Dock; it grows and shrinks with it."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if library.bottomDockEnabled, bottom.droppedCount > 0 {
                     Label(L("Not enough room beside the Dock, so the last items are hidden. Turn some items off, make it smaller, or make the macOS Dock smaller.")
                           + " (\(bottom.droppedCount) " + L("hidden") + ")",
@@ -426,5 +440,10 @@ struct BottomDockSettings: View {
         }
         .formStyle(.grouped)
         .onAppear { trusted = AXIsProcessTrusted() }
+        // Notice the permission as soon as it is given in System Settings.
+        .onReceive(Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()) { _ in
+            let now = AXIsProcessTrusted()
+            if now != trusted { trusted = now }
+        }
     }
 }

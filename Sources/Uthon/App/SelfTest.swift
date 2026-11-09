@@ -649,12 +649,15 @@ enum SelfTest {
         let crowded = BottomDockController.fit(base: 800, screen: CGRect(x: 0, y: 0, width: 1024, height: 768),
                                                dock: CGRect(x: 37, y: 4, width: 951, height: 62), side: .right, offset: 0)
         check("Fit: reports no room", crowded.tooWide)
-        check("Match: bar as tall as a 58 pt Dock", BottomDockController.matchedScale(dockHeight: 58, user: 1, match: true) == 1)
-        check("Match: bigger Dock, bigger bar", BottomDockController.matchedScale(dockHeight: 80, user: 1, match: true) > 1.3)
-        check("Match: smaller Dock, smaller bar", BottomDockController.matchedScale(dockHeight: 40, user: 1, match: true) < 0.75)
-        check("Match: fine-tune applies on top", abs(BottomDockController.matchedScale(dockHeight: 58, user: 1.2, match: true) - 1.2) < 0.001)
-        check("Match off: user size", BottomDockController.matchedScale(dockHeight: 80, user: 0.9, match: false) == 0.9)
-        check("Match: hidden Dock falls back to user size", BottomDockController.matchedScale(dockHeight: nil, user: 1.1, match: true) == 1.1)
+        check("Match: bar exactly as tall as the Dock", abs(BottomDockController.matchedScale(dockHeight: 64, tileSize: 48, user: 1, match: true)
+              * BottomDockController.baseHeight - 64) < 0.01)
+        check("Match: bigger Dock, bigger bar", BottomDockController.matchedScale(dockHeight: 80, tileSize: nil, user: 1, match: true) > 1.4)
+        check("Match: smaller Dock, smaller bar", BottomDockController.matchedScale(dockHeight: 40, tileSize: nil, user: 1, match: true) < 0.8)
+        check("Match: no Accessibility, icons as big as Dock icons",
+              abs(BottomDockController.matchedScale(dockHeight: nil, tileSize: 48, user: 1, match: true) * BottomDockController.appSize - 48) < 0.01)
+        check("Match: fine-tune applies on top", abs(BottomDockController.matchedScale(dockHeight: 52, tileSize: nil, user: 1.2, match: true) - 1.2) < 0.001)
+        check("Match off: user size", BottomDockController.matchedScale(dockHeight: 80, tileSize: 64, user: 0.9, match: false) == 0.9)
+        check("Match: hidden Dock falls back to user size", BottomDockController.matchedScale(dockHeight: nil, tileSize: nil, user: 1.1, match: true) == 1.1)
         let tight = BottomDockController.plan(items: BottomDockItem.allCases, appCount: 3, scale: 1,
                                               screen: CGRect(x: 0, y: 0, width: 1024, height: 768),
                                               dock: CGRect(x: 160, y: 4, width: 700, height: 50), side: .right, offset: 0)

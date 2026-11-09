@@ -120,7 +120,7 @@ enum SnapshotTour {
             let lib = UserLibrary.shared
             lib.bottomDockItems = BottomDockItem.allCases.map(\.rawValue)
             let width = BottomDockController.width(items: lib.bottomDockItems, appCount: lib.bottomDockAppURLs.count, scale: 1)
-            render(BottomDockView(forcedItems: BottomDockItem.allCases), size: CGSize(width: width, height: 58), shape: false, name: "bottom-dock")
+            render(BottomDockView(forcedItems: BottomDockItem.allCases), size: CGSize(width: width, height: BottomDockController.baseHeight), shape: false, name: "bottom-dock")
             lib.bottomDockItems = ["apps", "clock", "music", "weather"]
         }
         let peeks: [(String, PeekKind)] = [
