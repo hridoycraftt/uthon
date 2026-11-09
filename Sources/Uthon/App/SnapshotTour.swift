@@ -82,6 +82,18 @@ enum SnapshotTour {
             model.pickerOpen = false
             model.editing = false
         }
+        add("live-presets") {
+            IslandController.shared.expand(tab: .home, sticky: true)
+            model.editing = true
+            model.gallerySection = 2
+            model.pickerOpen = true
+        }
+        add("capture-presets") {
+            capture("screen-island-presets")
+            model.pickerOpen = false
+            model.gallerySection = 0
+            model.editing = false
+        }
         add("live-edit") {
             IslandController.shared.expand(tab: .home, sticky: true)
             model.editing = true

@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 import UniformTypeIdentifiers
+import CoreBluetooth
 
 enum SettingsTab: Hashable {
     case general, look, home, island, widgets, alerts, profiles, dock, care
@@ -243,6 +244,18 @@ private struct HomeSettings: View {
             } footer: {
                 Text(L("Tip: press Edit on the open island to add, remove and drag widgets right there."))
             }
+            Section {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 8)], spacing: 8) {
+                    ForEach(HomePreset.all) { preset in
+                        PresetCard(preset: preset)
+                    }
+                }
+                .padding(.vertical, 4)
+            } header: {
+                Text(L("Presets"))
+            } footer: {
+                Text(L("Tap a layout to use it on Home. Your own changes and the Undo button still work."))
+            }
             ForEach(0..<settings.pageCount, id: \.self) { page in
                 Section {
                     let items = settings.homeItems(page: page)
@@ -434,6 +447,7 @@ private struct WidgetDataSettings: View {
     @ObservedObject private var library = UserLibrary.shared
     @ObservedObject private var todos = TodoStore.shared
     @ObservedObject private var weather = WeatherStore.shared
+    @ObservedObject private var batteries = DeviceBatteryStore.shared
     @State private var newZone = "Asia/Dhaka"
     @State private var newDayName = ""
     @State private var newDayDate = Date()
@@ -506,6 +520,45 @@ private struct WidgetDataSettings: View {
                     }
                 }
                 Toggle(L("Show it on the island on the day"), isOn: $library.specialDayAlerts)
+            }
+            Section {
+                if batteries.devices.isEmpty {
+                    Text(L("No wireless devices found yet.")).foregroundStyle(.secondary)
+                } else {
+                    ForEach(batteries.devices) { device in
+                        HStack {
+                            Image(systemName: device.symbol).frame(width: 20)
+                            Text(device.name)
+                            Spacer()
+                            Text("\(device.percent)%").monospacedDigit()
+                        }
+                    }
+                }
+                HStack {
+                    Button(L("Look again")) { batteries.refreshDevices() }
+                    if CBManager.authorization != .allowedAlways {
+                        Button(L("Allow Bluetooth")) {
+                            if CBManager.authorization == .notDetermined {
+                                DeviceBatteryStore.requestBluetoothAccess()
+                            } else if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                    }
+                }
+                DisclosureGroup(L("What each source found")) {
+                    ForEach(batteries.report, id: \.self) { line in
+                        Text(line).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                    }
+                    if let date = batteries.lastChecked {
+                        Text(L("Checked") + " " + date.formatted(date: .omitted, time: .standard))
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text(L("Batteries"))
+            } footer: {
+                Text(L("If your keyboard or mouse is missing, take a screenshot of “What each source found” and send it."))
             }
             Section(L("To-do list")) {
                 Picker(L("Keep to-dos in"), selection: $todos.source) {

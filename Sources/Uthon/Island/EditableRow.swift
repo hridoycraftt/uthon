@@ -16,6 +16,8 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
     /// instead of the small chip list.
     var onAdd: (() -> Void)? = nil
     var addTitle = "Add Widget"
+    /// Optional "Presets" button shown next to "+ Add Widget".
+    var onPresets: (() -> Void)? = nil
     @ViewBuilder let tile: (Item) -> Tile
 
     @State private var dragging: Item?
@@ -84,7 +86,7 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
                     if let onAdd {
                         HStack(spacing: 8) {
                             Button(action: onAdd) {
-                                Label(addTitle, systemImage: "plus")
+                                Label(L(addTitle), systemImage: "plus")
                                     .font(.system(size: 12, weight: .semibold))
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
@@ -94,6 +96,19 @@ struct EditableRow<Item: CustomizableItem, Tile: View>: View {
                             }
                             .buttonStyle(.plain)
                             .help(L("Open the full widget gallery"))
+                            if let onPresets {
+                                Button(action: onPresets) {
+                                    Label(L("Presets"), systemImage: "square.grid.3x2.fill")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Capsule().fill(Theme.accent.opacity(0.16)))
+                                        .foregroundStyle(Theme.accent)
+                                        .fixedSize()
+                                }
+                                .buttonStyle(.plain)
+                                .help(L("Ready-made Home layouts"))
+                            }
                             // Quick suggestions right next to it: tap one to add it.
                             gallery
                         }

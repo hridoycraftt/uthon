@@ -310,6 +310,37 @@ enum SelfTest {
         let live = DeviceBatteryStore.readDevices()
         info("Devices on this Mac", live.isEmpty ? "none connected" : live.map { "\($0.name) \($0.percent)%" }.joined(separator: ", "))
 
+        let nested: [[String: Any]] = [[
+            "IOClass": "BTDevice", "Product": "Magic Mouse",
+            "IORegistryEntryChildren": [["IOClass": "AppleDeviceManagementHIDEventService", "BatteryPercent": 77]],
+        ]]
+        let nestedData = (try? PropertyListSerialization.data(fromPropertyList: nested, format: .xml, options: 0)) ?? Data()
+        check("Battery on a child entry uses the parent's name", DeviceBatteryStore.parseRegistry(nestedData).first.map { "\($0.name) \($0.percent)" } == "Magic Mouse 77")
+        check("Same device from two sources is listed once", DeviceBatteryStore.sameDevice("Magic Mouse", "magic mouse"))
+        var sourceReport: [String] = []
+        _ = DeviceBatteryStore.readDevices(report: &sourceReport)
+        check("Every battery source runs without crashing", sourceReport.count == 5, sourceReport.joined(separator: " | "))
+
+        // Home presets
+        step("Home presets")
+        check("At least 6 presets", HomePreset.all.count >= 6, "\(HomePreset.all.count)")
+        let presetBefore = settings.homePages
+        for preset in HomePreset.all {
+            preset.apply()
+            let fits = (0..<settings.pageCount).allSatisfy { settings.slotsUsed(page: $0) <= HomeWidget.maxSlots }
+            let complete = (0..<settings.pageCount).allSatisfy { settings.homeItems(page: $0).count == settings.page($0).count }
+            check("Preset '\(preset.name)' fits and shows every widget", fits && complete && preset.isActive)
+            check("Preset '\(preset.name)' icon exists", NSImage(systemSymbolName: preset.symbol, accessibilityDescription: nil) != nil)
+        }
+        check("No widget appears twice in a preset", HomePreset.all.allSatisfy { p in
+            let all = p.pages.flatMap { $0 }
+            return Set(all).count == all.count
+        })
+        settings.homePages = presetBefore
+        HomePreset.all[0].apply()
+        IslandModel.shared.performUndo()
+        check("Applying a preset can be undone", settings.homePages == presetBefore)
+
         // Music app tiles (bug reported in v0.5: Spotify tile had no controls)
         step("Music app tiles")
         check("Music app gets a player tile", NowPlayingStore.playerName(for: URL(fileURLWithPath: "/System/Applications/Music.app")) == "Music")

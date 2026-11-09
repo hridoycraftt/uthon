@@ -32,7 +32,8 @@ struct IslandHome: View {
                         }
                     },
                     place: { settings.placeHomeItem($0, at: $1) },
-                    onAdd: openGallery
+                    onAdd: openGallery,
+                    onPresets: openPresets
                 ) { item in
                     HomeWidgetView(item: item)
                         .contextMenu { TileMenu(item: item) }
@@ -63,6 +64,7 @@ struct IslandHome: View {
         .contextMenu {
             MenuButton(model.editing ? "Done Editing" : "Edit Home") { withAnimation { model.editing.toggle() } }
             MenuButton("Add Widget…") { openGallery() }
+            MenuButton("Presets…") { openPresets() }
             MenuButton("More Settings…") { SettingsWindowController.shared.show(tab: .home) }
         }
         .onChange(of: model.editing) { _, editing in
@@ -72,6 +74,15 @@ struct IslandHome: View {
 
     private func openGallery() {
         withAnimation(IslandModel.spring) {
+            model.gallerySection = 0
+            model.editing = true
+            model.pickerOpen = true
+        }
+    }
+
+    private func openPresets() {
+        withAnimation(IslandModel.spring) {
+            model.gallerySection = 2
             model.editing = true
             model.pickerOpen = true
         }
@@ -328,7 +339,6 @@ struct WidgetGallery: View {
     let page: Int
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var model = IslandModel.shared
-    @State private var section = 0
     @State private var query = ""
     @State private var message: String?
     @State private var makingFolder = false
@@ -338,14 +348,15 @@ struct WidgetGallery: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Picker("", selection: $section) {
+                Picker("", selection: $model.gallerySection) {
                     Text(L("Uthon Widgets")).tag(0)
                     Text(L("Apps on this Mac")).tag(1)
+                    Text(L("Presets")).tag(2)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(width: 270)
-                if section == 1 {
+                .frame(width: 340)
+                if model.gallerySection == 1 {
                     HStack(spacing: 5) {
                         Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(Color.secondary)
                         TextField(L("Search apps"), text: $query)
@@ -386,7 +397,7 @@ struct WidgetGallery: View {
                 .buttonStyle(.plain)
                 .help(L("Close the gallery"))
             }
-            if makingFolder && section == 1 {
+            if makingFolder && model.gallerySection == 1 {
                 HStack(spacing: 8) {
                     TextField(L("Folder name"), text: $folderName)
                         .textFieldStyle(.roundedBorder)
@@ -408,7 +419,13 @@ struct WidgetGallery: View {
                 }
             }
             ScrollView(.vertical, showsIndicators: true) {
-                if section == 0 {
+                if model.gallerySection == 2 {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 8)], spacing: 8) {
+                        ForEach(HomePreset.all) { preset in
+                            PresetCard(preset: preset)
+                        }
+                    }
+                } else if model.gallerySection == 0 {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
                         ForEach(HomeWidget.allCases) { widget in
                             let item = HomeItem(widget)
@@ -630,14 +647,23 @@ struct BatteriesTile: View {
                     row(symbol: device.symbol, name: device.name, percent: device.percent, wide: wide)
                 }
                 if store.devices.isEmpty && !store.hasInternalBattery {
-                    Text(L("No wireless devices connected"))
+                    Text(L(store.lastChecked == nil ? "Looking for devices…" : "No wireless devices connected"))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
+                    Button(L("Details")) { SettingsWindowController.shared.show(tab: .widgets) }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
                 }
                 Spacer(minLength: 0)
             }
         }
-        .onAppear { store.refreshDevices() }
+        .onAppear {
+            DeviceBatteryStore.requestBluetoothAccess()
+            store.refreshDevices()
+            // Look again once the Bluetooth permission prompt has been answered.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { store.refreshDevices() }
+        }
     }
 
     private func row(symbol: String, name: String, percent: Int, wide: Bool) -> some View {

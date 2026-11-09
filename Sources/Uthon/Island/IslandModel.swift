@@ -104,6 +104,8 @@ final class IslandModel: ObservableObject {
     @Published var editing = false
     /// The "+ Add Widget" gallery is open (the island grows to show it).
     @Published var pickerOpen = false
+    /// 0 = Uthon widgets, 1 = apps, 2 = presets
+    @Published var gallerySection = 0
     /// Which Home page is showing.
     @Published var homePage = 0
     /// An open app folder on Home (shown in place of the widgets).

@@ -1,6 +1,8 @@
 import Foundation
 import IOKit
 import IOKit.ps
+import IOBluetooth
+import CoreBluetooth
 
 /// Battery levels of Magic Mouse / Keyboard / Trackpad, headphones on connect,
 /// and the Mac's own battery (MacBook only: iMacs have none, so nothing shows there).
@@ -15,6 +17,9 @@ final class DeviceBatteryStore: ObservableObject {
     }
 
     @Published private(set) var devices: [Device] = []
+    /// What each source found the last time we looked (shown in Settings → Widgets).
+    @Published private(set) var report: [String] = []
+    @Published private(set) var lastChecked: Date?
     /// True only on Macs with a built-in battery (MacBooks).
     @Published private(set) var hasInternalBattery = false
 
@@ -68,9 +73,12 @@ final class DeviceBatteryStore: ObservableObject {
 
     func refreshDevices() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let found = Self.readDevices()
+            var lines: [String] = []
+            let found = Self.readDevices(report: &lines)
             DispatchQueue.main.async {
                 self?.devices = found
+                self?.report = lines
+                self?.lastChecked = Date()
                 self?.checkLow()
             }
         }
@@ -87,15 +95,98 @@ final class DeviceBatteryStore: ObservableObject {
         }
     }
 
-    /// Wireless devices with a battery: Magic Keyboard / Mouse / Trackpad from the I/O registry,
-    /// plus anything else Bluetooth reports (AirPods, headphones, game controllers...).
+    /// Wireless devices with a battery. macOS keeps this in different places depending on
+    /// the version and the device, so every known place is asked and the results merged.
     static func readDevices() -> [Device] {
-        var result = parseRegistry(run("/usr/sbin/ioreg", ["-r", "-a", "-k", "BatteryPercent"]))
-        for device in parseBluetooth(run("/usr/sbin/system_profiler", ["SPBluetoothDataType", "-json"]))
-        where !result.contains(where: { $0.name == device.name }) {
-            result.append(device)
+        var ignored: [String] = []
+        return readDevices(report: &ignored)
+    }
+
+    static func readDevices(report: inout [String]) -> [Device] {
+        var result: [Device] = []
+        func merge(_ found: [Device], source: String) {
+            report.append("\(source): " + (found.isEmpty ? "nothing" : found.map { "\($0.name) \($0.percent)%" }.joined(separator: ", ")))
+            for device in found where !result.contains(where: { sameDevice($0.name, device.name) }) {
+                result.append(device)
+            }
         }
+        merge(bluetoothDevices(), source: "Bluetooth")
+        merge(hidServices(), source: "HID registry")
+        merge(parseRegistry(run("/usr/sbin/ioreg", ["-r", "-l", "-a", "-k", "BatteryPercent"])), source: "ioreg")
+        merge(parseBluetooth(run("/usr/sbin/system_profiler", ["SPBluetoothDataType", "-json"])), source: "System Information")
+        merge(powerSourceAccessories(), source: "Power sources")
         return result.sorted { order($0.name) < order($1.name) }
+    }
+
+    static func sameDevice(_ a: String, _ b: String) -> Bool {
+        a.caseInsensitiveCompare(b) == .orderedSame
+    }
+
+    /// Paired Bluetooth devices that are connected. The battery level comes from the same
+    /// (non-public) properties System Settings uses; checked with responds(to:) so it can never crash.
+    static func bluetoothDevices() -> [Device] {
+        // Only ask once the user allowed Bluetooth (the Batteries widget asks for it).
+        guard CBManager.authorization == .allowedAlways else { return [] }
+        let paired = (IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice]) ?? []
+        var result: [Device] = []
+        for device in paired where device.isConnected() {
+            let name = device.name ?? device.nameOrAddress ?? ""
+            guard !name.isEmpty else { continue }
+            var levels: [Int] = []
+            for key in ["batteryPercentSingle", "batteryPercentLeft", "batteryPercentRight", "batteryPercentCombined"] {
+                guard device.responds(to: NSSelectorFromString(key)),
+                      let value = (device.value(forKey: key) as? NSNumber)?.intValue, value > 0, value <= 100 else { continue }
+                levels.append(value)
+            }
+            if let level = levels.min() { result.append(Device(name: name, percent: level)) }
+        }
+        return result
+    }
+
+    /// Bluetooth needs the user's OK once; the Batteries widget asks for it.
+    static func requestBluetoothAccess() {
+        guard CBManager.authorization == .notDetermined else { return }
+        // Creating a central manager shows the system prompt.
+        bluetoothPrompt = CBCentralManager(delegate: nil, queue: nil)
+    }
+
+    private static var bluetoothPrompt: CBCentralManager?
+
+    /// The classic place: AppleDeviceManagementHIDEventService entries in the I/O registry.
+    static func hidServices() -> [Device] {
+        var result: [Device] = []
+        for className in ["AppleDeviceManagementHIDEventService", "IOHIDDevice"] {
+            var iterator: io_iterator_t = 0
+            guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching(className), &iterator) == KERN_SUCCESS else { continue }
+            defer { IOObjectRelease(iterator) }
+            while case let service = IOIteratorNext(iterator), service != 0 {
+                defer { IOObjectRelease(service) }
+                let options = IOOptionBits(kIORegistryIterateRecursively | kIORegistryIterateParents)
+                let percent = IORegistryEntrySearchCFProperty(service, kIOServicePlane, "BatteryPercent" as CFString, kCFAllocatorDefault, options)
+                    as? NSNumber
+                let name = (IORegistryEntrySearchCFProperty(service, kIOServicePlane, "Product" as CFString, kCFAllocatorDefault, options) as? String)
+                guard let value = percent?.intValue, (1...100).contains(value), let name, !name.isEmpty,
+                      !result.contains(where: { sameDevice($0.name, name) }) else { continue }
+                result.append(Device(name: name, percent: value))
+            }
+        }
+        return result
+    }
+
+    /// Some macOS versions also list accessories (AirPods, Magic devices) as power sources.
+    static func powerSourceAccessories() -> [Device] {
+        guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [CFTypeRef] else { return [] }
+        var result: [Device] = []
+        for source in sources {
+            guard let info = IOPSGetPowerSourceDescription(snapshot, source)?.takeUnretainedValue() as? [String: Any],
+                  (info[kIOPSTypeKey] as? String) != kIOPSInternalBatteryType,
+                  let name = info[kIOPSNameKey] as? String, !name.isEmpty,
+                  let current = info[kIOPSCurrentCapacityKey] as? Int,
+                  let max = info[kIOPSMaxCapacityKey] as? Int, max > 0 else { continue }
+            result.append(Device(name: name, percent: current * 100 / max))
+        }
+        return result
     }
 
     private static func order(_ name: String) -> Int {
@@ -119,20 +210,25 @@ final class DeviceBatteryStore: ObservableObject {
         return data
     }
 
-    /// `ioreg -r -a -k BatteryPercent` output (a plist array of devices).
+    /// `ioreg -r -l -a -k BatteryPercent` output: a plist array of registry entries (with children).
     static func parseRegistry(_ data: Data) -> [Device] {
         guard !data.isEmpty,
               let list = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [[String: Any]] else { return [] }
         var result: [Device] = []
-        for entry in list {
+        func visit(_ entry: [String: Any], inheritedName: String?) {
             let ioClass = entry["IOClass"] as? String ?? ""
-            if ioClass.contains("AppleSmartBattery") { continue }   // the Mac's own battery is shown separately
-            guard let percent = (entry["BatteryPercent"] as? NSNumber)?.intValue, (0...100).contains(percent) else { continue }
-            let rawName = (entry["Product"] as? String) ?? (entry["DeviceName"] as? String) ?? (entry["Name"] as? String) ?? ""
-            let name = rawName.trimmingCharacters(in: .whitespaces)
-            guard !name.isEmpty, !result.contains(where: { $0.name == name }) else { continue }
-            result.append(Device(name: name, percent: percent))
+            let ownName = ((entry["Product"] as? String) ?? (entry["DeviceName"] as? String))?.trimmingCharacters(in: .whitespaces)
+            let name = (ownName?.isEmpty == false ? ownName : nil) ?? inheritedName
+            if !ioClass.contains("AppleSmartBattery"),
+               let percent = (entry["BatteryPercent"] as? NSNumber)?.intValue, (1...100).contains(percent),
+               let name, !name.isEmpty, !result.contains(where: { sameDevice($0.name, name) }) {
+                result.append(Device(name: name, percent: percent))
+            }
+            for child in entry["IORegistryEntryChildren"] as? [[String: Any]] ?? [] {
+                visit(child, inheritedName: name)
+            }
         }
+        for entry in list { visit(entry, inheritedName: nil) }
         return result
     }
 
