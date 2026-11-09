@@ -317,54 +317,74 @@ private struct IslandHeader: View {
                 }
             }
             Spacer(minLength: model.hasNotch ? model.notchSize.width + 24 : 16)
-            HStack(spacing: 8) {
-                if model.tab == .home || model.tab == .controls {
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.editing.toggle() }
-                    } label: {
-                        Text(model.editing ? "Done" : "Edit")
-                            .font(.system(size: 12, weight: .semibold))
-                            .padding(.horizontal, 11)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(model.editing ? Theme.accent : Color.primary.opacity(0.1)))
-                            .foregroundStyle(model.editing ? Color.white : Color.primary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(model.editing ? "Finish editing" : "Add, remove or reorder")
+            // When space is short, drop the battery chips first, then the weather.
+            // Nothing ever wraps onto two lines.
+            ViewThatFits(in: .horizontal) {
+                rightGroup(weather: true, batteries: true)
+                rightGroup(weather: true, batteries: false)
+                rightGroup(weather: false, batteries: false)
+            }
+            .layoutPriority(1)
+        }
+        .padding(.horizontal, IslandModel.expandedFlare + 12)
+    }
+
+    private func rightGroup(weather showWeather: Bool, batteries showBatteries: Bool) -> some View {
+        HStack(spacing: 8) {
+            if model.tab == .home || model.tab == .controls {
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { model.editing.toggle() }
+                } label: {
+                    Text(L(model.editing ? "Done" : "Edit"))
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(model.editing ? Theme.accent : Color.primary.opacity(0.1)))
+                        .foregroundStyle(model.editing ? Color.white : Color.primary)
                 }
-                if let w = weather.current {
-                    HStack(spacing: 3) {
-                        Image(systemName: w.symbol).symbolRenderingMode(.multicolor)
-                        Text("\(Int(w.temperature.rounded()))°")
-                    }
-                    .font(.system(size: 11, weight: .semibold))
-                    .help("\(w.city)")
+                .buttonStyle(.plain)
+                .help(L(model.editing ? "Finish editing" : "Add, remove or reorder"))
+            }
+            if showWeather, let w = weather.current {
+                HStack(spacing: 3) {
+                    Image(systemName: w.symbol).symbolRenderingMode(.multicolor)
+                    Text("\(Int(w.temperature.rounded()))°").lineLimit(1)
                 }
+                .font(.system(size: 11, weight: .semibold))
+                .fixedSize()
+                .help(w.city)
+            }
+            if showBatteries {
                 ForEach(batteries.devices.prefix(2)) { device in
                     HStack(spacing: 3) {
                         Image(systemName: device.symbol).font(.system(size: 10))
-                        Text("\(device.percent)%").font(.system(size: 10, weight: .semibold)).monospacedDigit()
+                        Text("\(device.percent)%").font(.system(size: 10, weight: .semibold)).monospacedDigit().lineLimit(1)
                     }
+                    .fixedSize()
                     .foregroundStyle(device.percent <= 15 ? Color.red : Color.secondary)
                     .help("\(device.name): \(device.percent)%")
                 }
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(context.date, format: .dateTime.hour().minute())
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                }
-                if settings.sideDockEnabled {
-                    IconButton(symbol: settings.edge == .right ? "sidebar.right" : "sidebar.left", help: "Open the side dock", size: 14) {
-                        IslandController.shared.collapse()
-                        DockController.shared.show(sticky: true)
-                    }
-                }
-                IconButton(symbol: "gearshape", help: "Customize", size: 14) {
-                    SettingsWindowController.shared.show()
+            }
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(context.date, format: .dateTime.hour().minute())
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            if settings.sideDockEnabled {
+                IconButton(symbol: settings.edge == .right ? "sidebar.right" : "sidebar.left", help: "Open the side dock", size: 14) {
+                    IslandController.shared.collapse()
+                    DockController.shared.show(sticky: true)
                 }
             }
+            IconButton(symbol: "gearshape", help: "Customize", size: 14) {
+                SettingsWindowController.shared.show()
+            }
         }
-        .padding(.horizontal, IslandModel.expandedFlare + 12)
+        .fixedSize()
     }
 }
 

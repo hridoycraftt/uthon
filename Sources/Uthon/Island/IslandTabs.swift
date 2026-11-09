@@ -1010,29 +1010,126 @@ struct IslandCalendarTile: View {
     }
 }
 
+/// The Home "Shortcuts" widget: apps you choose (any number), laid out to fit.
 struct IslandShortcutsTile: View {
-    @ObservedObject private var store = ShortcutsStore.shared
-    private let columns = [GridItem(.fixed(38), spacing: 8), GridItem(.fixed(38), spacing: 8)]
+    @ObservedObject private var library = UserLibrary.shared
+    @State private var hover = false
+    @State private var targeted = false
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(Array(store.paths.prefix(4)), id: \.self) { path in
-                let url = URL(fileURLWithPath: path)
-                Button {
-                    NSWorkspace.shared.open(url)
-                } label: {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: 34, height: 34)
-                        .frame(width: 38, height: 38)
+        let urls = library.homeShortcutURLs
+        GeometryReader { geo in
+            let inner = CGSize(width: geo.size.width - 16, height: geo.size.height - 16)
+            let layout = ShortcutLayout.best(count: urls.count, in: inner)
+            Group {
+                if urls.isEmpty {
+                    VStack(spacing: 6) {
+                        Image(systemName: "plus.app.fill").font(.system(size: 24)).foregroundStyle(Theme.accent)
+                        Text(L("Add apps")).font(.system(size: 11, weight: .semibold))
+                        Text(L("or drag them here")).font(.system(size: 9)).foregroundStyle(Color.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture { UserLibrary.shared.pickHomeShortcuts() }
+                } else {
+                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(layout.cell), spacing: ShortcutLayout.gap),
+                                             count: layout.columns),
+                              spacing: ShortcutLayout.gap) {
+                        ForEach(urls, id: \.self) { url in
+                            ShortcutIcon(url: url, cell: layout.cell, showName: layout.showNames)
+                        }
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
                 }
-                .buttonStyle(.plain)
-                .help(FileManager.default.displayName(atPath: url.path))
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .glassChip(radius: 20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Theme.accent, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                .opacity(targeted ? 1 : 0)
+        )
+        .overlay(alignment: .topTrailing) {
+            if hover && !urls.isEmpty {
+                IconButton(symbol: "plus.circle.fill", help: "Add apps") { UserLibrary.shared.pickHomeShortcuts() }
+                    .padding(4)
+                    .transition(.opacity)
+            }
+        }
+        .onHover { h in withAnimation(.easeOut(duration: 0.15)) { hover = h } }
+        .onDrop(of: FileDrop.types, isTargeted: $targeted) { providers in
+            FileDrop.load(providers) { UserLibrary.shared.addHomeShortcuts($0) }
+            return true
+        }
+        .contextMenu {
+            MenuButton("Add Apps…") { UserLibrary.shared.pickHomeShortcuts() }
+            MenuButton("Edit in Settings…") { SettingsWindowController.shared.show(tab: .widgets) }
+        }
+    }
+}
+
+/// Picks the column count that gives the biggest icons for this many apps in this space.
+enum ShortcutLayout {
+    static let gap: CGFloat = 8
+
+    struct Result: Equatable {
+        let columns: Int
+        let cell: CGFloat
+        let showNames: Bool
+    }
+
+    static func best(count: Int, in size: CGSize) -> Result {
+        guard count > 0, size.width > 0, size.height > 0 else { return Result(columns: 1, cell: 40, showNames: false) }
+        var best = Result(columns: 1, cell: 0, showNames: false)
+        for columns in 1...count {
+            let rows = Int((Double(count) / Double(columns)).rounded(.up))
+            let byWidth = (size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
+            let byHeight = (size.height - gap * CGFloat(rows - 1)) / CGFloat(rows)
+            let cell = min(byWidth, byHeight)
+            if cell > best.cell { best = Result(columns: columns, cell: cell, showNames: false) }
+        }
+        let cell = max(20, min(best.cell, 96))
+        return Result(columns: best.columns, cell: cell, showNames: cell >= 62)
+    }
+}
+
+private struct ShortcutIcon: View {
+    let url: URL
+    let cell: CGFloat
+    let showName: Bool
+    @State private var hover = false
+
+    var body: some View {
+        let name = FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+        Button {
+            NSWorkspace.shared.open(url)
+            IslandController.shared.collapse()
+        } label: {
+            VStack(spacing: 3) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: cell * (showName ? 0.62 : 0.86), height: cell * (showName ? 0.62 : 0.86))
+                    .scaleEffect(hover ? 1.07 : 1)
+                if showName {
+                    Text(name)
+                        .font(.system(size: max(9, cell * 0.13), weight: .medium))
+                        .lineLimit(1)
+                        .frame(maxWidth: cell)
+                }
+            }
+            .frame(width: cell, height: cell)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { h in withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { hover = h } }
+        .help(name)
+        .contextMenu {
+            MenuButton("Open") { NSWorkspace.shared.open(url) }
+            MenuButton("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            Divider()
+            MenuButton("Remove from widget") { UserLibrary.shared.removeHomeShortcut(url) }
+        }
     }
 }
 

@@ -361,6 +361,37 @@ enum SelfTest {
         check("Glass setting changes the look key", settings.lookKey != glassBefore)
         settings.glassClarity = .automatic
 
+        // Shortcuts widget (any number of apps, adaptive grid)
+        step("Shortcuts widget")
+        let lib = UserLibrary.shared
+        let savedShortcuts = lib.homeShortcuts
+        lib.homeShortcuts = []
+        lib.addHomeShortcuts([URL(fileURLWithPath: "/System/Applications/Calculator.app")])
+        lib.addHomeShortcuts([URL(fileURLWithPath: "/System/Applications/Calculator.app")])
+        check("One app can be the only shortcut (no duplicates)", lib.homeShortcutURLs.count == 1)
+        lib.removeHomeShortcut(URL(fileURLWithPath: "/System/Applications/Calculator.app"))
+        check("Shortcut can be removed", lib.homeShortcutURLs.isEmpty)
+        lib.homeShortcuts = savedShortcuts
+        let small = CGSize(width: 116, height: 130)
+        let one = ShortcutLayout.best(count: 1, in: small)
+        check("1 app: one big icon with its name", one.columns == 1 && one.showNames && one.cell >= 90, "\(one)")
+        let two = ShortcutLayout.best(count: 2, in: small)
+        check("2 apps fit side by side or stacked without overlap", two.cell * CGFloat(two.columns) + ShortcutLayout.gap * CGFloat(two.columns - 1) <= small.width + 0.5, "\(two)")
+        let four = ShortcutLayout.best(count: 4, in: small)
+        check("4 apps: 2×2", four.columns == 2, "\(four)")
+        let wide = ShortcutLayout.best(count: 4, in: CGSize(width: 380, height: 130))
+        check("4 apps in a wide widget: one row of 4", wide.columns == 4, "\(wide)")
+        for n in 1...12 {
+            for box in [small, CGSize(width: 250, height: 130), CGSize(width: 380, height: 130)] {
+                let r = ShortcutLayout.best(count: n, in: box)
+                let rows = Int((Double(n) / Double(r.columns)).rounded(.up))
+                let fitsW = r.cell * CGFloat(r.columns) + ShortcutLayout.gap * CGFloat(r.columns - 1) <= box.width + 0.5
+                let fitsH = r.cell * CGFloat(rows) + ShortcutLayout.gap * CGFloat(rows - 1) <= box.height + 0.5 || r.cell <= 20
+                if !(fitsW && fitsH) { check("\(n) apps fit in \(Int(box.width))×\(Int(box.height))", false, "\(r)") }
+            }
+        }
+        check("1–12 apps always fit at every widget size", true)
+
         // Home presets
         step("Home presets")
         check("At least 6 presets", HomePreset.all.count >= 6, "\(HomePreset.all.count)")

@@ -454,6 +454,28 @@ private struct WidgetDataSettings: View {
 
     var body: some View {
         Form {
+            Section {
+                ForEach(Array(library.homeShortcuts.enumerated()), id: \.element) { index, path in
+                    HStack {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable().frame(width: 20, height: 20)
+                        Text(FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))
+                        Spacer()
+                        Button { library.moveHomeShortcut(path, by: -1) } label: { Image(systemName: "chevron.up") }
+                            .buttonStyle(.borderless).disabled(index == 0)
+                        Button { library.moveHomeShortcut(path, by: 1) } label: { Image(systemName: "chevron.down") }
+                            .buttonStyle(.borderless).disabled(index == library.homeShortcuts.count - 1)
+                        Button { library.homeShortcuts.removeAll { $0 == path } } label: {
+                            Image(systemName: "minus.circle.fill").foregroundStyle(.red)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                Button(L("Add Apps…")) { library.pickHomeShortcuts() }
+            } header: {
+                Text(L("Shortcuts widget"))
+            } footer: {
+                Text(L("Add as many apps as you like; the widget arranges them to fit its size. You can also drag apps onto the widget."))
+            }
             Section(L("Bookmarks")) {
                 ForEach($library.bookmarks) { $bookmark in
                     HStack {

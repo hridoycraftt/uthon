@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import SwiftUI
 
 struct Bookmark: Codable, Identifiable, Equatable {
@@ -110,6 +111,8 @@ final class UserLibrary: ObservableObject {
     @Published var wallpaperFolder: String { didSet { d.set(wallpaperFolder, forKey: "wallpaperFolder") } }
     @Published var wallpaperDaily: Bool { didSet { d.set(wallpaperDaily, forKey: "wallpaperDaily") } }
     @Published var profiles: [LayoutProfile] { didSet { Persist.save(profiles, key: "profiles") } }
+    /// Apps in the Home "Shortcuts" widget, in order (separate from the side dock's shortcuts).
+    @Published var homeShortcuts: [String] { didSet { d.set(homeShortcuts, forKey: "homeShortcuts") } }
     @Published var activeProfile: UUID? { didSet { d.set(activeProfile?.uuidString, forKey: "activeProfile") } }
 
     private init() {
@@ -134,5 +137,47 @@ final class UserLibrary: ObservableObject {
         wallpaperDaily = d.object(forKey: "wallpaperDaily") as? Bool ?? true
         profiles = Persist.load([LayoutProfile].self, key: "profiles") ?? []
         activeProfile = d.string(forKey: "activeProfile").flatMap(UUID.init(uuidString:))
+        homeShortcuts = d.stringArray(forKey: "homeShortcuts") ?? [
+            "/System/Library/CoreServices/Finder.app", "/Applications/Safari.app",
+            "/System/Applications/Notes.app", "/System/Applications/Calendar.app",
+        ].filter { FileManager.default.fileExists(atPath: $0) }
+    }
+}
+
+extension UserLibrary {
+    var homeShortcutURLs: [URL] {
+        homeShortcuts.filter { FileManager.default.fileExists(atPath: $0) }.map { URL(fileURLWithPath: $0) }
+    }
+
+    func addHomeShortcuts(_ urls: [URL]) {
+        var list = homeShortcuts
+        for url in urls where !list.contains(url.path) { list.append(url.path) }
+        homeShortcuts = list
+    }
+
+    func removeHomeShortcut(_ url: URL) {
+        homeShortcuts.removeAll { $0 == url.path }
+    }
+
+    func moveHomeShortcut(_ path: String, by offset: Int) {
+        var list = homeShortcuts
+        AppSettings.move(&list, path, by: offset)
+        homeShortcuts = list
+    }
+
+    /// Choose apps (or folders/files) for the Shortcuts widget.
+    func pickHomeShortcuts() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = L("Add")
+        panel.message = L("Choose apps for the Shortcuts widget")
+        IslandController.shared.holdOpen = true
+        NSApp.activate(ignoringOtherApps: true)
+        let response = panel.runModal()
+        IslandController.shared.holdOpen = false
+        if response == .OK { addHomeShortcuts(panel.urls) }
     }
 }
