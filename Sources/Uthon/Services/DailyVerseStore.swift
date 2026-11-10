@@ -121,7 +121,9 @@ final class DailyVerseStore: ObservableObject {
                     ? await Self.fetchAyah(number: Self.pick(day: day, salt: salt + attempt, range: 1...6236), translation: translation)
                     : await Self.fetchHadith(day: day, salt: salt + attempt, translation: translation)
                 guard let text, Self.isMostly(text.translation, in: translation) else { continue }
-                if text.translation.count <= 700 || attempt == 4 { result = text }
+                // Prefer passages that fit the Home tile; the reader window shows any length.
+                let short = Self.tidy(text.translation).count <= 320 && text.arabic.count <= 360
+                if short || attempt == 4 { result = text }
             }
             await MainActor.run {
                 guard let self else { return }
@@ -146,6 +148,18 @@ final class DailyVerseStore: ObservableObject {
             translation == .bangla ? (0x0980...0x09FF).contains(scalar.value) : scalar.isASCII
         }.count
         return Double(matching) / Double(letters.count) >= 0.6
+    }
+
+    /// For the small tile only: drops the book references some hadith translations end with,
+    /// e.g. "[৫৫৪] (আধুনিক প্রকাশনী- ৬৯১৮, ইসলামিক ফাউন্ডেশন- ৬৯২৮)". The reader shows the full text.
+    static func tidy(_ text: String) -> String {
+        var t = text
+        for pattern in [#"\s*\((আধুনিক প্রকাশনী|ইসলামিক ফাউন্ডেশন|ইসলামিক ফা)[^)]*\)?\s*$"#,
+                        #"\s*\[[০-৯0-9,\s\-]+\]\s*$"#] {
+            if let range = t.range(of: pattern, options: .regularExpression) { t.removeSubrange(range) }
+        }
+        let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? text : trimmed
     }
 
     // MARK: Sources
@@ -275,9 +289,12 @@ struct VerseTile: View {
             }
         }
         .onAppear { store.refresh() }
-        .help(store.current.map { "\($0.translation)\n— \($0.reference)" } ?? "")
+        .contentShape(Rectangle())
+        .onTapGesture { if store.current != nil { VerseReader.show() } }
+        .help(L("Click to read in full"))
         .contextMenu {
             if let text = store.current {
+                MenuButton("Read in full") { VerseReader.show() }
                 MenuButton("Read on the web") { if let url = URL(string: text.link) { NSWorkspace.shared.open(url) } }
                 MenuButton("Copy") {
                     NSPasteboard.general.clearContents()
@@ -290,23 +307,133 @@ struct VerseTile: View {
     }
 
     @ViewBuilder private func content(_ text: DailyText) -> some View {
-        if library.verseShowArabic, !text.arabic.isEmpty {
+        let meaning = DailyVerseStore.tidy(text.translation)
+        // Long Arabic (a hadith's chain of narrators) would crowd the tile: there it stays in the reader.
+        let showArabic = library.verseShowArabic && !text.arabic.isEmpty && text.arabic.count <= (wide ? 220 : 130)
+        if showArabic {
             Text(text.arabic)
-                .font(.system(size: wide ? 18 : 16, weight: .regular))
+                .font(.system(size: wide ? 17 : 15))
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .lineLimit(wide ? 3 : 2)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
                 .environment(\.layoutDirection, .rightToLeft)
         }
-        Text(text.translation)
+        // Takes whatever height is left, shrinking a little before it shortens with "…".
+        Text(meaning)
             .font(.system(size: wide ? 13 : 12))
-            .lineLimit(library.verseShowArabic && !text.arabic.isEmpty ? 3 : 5)
+            .lineLimit(nil)
+            .minimumScaleFactor(0.72)
             .truncationMode(.tail)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-        Spacer(minLength: 0)
-        Text(text.reference)
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(Theme.accent)
-            .lineLimit(1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .layoutPriority(1)
+        HStack(spacing: 6) {
+            Text(text.reference)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            Button { VerseReader.show() } label: {
+                HStack(spacing: 3) {
+                    Text(L("Read in full"))
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                }
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(L("Open the whole text in a window"))
+        }
+    }
+}
+
+
+// MARK: Reader window
+
+/// A small window with the whole ayah or hadith: the complete Arabic, the full meaning and
+/// the reference, scrollable, for passages too long for the Home tile.
+enum VerseReader {
+    private static var window: NSWindow?
+
+    static func show() {
+        IslandController.shared.collapse()
+        if window == nil {
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 480),
+                             styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+                             backing: .buffered, defer: false)
+            w.titlebarAppearsTransparent = true
+            w.isReleasedWhenClosed = false
+            w.level = .floating
+            w.minSize = NSSize(width: 380, height: 300)
+            w.contentView = NSHostingView(rootView: VerseReaderView())
+            w.center()
+            window = w
+        }
+        window?.title = L("Quran & Hadith")
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+    }
+}
+
+struct VerseReaderView: View {
+    @ObservedObject private var store = DailyVerseStore.shared
+    @ObservedObject private var library = UserLibrary.shared
+    @ObservedObject private var settings = AppSettings.shared
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let text = store.current {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(L(text.isQuran ? "Quran" : "Hadith").uppercased())
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(0.8)
+                            .foregroundStyle(Theme.accent)
+                        if library.verseShowArabic, !text.arabic.isEmpty {
+                            Text(text.arabic)
+                                .font(.system(size: 22))
+                                .lineSpacing(8)
+                                .multilineTextAlignment(.trailing)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .environment(\.layoutDirection, .rightToLeft)
+                                .textSelection(.enabled)
+                        }
+                        Text(text.translation)
+                            .font(.system(size: 15))
+                            .lineSpacing(5)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                        Text(text.reference)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 34)
+                    .padding(.bottom, 20)
+                }
+                Divider()
+                HStack(spacing: 10) {
+                    Button(L("Copy")) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString("\(text.arabic)\n\n\(text.translation)\n— \(text.reference)", forType: .string)
+                    }
+                    Button(L("Read on the web")) { if let url = URL(string: text.link) { NSWorkspace.shared.open(url) } }
+                    Spacer()
+                    if store.loading { ProgressView().controlSize(.small) }
+                    Button(L("Show another")) { store.refresh(another: true) }
+                        .keyboardShortcut(.defaultAction)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            } else {
+                Text(store.error ?? L("Loading…"))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(minWidth: 380, minHeight: 300)
+        .background(.regularMaterial)
+        .id(settings.lookKey)
+        .environment(\.locale, Localization.locale)
     }
 }

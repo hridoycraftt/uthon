@@ -116,6 +116,22 @@ enum SnapshotTour {
             s.widgetSizes = [:]
             model.homePage = 0
         }
+        add("long-hadith") {
+            let saved = DailyVerseStore.shared.current
+            DailyVerseStore.shared.debugSet(DailyText(
+                isQuran: false,
+                arabic: "حَدَّثَنَا يُوسُفُ بْنُ مُوسَى، حَدَّثَنَا عَاصِمُ بْنُ يُوسُفَ الْيَرْبُوعِيُّ، حَدَّثَنَا أَبُو شِهَابٍ، عَنْ إِسْمَاعِيلَ بْنِ أَبِي خَالِدٍ، عَنْ قَيْسِ بْنِ أَبِي حَازِمٍ، عَنْ جَرِيرِ بْنِ عَبْدِ اللَّهِ، قَالَ قَالَ النَّبِيُّ صلى الله عليه وسلم ‏\"‏ إِنَّكُمْ سَتَرَوْنَ رَبَّكُمْ عِيَانًا ‏\"‏‏.‏",
+                translation: "জারীর ইবনু ‘আবদুল্লাহ্ (রাঃ) হতে বর্ণিত। নবী সাল্লাল্লাহু আলাইহি ওয়াসাল্লাম বলেছেনঃ অবশ্যই তোমরা তোমাদের রবকে দিব্যচক্ষে দেখতে পাবে। [৫৫৪] (আধুনিক প্রকাশনী- ৬৯১৮, ইসলামিক ফাউন্ডেশন- ৬৯২৮)",
+                reference: "Sahih al-Bukhari 7435", link: "https://sunnah.com/bukhari:7435",
+                day: DailyVerseStore.dayKey(), translationKey: "bangla"))
+            s.homePages[1] = ["batteries", "verse", "notes"]
+            model.tab = .home
+            model.homePage = 1
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-long-hadith")
+            render(VerseReaderView(), size: CGSize(width: 560, height: 480), shape: false, name: "verse-reader")
+            model.homePage = 0
+            if let saved { DailyVerseStore.shared.debugSet(saved) }
+        }
         add("bottom-dock-render") {
             let lib = UserLibrary.shared
             lib.bottomDockItems = BottomDockItem.allCases.map(\.rawValue)

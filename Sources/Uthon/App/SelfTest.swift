@@ -697,6 +697,9 @@ enum SelfTest {
                       "estimate \(Int(estimate.width)) vs \(Int(exact.width))")
             }
         }
+        let withRefs = "জারীর ইবনু আবদুল্লাহ (রাঃ) হতে বর্ণিত। অবশ্যই তোমরা তোমাদের রবকে দেখতে পাবে। [৫৫৪] (আধুনিক প্রকাশনী- ৬৯১৮, ইসলামিক ফাউন্ডেশন- ৬৯২৮)"
+        check("Tile drops trailing book references", DailyVerseStore.tidy(withRefs).hasSuffix("দেখতে পাবে।"), DailyVerseStore.tidy(withRefs))
+        check("Tidy keeps text without references", DailyVerseStore.tidy("নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।") == "নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।")
         check("Empty hadith is rejected", DailyVerseStore.parseHadith(Data(#"{"hadiths":[]}"#.utf8)) == nil)
         check("Hadith URL", DailyVerseStore.hadithURL(edition: "ben-bukhari", number: 1).absoluteString.hasSuffix("/editions/ben-bukhari/1.min.json"))
         check("Quran + Bangla widget needs 2 slots", HomeWidget.verse.minSlots == 2 && HomeWidget.network.minSlots == 1)
