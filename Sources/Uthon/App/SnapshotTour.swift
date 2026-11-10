@@ -128,9 +128,13 @@ enum SnapshotTour {
             model.tab = .home
             model.homePage = 1
             render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-long-hadith")
-            render(VerseReaderView(), size: CGSize(width: 560, height: 480), shape: false, name: "verse-reader")
             model.homePage = 0
-            if let saved { DailyVerseStore.shared.debugSet(saved) }
+            _ = saved
+        }
+        add("live-verse-reader") { VerseReader.show() }
+        add("capture-verse-reader") {
+            capture("screen-verse-reader")
+            NSApp.windows.first { $0.title == L("Quran & Hadith") }?.orderOut(nil)
         }
         add("bottom-dock-render") {
             let lib = UserLibrary.shared
