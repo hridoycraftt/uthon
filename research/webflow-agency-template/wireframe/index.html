@@ -521,7 +521,7 @@ const syncNt=()=>{const on=!document.documentElement.classList.contains('notes-o
 nt.addEventListener('click',()=>{document.documentElement.classList.toggle('notes-off');syncNt()});
 
 /* Services accordion */
-document.querySelectorAll('.svc-btn').forEach(b=>b.addEventListener('click',()=>{const s=b.parentElement,o=!s.classList.contains('open');s.classList.toggle('open',o);b.setAttribute('aria-expanded',o)}));
+document.querySelectorAll('.svc-btn').forEach(b=>b.addEventListener('click',()=>{const s=b.parentElement,o=!s.classList.contains('open');s.classList.toggle('open',o);b.setAttribute('aria-expanded',o);setTimeout(()=>window.ScrollTrigger&&ScrollTrigger.refresh(),650)}));
 /* Filters (visual state only) */
 document.querySelectorAll('.filters button').forEach(b=>b.addEventListener('click',()=>{b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))}));
 
