@@ -329,7 +329,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 .pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3));transform-origin:left;transform:scaleX(0);transition:transform .6s var(--ease)}
 
 /* ===== 07 · JOURNAL (final: depth tunnel) ===== */
-.b2{position:relative;height:600vh}
+.b2{position:relative;height:420vh}
 .b2 .stg7{perspective:900px;perspective-origin:50% 48%;background:radial-gradient(45% 30% at 50% 48%,rgba(255,107,69,.13),transparent 70%),radial-gradient(70% 45% at 50% 100%,rgba(30,47,184,.16),transparent 70%),var(--night)}
 .b2 .hdr7{padding:clamp(14px,2.4vh,26px) var(--pad) 0;align-items:end}
 .b2 .hdr7 h2{grid-column:1/span 7;font:500 clamp(44px,5vw,92px)/.92 var(--sans);letter-spacing:-.065em}
@@ -493,6 +493,25 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 @media (max-width:860px){.e1 .gr>*{grid-column:1/-1!important;justify-self:start!important}.e1 .gr{grid-template-columns:1fr 1fr}.e1 .say,.e1 .tp{grid-column:1/-1!important}.e1 .c1,.e1 .c2,.e1 .c3{grid-column:span 1!important}.e1 .leg{flex-direction:column;gap:8px}}
 
 
+
+/* ===== story pass: numbers gauge + client marquee + footer brand ===== */
+.nw{position:relative;align-self:center;display:inline-block;width:max-content;--lv:100%;--lo:0}
+.num.nb{color:rgba(240,236,230,.07)}
+.num.nf{position:absolute;left:0;top:0;clip-path:inset(var(--lv) -10% 0 -10%)}
+.nw::after{content:"";position:absolute;left:-8%;right:-8%;top:var(--lv);height:1px;background:linear-gradient(90deg,transparent,var(--c3),transparent);box-shadow:0 0 14px 1px var(--c2);opacity:var(--lo);pointer-events:none}
+.cell .tk{position:absolute;left:0;top:34%;bottom:30%;width:7px;background:repeating-linear-gradient(to bottom,rgba(240,236,230,.3) 0 1px,transparent 1px 9px);pointer-events:none}
+.clients2{border-bottom:1px solid var(--line);padding:clamp(26px,4vh,44px) 0;display:flex;flex-direction:column;gap:4px}
+.mrow{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.trk{display:flex;align-items:center;width:max-content;will-change:transform}
+.cn{display:inline-flex;align-items:center;gap:14px;padding:0 clamp(18px,2vw,34px);white-space:nowrap}
+.cn span{font:500 clamp(36px,4.6vw,84px)/1.12 var(--sans);letter-spacing:-.055em;color:#6f6d6c;background-image:var(--liq);background-size:cover;background-position:center;-webkit-background-clip:text;background-clip:text;transition:color .5s}
+.cn small{font:400 14px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--bone);opacity:0;transform:translateX(-8px);transition:opacity .4s,transform .6s var(--ease)}
+.cn:hover span,.cn:focus-visible span{color:transparent}.cn:hover small,.cn:focus-visible small{opacity:1;transform:none}
+.dt{width:9px;height:9px;border-radius:50%;flex:none;background:linear-gradient(135deg,var(--c1),var(--c2))}
+.e1 .say p{color:var(--smoke);max-width:34ch}
+.lg9{display:inline-flex;align-items:center;gap:10px;font:500 clamp(26px,2.2vw,36px)/1 var(--sans);letter-spacing:-.045em}
+.lg9 i{width:18px;height:18px;border-radius:50%;background:conic-gradient(from 200deg,var(--c1),var(--c2),var(--c3),var(--c1));transition:transform 1.2s var(--ease)}
+.lg9:hover i{transform:rotate(360deg)}
 /* ===== final pass: typography + mobile ===== */
 :where(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--c2);outline-offset:3px}
 h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
@@ -523,23 +542,6 @@ h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
   </div>
 </section>
 
-<!-- ============ 02 STUDIO IN NUMBERS (final) ============ -->
-<section class="nums" id="numbers" aria-labelledby="nums-h">
-  <div class="shead g12 mono"><span>Studio in numbers</span></div>
-  <div class="intro g12"><h2 id="nums-h">Twelve years, <span class="th">measured honestly.</span></h2><p>Every figure below comes from our own project log, updated each January.</p></div>
-  <div class="cells">
-    <div class="cell"><i class="bar"></i><div class="top mono sm"><span>Launches</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="num cnt liqtext" data-to="120" data-s="+">120+</span><p>Brands and websites shipped for clients in eleven countries.</p></div>
-    <div class="cell"><i class="bar"></i><div class="top mono sm"><span>Awards</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="num cnt liqtext" data-to="38">38</span><p>Site of the Day from Awwwards, FWA and CSS Design Awards.</p></div>
-    <div class="cell"><i class="bar"></i><div class="top mono sm"><span>Retention</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="num cnt liqtext" data-to="92" data-s="%">92%</span><p>Clients who came back for a second project within two years.</p></div>
-    <div class="cell"><i class="bar"></i><div class="top mono sm"><span>Team</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="num cnt liqtext" data-to="14">14</span><p>Designers, writers and developers under one roof in Lisbon.</p></div>
-  </div>
-  <div class="clients">
-    <a class="cl" href="#numbers"><span>Northwind</span><span class="meta">Identity ↗</span></a><a class="cl" href="#numbers"><span>Halcyon</span><span class="meta">Website ↗</span></a><a class="cl" href="#numbers"><span>Orbital</span><span class="meta">Product ↗</span></a><a class="cl" href="#numbers"><span>Fieldwork</span><span class="meta">Film ↗</span></a>
-    <a class="cl" href="#numbers"><span>Meridian</span><span class="meta">Identity ↗</span></a><a class="cl" href="#numbers"><span>Kinfolk</span><span class="meta">Packaging ↗</span></a><a class="cl" href="#numbers"><span>Atlas Bank</span><span class="meta">Website ↗</span></a><a class="cl" href="#numbers"><span>Sola</span><span class="meta">Brand film ↗</span></a>
-  </div>
-  <div class="foot g12"><p>Trusted by seed-stage startups and listed brands alike, from Lisbon to Singapore.</p><div class="acts"><a class="bk" href="#work"><span class="lb"><span class="roll"><span>See the work</span><span>See the work</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a></div></div>
-</section>
-
 <!-- ============ 03 ARCHIVE (final) ============ -->
 <section class="arch" id="work" aria-label="Selected work archive">
   <div class="shead g12 mono"><span>Selected work</span></div>
@@ -551,6 +553,20 @@ h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
     <aside class="peek" aria-hidden="true" inert><button class="x" aria-label="Close preview"><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2l8 8M10 2l-8 8"/></svg></button><div class="pc"></div>
       <div class="pb"><span class="mono sm pm">Identity — 2026</span><h3 class="pt">Northwind</h3><p class="px">A new identity for a Nordic outdoor brand.</p><div class="tags pg"></div><a class="bk" href="#work" style="align-self:flex-start"><span class="lb"><span class="roll"><span>View case study</span><span>View case study</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a></div></aside>
   </div>
+</section>
+
+<!-- ============ 02 STUDIO IN NUMBERS (final) ============ -->
+<section class="nums" id="numbers" aria-labelledby="nums-h">
+  <div class="shead g12 mono"><span>Studio in numbers</span></div>
+  <div class="intro g12"><h2 id="nums-h">Twelve years, <span class="th">measured honestly.</span></h2><p>Every figure below comes from our own project log, updated each January.</p></div>
+  <div class="cells">
+    <div class="cell"><i class="bar"></i><i class="tk"></i><div class="top mono sm"><span>Launches</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="nw"><span class="num nb cnt" data-to="120" data-s="+">120+</span><span class="num nf cnt liqtext" data-to="120" data-s="+" aria-hidden="true">120+</span></span><p>Brands and websites shipped for clients in eleven countries.</p></div>
+    <div class="cell"><i class="bar"></i><i class="tk"></i><div class="top mono sm"><span>Awards</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="nw"><span class="num nb cnt" data-to="38">38</span><span class="num nf cnt liqtext" data-to="38" aria-hidden="true">38</span></span><p>Site of the Day from Awwwards, FWA and CSS Design Awards.</p></div>
+    <div class="cell"><i class="bar"></i><i class="tk"></i><div class="top mono sm"><span>Retention</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="nw"><span class="num nb cnt" data-to="92" data-s="%">92%</span><span class="num nf cnt liqtext" data-to="92" data-s="%" aria-hidden="true">92%</span></span><p>Clients who came back for a second project within two years.</p></div>
+    <div class="cell"><i class="bar"></i><i class="tk"></i><div class="top mono sm"><span>Team</span><span class="arr"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10L10 2M4 2h6v6"/></svg></span></div><span class="nw"><span class="num nb cnt" data-to="14">14</span><span class="num nf cnt liqtext" data-to="14" aria-hidden="true">14</span></span><p>Designers, writers and developers under one roof in Lisbon.</p></div>
+  </div>
+  <div class="clients2" aria-label="Selected clients"><div class="mrow" data-dir="-1"><div class="trk"><a class="cn" href="#work"><span>Northwind</span><small>Identity</small></a><i class="dt"></i><a class="cn" href="#work"><span>Halcyon</span><small>Website</small></a><i class="dt"></i><a class="cn" href="#work"><span>Orbital</span><small>Product</small></a><i class="dt"></i><a class="cn" href="#work"><span>Fieldwork</span><small>Film</small></a><i class="dt"></i><a class="cn" href="#work"><span>Meridian</span><small>Identity</small></a><i class="dt"></i><a class="cn" href="#work"><span>Kinfolk</span><small>Packaging</small></a><i class="dt"></i><a class="cn" href="#work"><span>Atlas Bank</span><small>Website</small></a><i class="dt"></i><a class="cn" href="#work"><span>Sola</span><small>Brand film</small></a><i class="dt"></i></div></div><div class="mrow" data-dir="1"><div class="trk"><a class="cn" href="#work"><span>Meridian</span><small>Identity</small></a><i class="dt"></i><a class="cn" href="#work"><span>Kinfolk</span><small>Packaging</small></a><i class="dt"></i><a class="cn" href="#work"><span>Atlas Bank</span><small>Website</small></a><i class="dt"></i><a class="cn" href="#work"><span>Sola</span><small>Brand film</small></a><i class="dt"></i><a class="cn" href="#work"><span>Northwind</span><small>Identity</small></a><i class="dt"></i><a class="cn" href="#work"><span>Halcyon</span><small>Website</small></a><i class="dt"></i><a class="cn" href="#work"><span>Orbital</span><small>Product</small></a><i class="dt"></i><a class="cn" href="#work"><span>Fieldwork</span><small>Film</small></a><i class="dt"></i></div></div></div>
+  <div class="foot g12"><p>Trusted by seed-stage startups and listed brands alike, from Lisbon to Singapore.</p><div class="acts"><a class="bk" href="#services"><span class="lb"><span class="roll"><span>What we do</span><span>What we do</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a></div></div>
 </section>
 
 <!-- ============ 04 SERVICES (final) ============ -->
@@ -572,6 +588,17 @@ h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
     <div class="bar"><button class="bk shuf"><span class="lb"><span class="roll"><span>Shuffle the cards</span><span>Shuffle the cards</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4h9l-2-2M12 10H3l2 2"/></svg></span></button></div>
   </div>
 </section>
+
+<!-- ============ 07 JOURNAL (final) ============ -->
+<section class="b2" id="journal" aria-label="Journal"><div class="stg7">
+  <div class="tp7"><div class="shead g12 mono"><span>Journal</span></div>
+    <div class="hdr7 g12"><h2>Fly through <span>the journal</span></h2><p>Notes on brand, Webflow and motion. Eight essays, newest first.</p></div></div>
+  <div class="flr"></div><div class="hz"></div>
+  <div class="sp3"><div class="dust"></div></div>
+  <nav class="rl7" aria-label="Jump to essay"></nav>
+  <div class="now7"><div class="big7"><span class="ni">01</span><small>/ 08</small></div><div class="pbar"><i></i></div><a class="bk" href="#journal"><span class="lb"><span class="roll"><span>All 48 essays</span><span>All 48 essays</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a></div>
+  
+</div></section>
 
 <!-- ============ 06 PRICING (final) ============ -->
 <section class="prc" id="pricing" aria-label="Pricing">
@@ -596,17 +623,6 @@ h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
   </div>
 </section>
 
-<!-- ============ 07 JOURNAL (final) ============ -->
-<section class="b2" id="journal" aria-label="Journal"><div class="stg7">
-  <div class="tp7"><div class="shead g12 mono"><span>Journal</span></div>
-    <div class="hdr7 g12"><h2>Fly through <span>the journal</span></h2><p>Notes on brand, Webflow and motion. Eight essays, newest first.</p></div></div>
-  <div class="flr"></div><div class="hz"></div>
-  <div class="sp3"><div class="dust"></div></div>
-  <nav class="rl7" aria-label="Jump to essay"></nav>
-  <div class="now7"><div class="big7"><span class="ni">01</span><small>/ 08</small></div><div class="pbar"><i></i></div><a class="bk" href="#journal"><span class="lb"><span class="roll"><span>All 48 essays</span><span>All 48 essays</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a></div>
-  
-</div></section>
-
 <!-- ============ 08 FAQ (final) ============ -->
 <section class="q5" id="faq" aria-label="FAQ">
   <div class="shead g12 mono"><span>FAQ</span></div>
@@ -625,13 +641,13 @@ h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
   <div class="sunw"><span class="sun"><i></i></span></div><div class="refl"><span class="sun"><i></i></span></div><div class="hzl"></div>
   <div class="tp7"><div class="shead g12 mono"><span>Contact</span></div></div>
   <div class="ttl4"><span class="hd7">Booking projects for Q1 2027</span><h2>Let's make <span class="th2">the next one</span></h2></div>
-  <div class="ft4 g12"><p>New brands, new sites, new launches. Tell us what is next for you; a person replies within 48 hours.</p><div class="ac"><a class="bk" href="#contact"><span class="lb"><span class="roll"><span>Start a project</span><span>Start a project</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a><button class="cpy" data-e="hello@liquid.studio" aria-label="Copy email address"><span>hello@liquid.studio</span><span class="ok">Copied to clipboard</span></button></div><span class="hd7">Lisbon <b class="tz1">--:--</b> · Toronto <b class="tz2">--:--</b></span></div>
+  <div class="ft4 g12"><p>New brands, new sites, new launches. Tell us what is next for you; a person replies within 48 hours.</p><div class="ac"><a class="bk" href="#contact"><span class="lb"><span class="roll"><span>Start a project</span><span>Start a project</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a><button class="cpy" data-e="hello@liquid.studio" aria-label="Copy email address"><span>hello@liquid.studio</span><span class="ok">Copied to clipboard</span></button></div><span class="hd7">No deck, no pitch fee</span></div>
 </div></section>
 
 </main>
 <!-- ============ 10 FOOTER (final) ============ -->
 <footer class="e1" id="footer" aria-label="Footer"><div class="gr">
-  <div class="say"><span class="hd7">Say hello</span><b>Let's talk.</b><button class="cpy" data-e="hello@liquid.studio" aria-label="Copy email address"><span>hello@liquid.studio</span><span class="ok">Copied to clipboard</span></button><span class="hd7 bk9"><i></i>Booking projects for Q1 2027</span></div>
+  <div class="say"><a class="lg9" href="#hero"><i></i>Liquid Studio</a><p>An independent studio for brand, Webflow and motion. Remote, with desks in Lisbon and Toronto.</p><a class="lk" href="mailto:hello@liquid.studio" style="color:var(--bone)">hello@liquid.studio<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
   <nav class="fl c1" aria-label="Pages"><span class="hd7">Pages</span><a href="#work">Work</a><a href="#services">Services</a><a href="#pricing">Pricing</a><a href="#journal">Journal</a><a href="#contact">Contact</a></nav>
   <nav class="fl c2" aria-label="Social"><span class="hd7">Social</span><a href="#">Instagram<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a><a href="#">LinkedIn<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a><a href="#">Dribbble<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a><a href="#">Behance<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a></nav>
   <nav class="fl c3" aria-label="Template"><span class="hd7">Template</span><a href="#">Style guide</a><a href="#">Instructions</a><a href="#">Licenses</a><a href="#">Changelog</a></nav>
@@ -766,7 +782,14 @@ const AR=[];
 
 /* Numbers: gradient text + client tiles */
 const tx=snap(700,340,9,1.4,'dusk');document.querySelectorAll('.liqtext').forEach(el=>el.style.backgroundImage='url('+tx+')');
-document.querySelectorAll('.cl').forEach((el,i)=>el.style.setProperty('--liq','url('+snap(360,160,30+i*5,1,['rose','aurora','dusk','ember','pearl','rose','aurora','dusk'][i])+')'));
+{const pl=['rose','aurora','dusk','ember','pearl','rose','aurora','dusk'],cache={};document.querySelectorAll('.cn span').forEach(el=>{const k=el.textContent;if(!cache[k]){const n=Object.keys(cache).length;cache[k]=snap(420,140,30+n*5,1,pl[n%8])}el.style.setProperty('--liq','url('+cache[k]+')')});
+  /* client marquee: two rows, opposite directions, speeds up with scroll, slows on hover */
+  document.querySelectorAll('.mrow').forEach(r=>{const t=r.querySelector('.trk');t.innerHTML+=t.innerHTML;t.querySelectorAll('.cn').forEach((a,i)=>{if(i>=8){a.setAttribute('aria-hidden','true');a.tabIndex=-1}});
+    let x=0,v=0,hov=0,vis=false,last=performance.now(),dir=+r.dataset.dir,w=t.scrollWidth/2;addEventListener('resize',()=>{w=t.scrollWidth/2});
+    r.addEventListener('pointerenter',()=>hov=1);r.addEventListener('pointerleave',()=>hov=0);r.addEventListener('focusin',()=>hov=1);r.addEventListener('focusout',()=>hov=0);
+    if(ST)ScrollTrigger.create({trigger:r,start:'top bottom',end:'bottom top',onUpdate:s=>{v=Math.min(6,Math.abs(s.getVelocity())/300)}});
+    new IntersectionObserver(e=>{vis=e[0].isIntersecting;last=performance.now()}).observe(r);
+    if(!reduce)(function loop(n){requestAnimationFrame(loop);if(!vis)return;const dt=Math.min(.05,(n-last)/1000);last=n;v*=.94;x+=dir*(hov?8:46)*(1+v)*dt;if(x<-w)x+=w;if(x>0)x-=w;t.style.transform=`translate3d(${x.toFixed(1)}px,0,0)`})(last)})}
 
 /* ---------- Hero live canvas + trail ---------- */
 const hero=document.getElementById('hero'),cv=hero.querySelector('canvas');let L=mkGL(cv);
@@ -966,8 +989,8 @@ document.querySelectorAll('.cpy').forEach(b=>b.addEventListener('click',()=>{try
   scrubbed(s,draw);
   if(G&&fine&&!reduce){const o={x:0,y:0},u=()=>{sw.style.transform=rf.style.transform=`translateX(${(o.x*26).toFixed(1)}px)`;ttl.style.transform=`translate(${(-o.x*12).toFixed(1)}px,${(-o.y*8).toFixed(1)}px)`;gl.style.marginLeft=(o.x*30).toFixed(1)+'px'},qx=gsap.quickTo(o,'x',{duration:1.6,ease:'power3',onUpdate:u}),qy=gsap.quickTo(o,'y',{duration:1.6,ease:'power3',onUpdate:u});
     stg.addEventListener('pointermove',e=>{qx(e.clientX/innerWidth*2-1);qy(e.clientY/innerHeight*2-1)});stg.addEventListener('pointerleave',()=>{qx(0);qy(0)})}
-  const z1=s.querySelector('.tz1'),z2=s.querySelector('.tz2'),fmt=tz=>new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(new Date());
-  const clk=()=>{try{z1.textContent=fmt('Europe/Lisbon');z2.textContent=fmt('America/Toronto')}catch(e){}};clk();setInterval(clk,15000)})();
+  const fmt=tz=>new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(new Date());
+  })();
 
 /* ---------- 10 footer (final) ---------- */
 (function(){const f=document.querySelector('.e1'),fmt=tz=>{try{return new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(new Date())}catch(e){return '--:--'}};
@@ -1017,7 +1040,7 @@ document.querySelectorAll('.cpy').forEach(b=>b.addEventListener('click',()=>{try
   calc()})();
 
 function countUp(el){const to=+el.dataset.to,s=el.dataset.s||'';if(!G||reduce){el.textContent=to+s;return}const o={v:0};gsap.to(o,{v:to,duration:2,ease:'power3.out',onUpdate:()=>el.textContent=Math.round(o.v)+s})}
-if(!G||reduce){document.querySelectorAll('.cnt').forEach(countUp);
+if(!G||reduce){document.querySelectorAll('.cnt').forEach(countUp);document.querySelectorAll('.nw').forEach(w=>{const n=w.querySelector('.nf');w.style.setProperty('--lv',(n.dataset.s==='%'?100-(+n.dataset.to):0)+'%')});
   /* reduced motion: services switch instantly with scroll, no transitions */
   const sc=[...document.querySelectorAll('.svcs .scn')],rl=[...document.querySelectorAll('.svcs .rail button')];if(sc[0])sc[0].style.clipPath='none';
   if(ST&&sc.length){const t=ScrollTrigger.create({trigger:'.svcs .pin',start:'top top',end:'bottom bottom',onUpdate:x=>{const i=Math.min(sc.length-1,Math.floor(x.progress*sc.length*.999));sc.forEach((e,k)=>{e.style.clipPath=k===i?'none':'';e.style.visibility=k===i?'visible':'hidden'});rl.forEach((r,k)=>r.classList.toggle('on',k===i))}});
@@ -1033,7 +1056,10 @@ if(!ST)return;
 /* ---------- 02 numbers ---------- */
 gsap.from('.nums .intro h2,.nums .intro p',{y:30,autoAlpha:0,duration:1.2,stagger:.1,ease:'expo.out',scrollTrigger:{trigger:'.nums .intro',start:'top 80%'}});
 gsap.from('.cell',{yPercent:10,autoAlpha:0,duration:1.2,stagger:.08,ease:'expo.out',scrollTrigger:{trigger:'.cells',start:'top 82%'}});
-gsap.from('.cl',{autoAlpha:0,y:16,duration:.9,stagger:.05,ease:'expo.out',scrollTrigger:{trigger:'.clients',start:'top 88%'}});
+gsap.from('.mrow',{autoAlpha:0,y:24,duration:1.2,stagger:.1,ease:'expo.out',scrollTrigger:{trigger:'.clients2',start:'top 90%'}});
+{const tl=gsap.timeline({scrollTrigger:{trigger:'.cells',start:'top 78%',end:'bottom 55%',scrub:.8}});
+  document.querySelectorAll('.nw').forEach((w,i)=>{const n=w.querySelector('.nf'),pct=n.dataset.s==='%'?+n.dataset.to:100;
+    tl.fromTo(w,{'--lv':'100%','--lo':1},{'--lv':(100-pct)+'%',duration:1,ease:'power1.inOut'},i*.18).to(w,{'--lo':0,duration:.25},i*.18+.85)})}
 document.querySelectorAll('.cnt').forEach(el=>ScrollTrigger.create({trigger:el,start:'top 88%',once:true,onEnter:()=>countUp(el)}));
 gsap.to('.liqtext',{backgroundPosition:'100% 70%',duration:10,ease:'sine.inOut',repeat:-1,yoyo:true});
 
