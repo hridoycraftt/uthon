@@ -189,6 +189,8 @@ enum SnapshotTour {
             ("notification", .notification(NotificationPeek(bundleID: "com.apple.MobileSMS", app: "Messages", title: "Ammu",
                                                             text: "Dinner is ready, come home soon! Bring some sweets on the way."))),
             ("network-offline", .network(online: false)),
+            ("update", .update(version: "0.6.15")),
+            ("verse", .verse(reference: "Ash-Sharh 94:6", text: "নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।", isQuran: true)),
             ("volume", .volume(level: 0.62, muted: false)),
             ("brightness", .brightness(level: 0.4)),
             ("capslock", .capsLock(true)),

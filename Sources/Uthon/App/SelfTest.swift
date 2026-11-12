@@ -698,6 +698,29 @@ enum SelfTest {
             }
         }
         let withRefs = "জারীর ইবনু আবদুল্লাহ (রাঃ) হতে বর্ণিত। অবশ্যই তোমরা তোমাদের রবকে দেখতে পাবে। [৫৫৪] (আধুনিক প্রকাশনী- ৬৯১৮, ইসলামিক ফাউন্ডেশন- ৬৯২৮)"
+        let t0 = Date(timeIntervalSince1970: 1_790_000_000)
+        for hours in DailyVerseStore.intervals {
+            let a = DailyVerseStore.slotIndex(t0, hours: hours)
+            let b = DailyVerseStore.slotIndex(t0.addingTimeInterval(Double(hours) * 3600), hours: hours)
+            let next = DailyVerseStore.nextChange(after: t0, hours: hours)
+            check("New text every \(hours) h", b == a + 1
+                  && DailyVerseStore.slotIndex(next, hours: hours) == a + 1
+                  && DailyVerseStore.slotIndex(next.addingTimeInterval(-1), hours: hours) == a
+                  && next.timeIntervalSince(t0) <= Double(hours) * 3600)
+        }
+        check("Slot keys differ by interval", DailyVerseStore.slotKey(t0, hours: 6) != DailyVerseStore.slotKey(t0, hours: 12))
+        check("Update reminder: due when never shown", Updater.reminderDue(now: t0, last: nil, perDay: 3, available: true))
+        check("Update reminder: 3 a day means every 8 h",
+              !Updater.reminderDue(now: t0, last: t0.addingTimeInterval(-7 * 3600), perDay: 3, available: true)
+              && Updater.reminderDue(now: t0, last: t0.addingTimeInterval(-8 * 3600), perDay: 3, available: true))
+        check("Update reminder: 2 a day means every 12 h",
+              !Updater.reminderDue(now: t0, last: t0.addingTimeInterval(-11 * 3600), perDay: 2, available: true)
+              && Updater.reminderDue(now: t0, last: t0.addingTimeInterval(-12 * 3600), perDay: 2, available: true))
+        check("Update reminder: off means never", !Updater.reminderDue(now: t0, last: nil, perDay: 0, available: true))
+        check("Update reminder: nothing when up to date", !Updater.reminderDue(now: t0, last: nil, perDay: 3, available: false))
+        IslandController.shared.showPeek(.verse(reference: "Ash-Sharh 94:6", text: "নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।", isQuran: true))
+        check("New ayah pop-up appears", IslandModel.shared.peek?.kind.category == 16)
+        IslandController.shared.dismissPeek()
         check("Tile drops trailing book references", DailyVerseStore.tidy(withRefs).hasSuffix("দেখতে পাবে।"), DailyVerseStore.tidy(withRefs))
         check("Tidy keeps text without references", DailyVerseStore.tidy("নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।") == "নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।")
         check("Empty hadith is rejected", DailyVerseStore.parseHadith(Data(#"{"hadiths":[]}"#.utf8)) == nil)

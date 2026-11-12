@@ -49,8 +49,19 @@ final class DailyVerseStore: ObservableObject {
     private let d = UserDefaults.standard
     private var task: Task<Void, Never>?
 
+    private var timer: Timer?
+
     private init() {
         current = Persist.load(DailyText.self, key: "dailyText")
+    }
+
+    /// Checks once a minute whether the next text is due (cheap: no network unless it is).
+    func start() {
+        guard timer == nil else { return }
+        let t = Timer(timeInterval: 60, repeats: true) { [weak self] _ in self?.refresh() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+        refresh()
     }
 
     /// Screenshots and tests: show a fixed text without going online.
@@ -64,6 +75,28 @@ final class DailyVerseStore: ObservableObject {
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
+    }
+
+    /// How often a new text comes, in hours (Settings: 1, 2, 3, 4, 5, 6, 7, 8, 12 or 24).
+    static let intervals = [1, 2, 3, 4, 5, 6, 7, 8, 12, 24]
+
+    /// Number of the current period (local time), so a new text comes every `hours` hours.
+    static func slotIndex(_ date: Date = Date(), hours: Int) -> Int {
+        let local = date.timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT(for: date)) - 1_577_836_800
+        return max(0, Int(local / (Double(max(hours, 1)) * 3600)))
+    }
+
+    /// Identifies the current period, e.g. "6h-1234".
+    static func slotKey(_ date: Date = Date(), hours: Int) -> String {
+        "\(hours)h-\(slotIndex(date, hours: hours))"
+    }
+
+    /// When the next text is due.
+    static func nextChange(after date: Date = Date(), hours: Int) -> Date {
+        let h = Double(max(hours, 1)) * 3600
+        let offset = Double(TimeZone.current.secondsFromGMT(for: date))
+        let local = date.timeIntervalSince1970 + offset
+        return Date(timeIntervalSince1970: (floor(local / h) + 1) * h - offset)
     }
 
     /// Day number since 2020, used to pick the same text for everyone on a given day.
@@ -91,8 +124,9 @@ final class DailyVerseStore: ObservableObject {
     var needsRefresh: Bool {
         let library = UserLibrary.shared
         guard let current else { return true }
-        let wantsQuran = Self.wantsQuran(library.verseSource, day: Self.dayIndex())
-        return current.day != Self.dayKey()
+        let hours = library.verseIntervalHours
+        let wantsQuran = Self.wantsQuran(library.verseSource, day: Self.slotIndex(hours: hours))
+        return current.day != Self.slotKey(hours: hours)
             || current.translationKey != library.verseTranslation.rawValue
             || (library.verseSource != .both && current.isQuran != wantsQuran)
     }
@@ -103,7 +137,9 @@ final class DailyVerseStore: ObservableObject {
         guard another || needsRefresh else { return }
         guard !loading else { return }
         let library = UserLibrary.shared
-        let day = Self.dayIndex()
+        let hours = library.verseIntervalHours
+        let day = Self.slotIndex(hours: hours)
+        let scheduled = !another
         let quran: Bool
         if another, library.verseSource == .both { quran = Bool.random() }
         else { quran = Self.wantsQuran(library.verseSource, day: day) }
@@ -129,9 +165,16 @@ final class DailyVerseStore: ObservableObject {
                 guard let self else { return }
                 self.loading = false
                 if var result {
-                    result.day = Self.dayKey()
+                    result.day = Self.slotKey(hours: hours)
+                    let isNew = self.current?.reference != result.reference
                     self.current = result
                     Persist.save(result, key: "dailyText")
+                    // A new scheduled text: optionally show it on the island.
+                    if scheduled, isNew, UserLibrary.shared.verseNewPeek {
+                        IslandController.shared.showPeek(.verse(reference: result.reference,
+                                                                text: Self.tidy(result.translation),
+                                                                isQuran: result.isQuran), duration: 10)
+                    }
                 } else {
                     self.error = L("Couldn't load. Check the internet connection.")
                 }

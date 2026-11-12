@@ -35,12 +35,41 @@ final class Updater: ObservableObject {
         }
     }
 
+    private var reminderTimer: Timer?
+    private static let lastReminderKey = "lastUpdateReminder"
+
+    /// Hours between update reminders for N reminders a day (3 → every 8 hours).
+    static func reminderGap(perDay: Int) -> TimeInterval? {
+        perDay > 0 ? 24 * 3600 / Double(perDay) : nil
+    }
+
+    /// True when a reminder is due: a newer version waits, reminders are on, and the last one
+    /// was at least a gap ago.
+    static func reminderDue(now: Date, last: Date?, perDay: Int, available: Bool) -> Bool {
+        guard available, let gap = reminderGap(perDay: perDay) else { return false }
+        guard let last else { return true }
+        return now.timeIntervalSince(last) >= gap - 60
+    }
+
+    /// Shows the update pop-up if it is time (2–3 times a day by default) so nobody stays on
+    /// an old version for long.
+    func remindIfDue(now: Date = Date()) {
+        guard case .available(let version) = state else { return }
+        let last = UserDefaults.standard.object(forKey: Self.lastReminderKey) as? Date
+        guard Self.reminderDue(now: now, last: last, perDay: UserLibrary.shared.updateRemindersPerDay, available: true) else { return }
+        UserDefaults.standard.set(now, forKey: Self.lastReminderKey)
+        IslandController.shared.showPeek(.update(version: version), duration: 15)
+    }
+
     func start() {
-        let t = Timer(timeInterval: 6 * 3600, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: 3 * 3600, repeats: true) { [weak self] _ in
             if UserLibrary.shared.autoCheckUpdates { self?.check(silent: true) }
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
+        let r = Timer(timeInterval: 15 * 60, repeats: true) { [weak self] _ in self?.remindIfDue() }
+        RunLoop.main.add(r, forMode: .common)
+        reminderTimer = r
         if UserLibrary.shared.autoCheckUpdates {
             DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in self?.check(silent: true) }
         }
@@ -62,7 +91,7 @@ final class Updater: ObservableObject {
                     self.dmgURL = release.dmg
                     if Self.isNewer(release.version, than: AppInfo.version) {
                         self.state = .available(version: release.version)
-                        if silent { IslandController.shared.showPeek(.update(version: release.version), duration: 12) }
+                        if silent { self.remindIfDue() }
                     } else {
                         self.state = .upToDate
                     }

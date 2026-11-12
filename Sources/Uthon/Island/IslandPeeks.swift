@@ -68,19 +68,24 @@ struct PeekView: View {
                 }
             }
         case .update(let version):
-            PeekRow(symbol: "arrow.down.app.fill", tint: Theme.accent, title: L("Nook") + " \(version) " + L("is available"),
-                    subtitle: L("New features and fixes")) {
-                HStack(spacing: 8) {
-                    Button(L("Later")) { IslandController.shared.dismissPeek() }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.secondary)
-                    Button(L("Update")) {
-                        IslandController.shared.dismissPeek()
-                        Updater.shared.install()
-                    }
-                    .buttonStyle(AccentButtonStyle())
+            UpdatePeekRow(version: version)
+        case .verse(let reference, let text, let isQuran):
+            HStack(spacing: 12) {
+                Image(systemName: isQuran ? "book.closed.fill" : "text.book.closed.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Theme.accent.opacity(0.16)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(text).font(.system(size: 12)).lineLimit(2).minimumScaleFactor(0.85)
+                    Text(reference).font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.accent).lineLimit(1)
                 }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                IslandController.shared.dismissPeek()
+                VerseReader.show()
             }
         case .prayer(let name, let time):
             PeekRow(symbol: "moon.stars.fill", tint: Theme.accent, title: L("Time for") + " " + L(name),
@@ -426,5 +431,40 @@ private struct MeetingPeek: View {
         let minutes = max(0, Int(start.timeIntervalSinceNow / 60))
         let time = start.formatted(date: .omitted, time: .shortened)
         return minutes <= 0 ? "Starting now · \(time)" : "In \(minutes) min · \(time)"
+    }
+}
+
+/// The update pop-up: made to be noticed (pulsing icon, clear one-click action).
+private struct UpdatePeekRow: View {
+    let version: String
+    @State private var pulse = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.app.fill")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(Color.white)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(Theme.accent))
+                .overlay(Circle().stroke(Theme.accent.opacity(0.5), lineWidth: 2).scaleEffect(pulse ? 1.35 : 1).opacity(pulse ? 0 : 1))
+                .symbolEffect(.bounce, value: pulse)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("Nook") + " \(version) " + L("is ready") + " ✨").font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Text(L("One click: new features and fixes, your settings stay")).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            Button(L("Later")) { IslandController.shared.dismissPeek() }
+                .buttonStyle(.plain)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.secondary)
+            Button(L("Update now")) {
+                IslandController.shared.dismissPeek()
+                Updater.shared.install()
+            }
+            .buttonStyle(AccentButtonStyle())
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.4).repeatForever(autoreverses: false)) { pulse = true }
+        }
     }
 }

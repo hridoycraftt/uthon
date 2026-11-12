@@ -55,7 +55,7 @@ struct VerseSettings: View {
                 HomeWidgetToggle(widget: .verse)
                     .disabled(!library.verseEnabled)
             } footer: {
-                Text(L("A new ayah or hadith every day, with its meaning. It is kept on this Mac, so it also shows without internet."))
+                Text(L("A new ayah or hadith as often as you like (every hour up to once a day), with its meaning. It is kept on this Mac, so it also shows without internet."))
             }
             Section(L("What to show")) {
                 Picker(L("Show"), selection: $library.verseSource) {
@@ -66,6 +66,14 @@ struct VerseSettings: View {
                 }
                 .pickerStyle(.segmented)
                 Toggle(L("Show the Arabic text"), isOn: $library.verseShowArabic)
+                Picker(L("A new one every"), selection: $library.verseIntervalHours) {
+                    ForEach(DailyVerseStore.intervals, id: \.self) { h in
+                        Text(h == 24 ? L("Day (24 hours)") : "\(h) " + L(h == 1 ? "hour" : "hours")).tag(h)
+                    }
+                }
+                Toggle(L("Show the new one on the island when it arrives"), isOn: $library.verseNewPeek)
+                LabeledContent(L("Next one"), value: DailyVerseStore.nextChange(hours: library.verseIntervalHours)
+                    .formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Localization.locale)))
             }
             .disabled(!library.verseEnabled)
             Section(L("Today")) {

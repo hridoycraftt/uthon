@@ -58,6 +58,7 @@ enum PeekKind: Equatable {
     case specialDay(name: String, symbol: String)
     case network(online: Bool)
     case notification(NotificationPeek)
+    case verse(reference: String, text: String, isQuran: Bool)
 
     /// Peeks of the same category replace each other in place (e.g. volume steps).
     var category: Int {
@@ -78,6 +79,7 @@ enum PeekKind: Equatable {
         case .specialDay: return 13
         case .network: return 14
         case .notification: return 15
+        case .verse: return 16
         }
     }
 

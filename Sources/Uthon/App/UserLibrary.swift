@@ -120,6 +120,12 @@ final class UserLibrary: ObservableObject {
     @Published var verseSource: VerseSource { didSet { d.set(verseSource.rawValue, forKey: "verseSource") } }
     @Published var verseTranslation: VerseTranslation { didSet { d.set(verseTranslation.rawValue, forKey: "verseTranslation") } }
     @Published var verseShowArabic: Bool { didSet { d.set(verseShowArabic, forKey: "verseShowArabic") } }
+    /// A new ayah/hadith every this many hours.
+    @Published var verseIntervalHours: Int { didSet { d.set(verseIntervalHours, forKey: "verseIntervalHours") } }
+    /// Show a new ayah/hadith on the island when it arrives.
+    @Published var verseNewPeek: Bool { didSet { d.set(verseNewPeek, forKey: "verseNewPeek") } }
+    /// Update reminders per day while a new version is waiting (0 = never).
+    @Published var updateRemindersPerDay: Int { didSet { d.set(updateRemindersPerDay, forKey: "updateRemindersPerDay") } }
     // Internet & Wi-Fi
     @Published var networkEnabled: Bool { didSet { d.set(networkEnabled, forKey: "networkEnabled") } }
     @Published var networkPeeks: Bool { didSet { d.set(networkPeeks, forKey: "networkPeeks") } }
@@ -178,6 +184,10 @@ final class UserLibrary: ObservableObject {
         verseSource = VerseSource(rawValue: d.string(forKey: "verseSource") ?? "") ?? .both
         verseTranslation = VerseTranslation(rawValue: d.string(forKey: "verseTranslation") ?? "") ?? .bangla
         verseShowArabic = d.object(forKey: "verseShowArabic") as? Bool ?? true
+        let savedInterval = d.object(forKey: "verseIntervalHours") as? Int ?? 24
+        verseIntervalHours = DailyVerseStore.intervals.contains(savedInterval) ? savedInterval : 24
+        verseNewPeek = d.object(forKey: "verseNewPeek") as? Bool ?? true
+        updateRemindersPerDay = min(max(d.object(forKey: "updateRemindersPerDay") as? Int ?? 3, 0), 3)
         networkEnabled = d.object(forKey: "networkEnabled") as? Bool ?? true
         networkPeeks = d.object(forKey: "networkPeeks") as? Bool ?? true
         speedTestMB = d.object(forKey: "speedTestMB") as? Int ?? 25

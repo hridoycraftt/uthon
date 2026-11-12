@@ -243,6 +243,13 @@ private struct GeneralSettings: View {
             }
             Section(L("Updates")) {
                 Toggle(L("Check for updates automatically"), isOn: $library.autoCheckUpdates)
+                Picker(L("Remind me about a new version"), selection: $library.updateRemindersPerDay) {
+                    Text(L("3 times a day")).tag(3)
+                    Text(L("2 times a day")).tag(2)
+                    Text(L("Once a day")).tag(1)
+                    Text(L("Never")).tag(0)
+                }
+                .disabled(!library.autoCheckUpdates)
                 HStack {
                     Text(L("This version") + ": \(AppInfo.version)")
                     Spacer()
