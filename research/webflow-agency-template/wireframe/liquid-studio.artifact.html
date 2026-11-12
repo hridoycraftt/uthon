@@ -66,7 +66,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 /* ===== HERO ===== */
 .hero{position:relative;height:100vh;min-height:640px;overflow:hidden;background:var(--c0)}
 .hero canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.hero .shade{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 75% at 30% 115%,rgba(7,7,10,.85),transparent 60%),linear-gradient(to bottom,rgba(7,7,10,.45),transparent 22%)}
+.hero .shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,var(--night),rgba(7,7,10,0) 26%),radial-gradient(120% 75% at 30% 115%,rgba(7,7,10,.85),transparent 60%),linear-gradient(to bottom,rgba(7,7,10,.45),transparent 22%)}
 .hero .reel{position:absolute;z-index:10;right:var(--pad);top:96px}
 .hero .kick{position:absolute;z-index:10;left:var(--pad);top:clamp(140px,22vh,220px);display:grid;gap:4px;color:rgba(240,236,230,.6)}
 .hero .low{position:absolute;z-index:10;left:var(--pad);right:var(--pad);bottom:clamp(28px,5vh,52px);align-items:end;pointer-events:none}
@@ -80,11 +80,11 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 @media (max-width:860px){.hero h1,.hero .side{grid-column:1/-1}.hero .side{margin-top:22px}.hero .reel{top:84px}.hero .kick{top:170px}.hero .hint{display:none}}
 
 /* ===== Section head ===== */
-.shead{padding:18px var(--pad);border-bottom:1px solid var(--line);align-items:center}
+.shead{padding:18px var(--pad);align-items:center}
 .shead>:nth-child(1){grid-column:1/span 6}.shead>:nth-child(2){grid-column:7/-1;justify-self:end}
 
 /* ===== 02 · STUDIO IN NUMBERS (final) ===== */
-.nums{border-top:1px solid var(--line)}
+.nums{position:relative}
 .nums .intro{padding:clamp(56px,9vh,96px) var(--pad) clamp(40px,6vh,64px);align-items:end}
 .nums .intro h2{grid-column:1/span 7;font:500 clamp(40px,4.6vw,88px)/.95 var(--sans);letter-spacing:-.055em}
 .nums .intro h2 .th{font-weight:200}
@@ -141,7 +141,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 @media (max-width:860px){.wtitle h2,.wtitle .r{grid-column:1/-1;justify-self:start;align-items:flex-start;text-align:left}.wtitle .r{margin-top:18px}}
 
 /* ===== 03 · ARCHIVE (final) ===== */
-.arch{position:relative;border-top:1px solid var(--line)}
+.arch{position:relative}
 .arch .shead{position:absolute;z-index:7;left:0;right:0;top:0;border-bottom:0;background:linear-gradient(to bottom,rgba(7,7,10,.92),rgba(7,7,10,0));pointer-events:none}
 .field{position:relative;height:100vh;min-height:620px;overflow:hidden;cursor:none;touch-action:none;outline:none;background:radial-gradient(80% 70% at 50% 50%,#12121b,var(--night))}
 .field:focus-visible{box-shadow:inset 0 0 0 1px var(--c2)}
@@ -178,7 +178,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 @media (hover:none){.field{cursor:auto}.field .cur{display:none}}
 
 /* ===== 04 · SERVICES (final: cinematic scenes) ===== */
-.svcs{border-top:1px solid var(--line)}
+.svcs{position:relative}
 .svcs .pin{height:460vh}
 .svcs .sticky{position:sticky;top:0;height:100vh;overflow:hidden}
 .svcs .scn{position:absolute;inset:0;overflow:hidden;clip-path:circle(0% at 50% 100%)}
@@ -211,7 +211,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 .chk{width:16px;height:16px;flex:none;color:var(--c3)}
 
 /* ===== 05 · VOICES (final: postcards) ===== */
-.voices{border-top:1px solid var(--line)}
+.voices{position:relative}
 .voices .table{position:relative;height:100vh;min-height:700px;overflow:hidden;background:radial-gradient(70% 60% at 55% 55%,#16161f,var(--night));touch-action:pan-y}
 .voices .shead{position:absolute;left:0;right:0;top:0;z-index:60;border-bottom:0;pointer-events:none}
 .voices .head{position:absolute;z-index:60;left:var(--pad);top:clamp(64px,9vh,96px);display:flex;flex-direction:column;gap:12px;pointer-events:none}
@@ -244,7 +244,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 @media (max-width:860px){.voices .table{height:auto;min-height:0;padding:150px var(--pad) 90px;display:flex;flex-direction:column;gap:16px}.voices .pc{position:relative;width:100%;transform:none!important}.voices .rate{display:none}}
 
 /* ===== 06 · PRICING (final estimator) ===== */
-.prc{border-top:1px solid var(--line);padding-bottom:clamp(80px,12vh,140px)}
+.prc{padding-bottom:clamp(80px,12vh,140px)}
 .prc .body{padding-inline:var(--pad);align-items:start}
 .prc .ctrl{grid-column:1/span 7;display:flex;flex-direction:column;gap:clamp(28px,5vh,44px)}
 .prc .grp{display:flex;flex-direction:column;gap:14px}
@@ -462,7 +462,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 @media (max-width:860px){.d4 .ft4>*{grid-column:1/-1!important;text-align:left!important;margin-top:14px}.d4 .ttl4{top:12%}}
 
 /* ===== 10 · FOOTER (final: horizon wordmark) ===== */
-.e1{position:relative;overflow:hidden;background:linear-gradient(#07070a,#0e0a0d 65%,#1c1011);padding:clamp(70px,11vh,120px) var(--pad) 0;border-top:1px solid var(--line)}
+.e1{position:relative;overflow:hidden;background:linear-gradient(#07070a,#0e0a0d 65%,#1c1011);padding:clamp(70px,11vh,120px) var(--pad) 0}
 .e1 .gr{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gap);row-gap:40px}
 .e1 .say{grid-column:1/span 4;display:flex;flex-direction:column;gap:18px;align-items:flex-start}
 .e1 .say b{font:500 clamp(34px,3.2vw,56px)/1 var(--sans);letter-spacing:-.05em}
@@ -495,12 +495,12 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 
 
 /* ===== story pass: numbers gauge + client marquee + footer brand ===== */
-.nw{position:relative;align-self:center;display:inline-block;width:max-content;--lv:100%;--lo:0}
+.nw{position:relative;align-self:center;display:inline-block;width:max-content;--lv:120%;--lo:0}
 .num.nb{color:rgba(240,236,230,.07)}
-.num.nf{position:absolute;left:0;top:0;clip-path:inset(var(--lv) -10% 0 -10%)}
+.num.nf{position:absolute;left:0;top:0;clip-path:inset(var(--lv) -12% -30% -12%)}
 .nw::after{content:"";position:absolute;left:-8%;right:-8%;top:var(--lv);height:1px;background:linear-gradient(90deg,transparent,var(--c3),transparent);box-shadow:0 0 14px 1px var(--c2);opacity:var(--lo);pointer-events:none}
 .cell .tk{position:absolute;left:0;top:34%;bottom:30%;width:7px;background:repeating-linear-gradient(to bottom,rgba(240,236,230,.3) 0 1px,transparent 1px 9px);pointer-events:none}
-.clients2{border-bottom:1px solid var(--line);padding:clamp(26px,4vh,44px) 0;display:flex;flex-direction:column;gap:4px}
+.clients2{padding:clamp(26px,4vh,44px) 0;display:flex;flex-direction:column;gap:4px}
 .mrow{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
 .trk{display:flex;align-items:center;width:max-content;will-change:transform}
 .cn{display:inline-flex;align-items:center;gap:14px;padding:0 clamp(18px,2vw,34px);white-space:nowrap}
@@ -512,6 +512,14 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 .lg9{display:inline-flex;align-items:center;gap:10px;font:500 clamp(26px,2.2vw,36px)/1 var(--sans);letter-spacing:-.045em}
 .lg9 i{width:18px;height:18px;border-radius:50%;background:conic-gradient(from 200deg,var(--c1),var(--c2),var(--c3),var(--c1));transition:transform 1.2s var(--ease)}
 .lg9:hover i{transform:rotate(360deg)}
+
+/* ===== seamless section transitions (no divider strokes) ===== */
+.shead>:first-child{display:inline-flex;align-items:center;gap:10px}
+.shead>:first-child::before{content:"";width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,var(--c2),var(--c3));box-shadow:0 0 10px rgba(255,107,69,.6)}
+.svcs::before,.svcs::after{content:"";position:absolute;left:0;right:0;height:22vh;z-index:8;pointer-events:none}
+.svcs::before{top:0;background:linear-gradient(var(--night),rgba(7,7,10,0))}
+.svcs::after{bottom:0;background:linear-gradient(rgba(7,7,10,0),var(--night))}
+.nums::before{content:"";position:absolute;left:0;right:0;top:-1px;height:30vh;pointer-events:none;background:radial-gradient(60% 100% at 50% 0,rgba(30,47,184,.10),transparent 70%)}
 /* ===== final pass: typography + mobile ===== */
 :where(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--c2);outline-offset:3px}
 h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
@@ -1040,7 +1048,7 @@ document.querySelectorAll('.cpy').forEach(b=>b.addEventListener('click',()=>{try
   calc()})();
 
 function countUp(el){const to=+el.dataset.to,s=el.dataset.s||'';if(!G||reduce){el.textContent=to+s;return}const o={v:0};gsap.to(o,{v:to,duration:2,ease:'power3.out',onUpdate:()=>el.textContent=Math.round(o.v)+s})}
-if(!G||reduce){document.querySelectorAll('.cnt').forEach(countUp);document.querySelectorAll('.nw').forEach(w=>{const n=w.querySelector('.nf');w.style.setProperty('--lv',(n.dataset.s==='%'?100-(+n.dataset.to):0)+'%')});
+if(!G||reduce){document.querySelectorAll('.cnt').forEach(countUp);document.querySelectorAll('.nw').forEach(w=>w.style.setProperty('--lv','-30%'));
   /* reduced motion: services switch instantly with scroll, no transitions */
   const sc=[...document.querySelectorAll('.svcs .scn')],rl=[...document.querySelectorAll('.svcs .rail button')];if(sc[0])sc[0].style.clipPath='none';
   if(ST&&sc.length){const t=ScrollTrigger.create({trigger:'.svcs .pin',start:'top top',end:'bottom bottom',onUpdate:x=>{const i=Math.min(sc.length-1,Math.floor(x.progress*sc.length*.999));sc.forEach((e,k)=>{e.style.clipPath=k===i?'none':'';e.style.visibility=k===i?'visible':'hidden'});rl.forEach((r,k)=>r.classList.toggle('on',k===i))}});
@@ -1058,8 +1066,7 @@ gsap.from('.nums .intro h2,.nums .intro p',{y:30,autoAlpha:0,duration:1.2,stagge
 gsap.from('.cell',{yPercent:10,autoAlpha:0,duration:1.2,stagger:.08,ease:'expo.out',scrollTrigger:{trigger:'.cells',start:'top 82%'}});
 gsap.from('.mrow',{autoAlpha:0,y:24,duration:1.2,stagger:.1,ease:'expo.out',scrollTrigger:{trigger:'.clients2',start:'top 90%'}});
 {const tl=gsap.timeline({scrollTrigger:{trigger:'.cells',start:'top 78%',end:'bottom 55%',scrub:.8}});
-  document.querySelectorAll('.nw').forEach((w,i)=>{const n=w.querySelector('.nf'),pct=n.dataset.s==='%'?+n.dataset.to:100;
-    tl.fromTo(w,{'--lv':'100%','--lo':1},{'--lv':(100-pct)+'%',duration:1,ease:'power1.inOut'},i*.18).to(w,{'--lo':0,duration:.25},i*.18+.85)})}
+  document.querySelectorAll('.nw').forEach((w,i)=>{tl.fromTo(w,{'--lv':'120%','--lo':1},{'--lv':'-30%',duration:1,ease:'power1.inOut'},i*.18).to(w,{'--lo':0,duration:.25},i*.18+.85)})}
 document.querySelectorAll('.cnt').forEach(el=>ScrollTrigger.create({trigger:el,start:'top 88%',once:true,onEnter:()=>countUp(el)}));
 gsap.to('.liqtext',{backgroundPosition:'100% 70%',duration:10,ease:'sine.inOut',repeat:-1,yoyo:true});
 
