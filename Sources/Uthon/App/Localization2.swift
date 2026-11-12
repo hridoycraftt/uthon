@@ -21,7 +21,7 @@ extension Localization {
         "A new ayah or hadith as often as you like (every hour up to once a day), with its meaning. It is kept on this Mac, so it also shows without internet.": "যতবার চাও নতুন আয়াত বা হাদিস (প্রতি ঘণ্টা থেকে দিনে একবার), অর্থসহ। এই Mac-এ রাখা থাকে, তাই ইন্টারনেট ছাড়াও দেখায়।",
         "Remind me about a new version": "নতুন ভার্সনের কথা মনে করাও", "3 times a day": "দিনে ৩ বার", "2 times a day": "দিনে ২ বার",
         "Once a day": "দিনে ১ বার", "Never": "কখনো না", "is ready": "তৈরি", "Update now": "এখনই আপডেট করো",
-        "One click: new features and fixes, your settings stay": "এক ক্লিকে নতুন ফিচার আর সমাধান, সেটিংস যেমন আছে থাকবে", "Try again": "আবার চেষ্টা করো",
+        "New features and fixes · one click": "নতুন ফিচার আর সমাধান · এক ক্লিকে", "Try again": "আবার চেষ্টা করো",
         "Couldn't load. Check the internet connection.": "লোড হয়নি। ইন্টারনেট সংযোগ দেখো।",
         "Daily Quran & Hadith is off in Settings": "সেটিংসে আয়াত ও হাদিস বন্ধ আছে",
         "Quran: Arabic (Uthmani) and translations from alquran.cloud (Bangla: Muhiuddin Khan, English: Saheeh International). Hadith: Sahih al-Bukhari and Sahih Muslim from the open hadith-api collection. Nook does not write or change any text.": "কোরআন: আরবি (উসমানি) আর অনুবাদ alquran.cloud থেকে (বাংলা: মুহিউদ্দীন খান, ইংরেজি: Saheeh International)। হাদিস: সহীহ বুখারি ও সহীহ মুসলিম, উন্মুক্ত hadith-api সংগ্রহ থেকে। Nook নিজে কোনো লেখা লেখে বা বদলায় না।",

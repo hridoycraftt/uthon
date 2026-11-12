@@ -450,7 +450,7 @@ private struct UpdatePeekRow: View {
                 .symbolEffect(.bounce, value: pulse)
             VStack(alignment: .leading, spacing: 2) {
                 Text(L("Nook") + " \(version) " + L("is ready") + " ✨").font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                Text(L("One click: new features and fixes, your settings stay")).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(1)
+                Text(L("New features and fixes · one click")).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(1)
             }
             Spacer(minLength: 0)
             Button(L("Later")) { IslandController.shared.dismissPeek() }
