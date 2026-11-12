@@ -423,7 +423,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 .q5 .yn[disabled]:not(.on){opacity:.35}
 @media (prefers-reduced-motion:reduce){.q5 .lq5 .im{animation:none}}
 @media (max-width:1100px){.q5 .hc{grid-template-columns:200px minmax(0,1fr)}.q5 .an5{grid-column:1/-1;border-top:1px solid var(--line)}}
-@media (max-width:860px){.q5 .hc{grid-template-columns:1fr}.q5 .cats5{border-right:0;border-bottom:1px solid var(--line)}.q5 .cl5{flex-direction:row;overflow-x:auto}.q5 .cats5 .ft5{display:none}.q5 .mid5{border-right:0}.q5 .pts{grid-template-columns:1fr}.q5 .pts div{border-left:0;border-top:1px solid var(--line)}.q5 .pts div:first-child{border-top:0}}
+@media (max-width:860px){.q5 .hc{grid-template-columns:minmax(0,1fr)}.q5 .an5{grid-column:auto}.q5 .cats5{border-right:0;border-bottom:1px solid var(--line)}.q5 .cl5{flex-direction:row;overflow-x:auto}.q5 .cats5 .ft5{display:none}.q5 .mid5{border-right:0}.q5 .pts{grid-template-columns:1fr}.q5 .pts div{border-left:0;border-top:1px solid var(--line)}.q5 .pts div:first-child{border-top:0}}
 
 /* ===== 09 · CTA (final: sunrise) ===== */
 .cpy{position:relative;display:inline-flex;flex-direction:column;height:1.3em;overflow:hidden;font:500 clamp(17px,1.4vw,22px)/1.3 var(--sans);letter-spacing:-.02em;color:inherit;text-align:left}
@@ -461,98 +461,36 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 @media (prefers-reduced-motion:reduce){.d4 .sun i,.d4 .stars i{animation:none}}
 @media (max-width:860px){.d4 .ft4>*{grid-column:1/-1!important;text-align:left!important;margin-top:14px}.d4 .ttl4{top:12%}}
 
-/* ===== 10 · FOOTER options ===== */
-.fl{display:flex;flex-direction:column;gap:12px}
-.fl a{width:max-content;font:500 15px/1.2 var(--sans);color:rgba(240,236,230,.75);transition:color .3s}
-.fl a:hover{color:var(--bone)}
-.top9{white-space:nowrap;display:inline-flex;align-items:center;gap:10px;font:400 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--bone)}
-.top9 i{width:40px;height:40px;border:1px solid var(--line-2);border-radius:50%;display:grid;place-items:center;transition:background .4s,color .4s,transform .6s var(--ease)}
-.top9:hover i{background:var(--bone);color:var(--ink);transform:translateY(-4px)}
-.top9 svg{width:12px;height:12px}
-.leg{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
-
-/* E1 · horizon wordmark */
-.e1{position:relative;overflow:hidden;background:linear-gradient(#07070a,#0e0a0d 70%,#1a0f10);padding:clamp(60px,10vh,110px) var(--pad) 0;border-top:1px solid var(--line)}
+/* ===== 10 · FOOTER (final: horizon wordmark) ===== */
+.e1{position:relative;overflow:hidden;background:linear-gradient(#07070a,#0e0a0d 65%,#1c1011);padding:clamp(70px,11vh,120px) var(--pad) 0;border-top:1px solid var(--line)}
 .e1 .gr{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gap);row-gap:40px}
-.e1 .say{grid-column:1/span 4;display:flex;flex-direction:column;gap:18px}
-.e1 .say b{font:500 clamp(30px,2.8vw,48px)/1 var(--sans);letter-spacing:-.05em}
+.e1 .say{grid-column:1/span 4;display:flex;flex-direction:column;gap:18px;align-items:flex-start}
+.e1 .say b{font:500 clamp(34px,3.2vw,56px)/1 var(--sans);letter-spacing:-.05em}
+.e1 .bk9{display:inline-flex;align-items:center;gap:9px;margin-top:6px}
+.e1 .bk9 i{width:7px;height:7px;border-radius:50%;background:#5BE49B;animation:live9 2s infinite}
+@keyframes live9{0%{box-shadow:0 0 0 0 rgba(91,228,155,.6)}70%,100%{box-shadow:0 0 0 7px rgba(91,228,155,0)}}
 .e1 .c1{grid-column:6/span 2}.e1 .c2{grid-column:8/span 2}.e1 .c3{grid-column:10/span 2}
 .e1 .tp{grid-column:12/-1;justify-self:end;align-self:start}
-.e1 .leg{margin-top:clamp(50px,8vh,90px);padding-bottom:16px;border-bottom:1px solid var(--line)}
-.e1 .wm{display:flex;justify-content:center;font:600 clamp(120px,31vw,600px)/.78 var(--sans);letter-spacing:-.07em;margin-top:2vh;height:.62em;overflow:hidden}
-.e1 .wm span{display:inline-block;background:linear-gradient(180deg,#F0ECE6 30%,rgba(255,150,100,.55) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;transition:transform .9s var(--ease)}
-.e1 .wm span:first-child{margin-right:-.05em}
-.e1 .wm span:hover{transform:translateY(-16%)}
-.e1 .hz{position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,198,161,.8),transparent)}
-
-/* E2 · system bar */
-.e2{position:relative;padding:clamp(60px,10vh,110px) var(--pad) 0;border-top:1px solid var(--line);background:var(--night)}
-.e2 .one{font:500 clamp(30px,3.4vw,60px)/1.02 var(--sans);letter-spacing:-.05em;max-width:22ch}
-.e2 .one span{font-weight:200;color:rgba(240,236,230,.6)}
-.e2 .ix{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap);margin-top:clamp(40px,7vh,80px)}
-.e2 .ix .hd7{display:block;padding-bottom:12px;border-bottom:1px solid var(--line)}
-.e2 .ix a{position:relative;display:grid;grid-template-columns:34px 1fr auto;align-items:center;padding:14px 10px;border-bottom:1px solid var(--line);font:500 16px/1 var(--sans);isolation:isolate;overflow:hidden;transition:color .4s}
-.e2 .ix a::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3));clip-path:inset(0 100% 0 0);transition:clip-path .6s var(--ease)}
-.e2 .ix a:hover{color:var(--ink)}.e2 .ix a:hover::before{clip-path:inset(0 0 0 0)}
-.e2 .ix a .n{font:400 10.5px var(--mono);opacity:.6}
-.e2 .ix a svg{width:12px;height:12px;transition:transform .5s var(--ease)}.e2 .ix a:hover svg{transform:rotate(-45deg)}
-.e2 .cmd{display:flex;align-items:center;gap:12px;padding:14px 10px;border-bottom:1px solid var(--line);font:400 14px var(--mono)}
-.e2 .cmd span{color:var(--c2)}
-.e2 .cmd input{flex:1;min-width:0;background:none;border:0;outline:none;color:var(--bone);font:400 14px var(--mono);caret-color:var(--c2)}
-.e2 .bar{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:clamp(50px,8vh,90px);padding:14px 0 18px;border-top:1px solid var(--line)}
-.e2 .bar .sp{flex:1}
-.e2 .ok2{display:inline-flex;align-items:center;gap:8px}
-.e2 .ok2 i{width:7px;height:7px;border-radius:50%;background:#5BE49B;animation:live 2s infinite}
-@keyframes live{70%{box-shadow:0 0 0 7px rgba(91,228,155,0)}0%{box-shadow:0 0 0 0 rgba(91,228,155,.6)}100%{box-shadow:0 0 0 0 rgba(91,228,155,0)}}
-.e2 .pc{display:inline-flex;align-items:center;gap:8px}.e2 .pc u{display:block;width:60px;height:2px;background:var(--line-2);text-decoration:none;position:relative}.e2 .pc u i{position:absolute;inset:0;background:var(--bone);transform-origin:left}
-
-/* E3 · orbit links */
-.e3{position:relative;padding:clamp(60px,10vh,110px) var(--pad) 0;border-top:1px solid var(--line);background:radial-gradient(40% 60% at 78% 45%,rgba(30,47,184,.18),transparent 70%),var(--night)}
-.e3 .gr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--gap);align-items:center}
-.e3 .lf{display:flex;flex-direction:column;gap:30px}
-.e3 .lf h2{font:500 clamp(48px,5.6vw,100px)/.9 var(--sans);letter-spacing:-.065em}.e3 .lf h2 span{font-weight:200}
-.e3 .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:20px}
-.e3 .orb3{position:relative;height:clamp(420px,58vh,540px)}
-.e3 .rg3{position:absolute;left:50%;top:50%;width:84%;aspect-ratio:2.3;border:1px solid var(--line-2);border-radius:50%;translate:-50% -50%}
-.e3 .core{position:absolute;left:50%;top:50%;width:150px;height:150px;translate:-50% -50%;border-radius:50%;background-size:240%;background-position:0 50%;animation:hubm 40s linear infinite alternate;box-shadow:0 0 120px -10px rgba(255,107,69,.5),inset -20px -30px 50px rgba(0,0,0,.55),inset 14px 16px 36px rgba(255,255,255,.2);display:grid;place-items:center;z-index:50;font:500 17px var(--sans)}
-@keyframes hubm{to{background-position:100% 50%}}
-.e3 .sn{position:absolute;left:0;top:0;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;display:grid;place-items:center;font:500 13px/1 var(--mono);background:#16151c;border:1px solid var(--line-2);color:var(--bone);will-change:transform;transition:background .4s,color .4s,border-color .4s}
-.e3 .sn:hover,.e3 .sn:focus-visible{background:var(--bone);color:var(--ink);border-color:var(--bone)}
-.e3 .sn span{position:absolute;top:calc(100% + 10px);left:50%;translate:-50% 0;font:400 10px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--smoke);white-space:nowrap;opacity:0;transition:opacity .3s}
-.e3 .sn:hover span{opacity:1;color:var(--bone)}
-.e3 .leg{margin-top:clamp(40px,6vh,70px);padding:18px 0;border-top:1px solid var(--line)}
-
-/* E4 · velocity marquee */
-.e4{position:relative;padding-top:clamp(50px,8vh,90px);border-top:1px solid var(--line);background:var(--night);overflow:hidden}
-.e4 .mq{position:relative;display:block;width:100%;overflow:hidden;cursor:pointer;padding:1vh 0;text-align:left}
-.e4 .tr4{display:flex;width:max-content;will-change:transform}
-.e4 .tr4 span{display:inline-flex;align-items:center;gap:.25em;padding-right:.3em;font:500 clamp(70px,11vw,210px)/1 var(--sans);letter-spacing:-.065em;white-space:nowrap;transition:color .4s}
-.e4 .tr4 span i{display:inline-block;width:.42em;height:.42em;border-radius:50%;background-size:cover}
-.e4 .mq:hover .tr4 span{color:var(--c3)}
-.e4 .chip{position:absolute;left:0;top:0;z-index:3;pointer-events:none;height:36px;padding:0 14px;border-radius:99px;background:var(--bone);color:var(--ink);font:500 13px/36px var(--sans);opacity:0;transition:opacity .3s;white-space:nowrap}
-.e4 .mq:hover .chip{opacity:1}
-.e4 .gr{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gap);padding:clamp(40px,7vh,70px) var(--pad) 0}
-.e4 .gr>p{grid-column:1/span 4;color:var(--smoke);max-width:34ch}
-.e4 .c1{grid-column:6/span 2}.e4 .c2{grid-column:8/span 2}.e4 .c3{grid-column:10/span 2}.e4 .tp{grid-column:12/-1;justify-self:end;align-self:start}
-.e4 .leg{margin:clamp(40px,6vh,70px) var(--pad) 0;padding:18px 0;border-top:1px solid var(--line)}
-
-/* E5 · studio status */
-.e5{position:relative;padding:clamp(60px,10vh,110px) var(--pad) 0;border-top:1px solid var(--line);background:var(--night)}
-.e5 .hd5{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap}
-.e5 .hd5 h2{font:500 clamp(40px,4.4vw,80px)/.92 var(--sans);letter-spacing:-.06em}.e5 .hd5 h2 span{font-weight:200}
-.e5 .wg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:clamp(30px,5vh,50px)}
-.e5 .w{position:relative;padding:20px;border:1px solid var(--line);border-radius:10px;background:rgba(240,236,230,.02);display:flex;flex-direction:column;gap:14px;min-height:190px;overflow:hidden;transition:border-color .4s}
-.e5 .w:hover{border-color:var(--line-2)}
-.e5 .w b{font:300 clamp(26px,2.2vw,38px)/1 var(--sans);letter-spacing:-.05em}
-.e5 .w .ft{margin-top:auto}
-.e5 .pb5{height:3px;background:var(--line-2);border-radius:3px;overflow:hidden}.e5 .pb5 i{display:block;height:100%;width:64%;background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3));transform-origin:left}
-.e5 .sl{display:flex;gap:6px}.e5 .sl i{flex:1;height:26px;border-radius:5px;border:1px solid var(--line-2)}.e5 .sl i.t{background:repeating-linear-gradient(135deg,rgba(240,236,230,.12) 0 4px,transparent 4px 8px)}.e5 .sl i.f{border-color:var(--c2);box-shadow:inset 0 0 0 1px var(--c2)}
-.e5 .w.lq{border:0;background-size:cover;background-position:center;isolation:isolate}.e5 .w.lq::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(to top,rgba(7,7,10,.7),rgba(7,7,10,.1))}
-.e5 .nl{display:flex;border-bottom:1px solid var(--line-2)}.e5 .nl input{flex:1;min-width:0;background:none;border:0;outline:none;color:var(--bone);font:400 14px var(--sans);padding:10px 0}.e5 .nl button{font:500 13px var(--sans);color:var(--c3)}
-.e5 .nav5{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:clamp(40px,6vh,70px);padding:20px 0;border-top:1px solid var(--line)}
-.e5 .nav5 .fl{flex-direction:row;gap:22px;flex-wrap:wrap}
-.e5 .leg{padding:16px 0 20px;border-top:1px solid var(--line)}
-@media (max-width:860px){.e1 .gr>*,.e4 .gr>*{grid-column:1/-1!important;justify-self:start!important}.e2 .ix,.e5 .wg{grid-template-columns:1fr 1fr}.e3 .gr{grid-template-columns:1fr}}
+.fl{display:flex;flex-direction:column;gap:13px}
+.fl .hd7{margin-bottom:4px}
+.fl a{position:relative;width:max-content;display:inline-flex;align-items:center;gap:7px;font:500 15px/1.2 var(--sans);color:rgba(240,236,230,.72);transition:color .3s}
+.fl a::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:1px;background:currentColor;transform:scaleX(0);transform-origin:right;transition:transform .5s var(--ease)}
+.fl a:hover,.fl a:focus-visible{color:var(--bone)}.fl a:hover::after,.fl a:focus-visible::after{transform:scaleX(1);transform-origin:left}
+.fl a svg{width:9px;height:9px;opacity:0;transform:translate(-4px,4px);transition:opacity .3s,transform .5s var(--ease)}
+.fl a:hover svg,.fl a:focus-visible svg{opacity:1;transform:none}
+.top9{white-space:nowrap;display:inline-flex;align-items:center;gap:12px;font:400 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--bone)}
+.top9 i{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;transition:background .4s,color .4s,transform .6s var(--ease)}
+.top9 i svg.ar9{width:12px;height:12px;position:relative;transition:transform .5s var(--ease)}
+.top9 i svg.pr9{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.top9 i svg.pr9 circle{fill:none;stroke-width:1}
+.top9 .tr9{stroke:var(--line-2)}.top9 .pg9{stroke:var(--c2);stroke-dasharray:138;stroke-dashoffset:138}
+.top9:hover i{background:var(--bone);color:var(--ink)}.top9:hover i svg.ar9{transform:translateY(-3px)}
+.leg{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.e1 .leg{margin-top:clamp(60px,9vh,100px);padding-bottom:16px;border-bottom:1px solid var(--line)}
+.e1 .wm{display:block;text-align:center;font:600 clamp(120px,30vw,580px)/.78 var(--sans);letter-spacing:-.075em;margin-top:2.5vh;height:.6em;overflow:hidden;white-space:nowrap}
+.e1 .wm span{display:inline-block;padding:0 .03em;background-image:radial-gradient(circle 22vw at var(--mx,50%) 35%,rgba(255,150,100,var(--ma,0)),rgba(255,150,100,0) 70%),linear-gradient(180deg,#F0ECE6 25%,rgba(255,140,90,.6) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;will-change:transform}
+.e1 .hz{position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,198,161,.8),transparent);box-shadow:0 0 22px 3px rgba(255,140,90,.3)}
+@media (max-width:860px){.e1 .gr>*{grid-column:1/-1!important;justify-self:start!important}.e1 .gr{grid-template-columns:1fr 1fr}.e1 .say,.e1 .tp{grid-column:1/-1!important}.e1 .c1,.e1 .c2,.e1 .c3{grid-column:span 1!important}.e1 .leg{flex-direction:column;gap:8px}}
 
 /* ===== Dock ===== */
 .dock{position:fixed;z-index:100;left:50%;bottom:max(14px,env(safe-area-inset-bottom,0px));translate:-50% 0;display:flex;align-items:center;gap:2px;padding:5px;background:rgba(16,16,20,.72);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line-2);border-radius:14px;max-width:calc(100% - 24px);overflow-x:auto;transition:opacity .5s,translate .6s var(--ease)}
@@ -684,36 +622,19 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
   <div class="ft4 g12"><p>New brands, new sites, new launches. Tell us what is next for you; a person replies within 48 hours.</p><div class="ac"><a class="bk" href="#contact"><span class="lb"><span class="roll"><span>Start a project</span><span>Start a project</span></span></span><span class="ar"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 7h12M8 2l5 5-5 5"/></svg></span></a><button class="cpy" data-e="hello@liquid.studio" aria-label="Copy email address"><span>hello@liquid.studio</span><span class="ok">Copied to clipboard</span></button></div><span class="hd7">Lisbon <b class="tz1">--:--</b> · Toronto <b class="tz2">--:--</b></span></div>
 </div></section>
 
-<div class="divider" id="next"><span class="mono sm">Next · Section 10 · Footer</span><h2>Five footer ideas</h2><p>Each one carries the template pages Webflow requires (style guide, instructions, licenses, changelog), plus pages, socials and live studio clocks.</p></div>
-
-<div class="band g12" id="E1"><span class="tg"><b>E1</b></span><h3>Horizon wordmark</h3><p>Continues the sunrise: a giant wordmark sits half-sunk below the bottom edge like the sun on the horizon. Letters rise as you arrive and lift on hover.</p><span class="wf mono">Webflow: native<br>+ GSAP reveal</span></div>
-<footer class="e1" aria-label="Footer option E1"><div class="gr"><div class="say"><span class="hd7">Say hello</span><b>Let's talk.</b><button class="cpy" data-e="hello@liquid.studio" aria-label="Copy email address"><span>hello@liquid.studio</span><span class="ok">Copied to clipboard</span></button></div><div class="fl c1"><span class="hd7">Pages</span><a href="#work">Work</a><a href="#services">Services</a><a href="#pricing">Pricing</a><a href="#journal">Journal</a><a href="#contact">Contact</a></div><div class="fl c2"><span class="hd7">Social</span><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">Dribbble</a><a href="#">Behance</a></div><div class="fl c3"><span class="hd7">Template</span><a href="#">Style guide</a><a href="#">Instructions</a><a href="#">Licenses</a><a href="#">Changelog</a></div><div class="tp"><a class="top9" href="#hero">Back to top<i><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 11V1M2 5l4-4 4 4"/></svg></i></a></div></div><div class="leg hd7"><span>© 2026 Liquid Studio</span><span>Lisbon <b class="fz1">--:--</b> · Toronto <b class="fz2">--:--</b></span><span>Built in Webflow</span></div><div class="wm" aria-hidden="true"><span>L</span><span>i</span><span>q</span><span>u</span><span>i</span><span>d</span></div><i class="hz"></i></footer>
-
-<div class="band g12" id="E2"><span class="tg"><b>E2</b></span><h3>System bar</h3><p>The footer as a control panel: numbered link index that floods with liquid gradient on hover, a command-line newsletter, and a live status bar with scroll progress.</p><span class="wf mono">Webflow: native form<br>+ GSAP</span></div>
-<footer class="e2" aria-label="Footer option E2"><p class="one">Liquid Studio. <span>An independent brand, Webflow and motion studio in Lisbon and Toronto.</span></p>
-  <div class="ix"><div><span class="hd7">Pages</span><a href="#work"><span class="n">01</span>Work<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a href="#services"><span class="n">02</span>Services<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a href="#journal"><span class="n">03</span>Journal<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
-    <div><span class="hd7">Social</span><a href="#"><span class="n">04</span>Instagram<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a href="#"><span class="n">05</span>LinkedIn<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a href="#"><span class="n">06</span>Dribbble<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
-    <div><span class="hd7">Template</span><a href="#"><span class="n">07</span>Style guide<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a href="#"><span class="n">08</span>Licenses<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a><a href="#"><span class="n">09</span>Changelog<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 6h10M7 2l4 4-4 4"/></svg></a></div>
-    <div><span class="hd7">Monthly letter</span><form class="cmd e2f"><span>&gt;</span><input type="email" placeholder="subscribe your@email" aria-label="Email for newsletter"></form><p class="hd7 e2n" style="padding:12px 10px">One email a month. No fluff.</p></div></div>
-  <div class="bar hd7"><span class="ok2"><i></i>All systems normal</span><span>© 2026 Liquid Studio</span><span>Lisbon <b class="fz1">--:--</b> · Toronto <b class="fz2">--:--</b></span><span class="sp"></span><span class="pc">Scroll <u><i></i></u><b class="pcv">0%</b></span><a class="top9" href="#hero">Back to top<i><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 11V1M2 5l4-4 4 4"/></svg></i></a></div></footer>
-
-<div class="band g12" id="E3"><span class="tg"><b>E3</b></span><h3>Orbit links</h3><p>Brings back the orbit you liked: social links circle a small liquid core on a tilted ring. Hovering slows the orbit and names the link.</p><span class="wf mono">Webflow: native<br>+ GSAP ticker</span></div>
-<footer class="e3" aria-label="Footer option E3"><div class="gr"><div class="lf"><h2>Say <span>hello</span></h2><button class="cpy" data-e="hello@liquid.studio" aria-label="Copy email address"><span>hello@liquid.studio</span><span class="ok">Copied to clipboard</span></button><div class="cols"><div class="fl c1"><span class="hd7">Pages</span><a href="#work">Work</a><a href="#services">Services</a><a href="#pricing">Pricing</a><a href="#journal">Journal</a><a href="#contact">Contact</a></div><div class="fl c2"><span class="hd7">Social</span><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">Dribbble</a><a href="#">Behance</a></div><div class="fl c3"><span class="hd7">Template</span><a href="#">Style guide</a><a href="#">Instructions</a><a href="#">Licenses</a><a href="#">Changelog</a></div></div></div><div class="orb3"><i class="rg3"></i><div class="core">Follow</div></div></div><div class="leg hd7"><span>© 2026 Liquid Studio</span><span>Lisbon <b class="fz1">--:--</b> · Toronto <b class="fz2">--:--</b></span><span>Built in Webflow</span></div></footer>
-
-<div class="band g12" id="E4"><span class="tg"><b>E4</b></span><h3>Velocity marquee</h3><p>The email address runs across the screen as a huge marquee. Scrolling speeds it up and flips its direction; click anywhere on it to copy.</p><span class="wf mono">Webflow: GSAP<br>+ ScrollTrigger velocity</span></div>
-<footer class="e4" aria-label="Footer option E4"><button class="mq" aria-label="Copy email address hello@liquid.studio"><span class="tr4"></span><span class="chip">Click to copy</span></button>
-  <div class="gr"><p>An independent brand, Webflow and motion studio. Replies within 48 hours.</p><div class="fl c1"><span class="hd7">Pages</span><a href="#work">Work</a><a href="#services">Services</a><a href="#pricing">Pricing</a><a href="#journal">Journal</a><a href="#contact">Contact</a></div><div class="fl c2"><span class="hd7">Social</span><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">Dribbble</a><a href="#">Behance</a></div><div class="fl c3"><span class="hd7">Template</span><a href="#">Style guide</a><a href="#">Instructions</a><a href="#">Licenses</a><a href="#">Changelog</a></div><div class="tp"><a class="top9" href="#hero">Back to top<i><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 11V1M2 5l4-4 4 4"/></svg></i></a></div></div><div class="leg hd7"><span>© 2026 Liquid Studio</span><span>Lisbon <b class="fz1">--:--</b> · Toronto <b class="fz2">--:--</b></span><span>Built in Webflow</span></div></footer>
-
-<div class="band g12" id="E5"><span class="tg"><b>E5</b></span><h3>Studio status</h3><p>A live dashboard of the studio: what we are designing right now, slots left this quarter, local time and the newsletter. Gives the template personality.</p><span class="wf mono">Webflow: CMS<br>+ native form</span></div>
-<footer class="e5" aria-label="Footer option E5"><div class="hd5"><h2>The studio, <span>right now</span></h2><a class="top9" href="#hero">Back to top<i><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 11V1M2 5l4-4 4 4"/></svg></i></a></div>
-  <div class="wg"><div class="w"><span class="hd7">Now designing</span><b>Halcyon rebrand</b><div class="ft"><div class="pb5"><i></i></div><span class="hd7" style="display:block;margin-top:10px">64% · ships in 3 weeks</span></div></div>
-    <div class="w"><span class="hd7">Q1 2027 slots</span><b>2 of 4 left</b><div class="ft"><div class="sl"><i class="t"></i><i class="t"></i><i class="f"></i><i class="f"></i></div></div></div>
-    <div class="w lq"><span class="hd7" style="color:var(--bone)">Local time</span><b class="fz1b">--:--</b><span class="hd7 ft" style="color:var(--bone)">Lisbon · first light 07:42</span></div>
-    <div class="w"><span class="hd7">Monthly letter</span><b>12,400 readers</b><form class="nl ft e5f"><input type="email" placeholder="Your email" aria-label="Email for newsletter"><button type="submit">Join →</button></form></div></div>
-  <div class="nav5"><div class="fl"><a href="#work">Work</a><a href="#services">Services</a><a href="#pricing">Pricing</a><a href="#journal">Journal</a><a href="#contact">Contact</a></div><div class="fl"><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">Dribbble</a></div><div class="fl"><a href="#">Style guide</a><a href="#">Licenses</a><a href="#">Changelog</a></div></div><div class="leg hd7"><span>© 2026 Liquid Studio</span><span>Lisbon <b class="fz1">--:--</b> · Toronto <b class="fz2">--:--</b></span><span>Built in Webflow</span></div></footer>
+<!-- ============ 10 FOOTER (final) ============ -->
+<footer class="e1" id="footer" aria-label="Footer"><div class="gr">
+  <div class="say"><span class="hd7">Say hello</span><b>Let's talk.</b><button class="cpy" data-e="hello@liquid.studio" aria-label="Copy email address"><span>hello@liquid.studio</span><span class="ok">Copied to clipboard</span></button><span class="hd7 bk9"><i></i>Booking projects for Q1 2027</span></div>
+  <nav class="fl c1" aria-label="Pages"><span class="hd7">Pages</span><a href="#work">Work</a><a href="#services">Services</a><a href="#pricing">Pricing</a><a href="#journal">Journal</a><a href="#contact">Contact</a></nav>
+  <nav class="fl c2" aria-label="Social"><span class="hd7">Social</span><a href="#">Instagram<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a><a href="#">LinkedIn<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a><a href="#">Dribbble<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a><a href="#">Behance<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 8l6-6M3 2h5v5"/></svg></a></nav>
+  <nav class="fl c3" aria-label="Template"><span class="hd7">Template</span><a href="#">Style guide</a><a href="#">Instructions</a><a href="#">Licenses</a><a href="#">Changelog</a></nav>
+  <div class="tp"><a class="top9" href="#hero">Back to top<i><svg class="pr9" viewBox="0 0 46 46"><circle class="tr9" cx="23" cy="23" r="22"/><circle class="pg9" cx="23" cy="23" r="22"/></svg><svg class="ar9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 11V1M2 5l4-4 4 4"/></svg></i></a></div></div>
+  <div class="leg hd7"><span>© 2026 Liquid Studio</span><span>Lisbon <b class="fz1">--:--</b> · Toronto <b class="fz2">--:--</b></span><span>Built in Webflow</span></div>
+  <div class="wm" aria-hidden="true"><span>Liquid</span></div><i class="hz"></i>
+</footer>
 
 <nav class="dock" aria-label="Jump to">
-  <a href="#hero" data-t="hero" class="on">01 Hero</a><a href="#numbers" data-t="numbers">02 Numbers</a><a href="#work" data-t="work">03 Work</a><span class="sep"></span><a href="#services" data-t="services">04 Services</a><span class="sep"></span><a href="#voices" data-t="voices">05 Voices</a><a href="#pricing" data-t="pricing">06 Pricing</a><span class="sep"></span><a href="#journal" data-t="journal">07 Journal</a><span class="sep"></span><a href="#faq" data-t="faq">08 FAQ</a><span class="sep"></span><a href="#contact" data-t="contact">09 Contact</a><span class="sep"></span><a href="#E1" data-t="E1">E1</a><a href="#E2" data-t="E2">E2</a><a href="#E3" data-t="E3">E3</a><a href="#E4" data-t="E4">E4</a><a href="#E5" data-t="E5">E5</a>
+  <a href="#hero" data-t="hero" class="on">01 Hero</a><a href="#numbers" data-t="numbers">02 Numbers</a><a href="#work" data-t="work">03 Work</a><span class="sep"></span><a href="#services" data-t="services">04 Services</a><span class="sep"></span><a href="#voices" data-t="voices">05 Voices</a><a href="#pricing" data-t="pricing">06 Pricing</a><span class="sep"></span><a href="#journal" data-t="journal">07 Journal</a><span class="sep"></span><a href="#faq" data-t="faq">08 FAQ</a><span class="sep"></span><a href="#contact" data-t="contact">09 Contact</a><span class="sep"></span><a href="#footer" data-t="footer">10 Footer</a>
 </nav>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -1042,32 +963,17 @@ document.querySelectorAll('.cpy').forEach(b=>b.addEventListener('click',()=>{try
   const z1=s.querySelector('.tz1'),z2=s.querySelector('.tz2'),fmt=tz=>new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(new Date());
   const clk=()=>{try{z1.textContent=fmt('Europe/Lisbon');z2.textContent=fmt('America/Toronto')}catch(e){}};clk();setInterval(clk,15000)})();
 
-/* ---------- 10 footer options ---------- */
-(function(){const fmt=tz=>{try{return new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(new Date())}catch(e){return '--:--'}};
-  const clk=()=>{document.querySelectorAll('.fz1,.fz1b').forEach(e=>e.textContent=fmt('Europe/Lisbon'));document.querySelectorAll('.fz2').forEach(e=>e.textContent=fmt('America/Toronto'))};clk();setInterval(clk,15000);
-  document.querySelectorAll('.top9').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();scrollTo({top:0,behavior:reduce?'auto':'smooth'})}));
-  document.querySelectorAll('footer .cpy').forEach(b=>{if(b._c)return;b._c=1});
-  const lqw=document.querySelector('.e5 .w.lq');if(lqw)lqw.style.backgroundImage=`url(${snap(500,400,909,1.2,'ember')})`;
-  [['.e2f','.e2n'],['.e5f',null]].forEach(([f,n])=>{const fm=document.querySelector(f);fm&&fm.addEventListener('submit',e=>{e.preventDefault();const i=fm.querySelector('input');i.value='';i.placeholder='subscribed. see you next month';if(n)document.querySelector(n).textContent='✓ Subscribed. In the template this joins your Webflow form.'})})})();
-/* E2 scroll progress */
-(function(){const i=document.querySelector('.e2 .pc u i'),v=document.querySelector('.e2 .pcv');let raf=0;const u=()=>{raf=0;const p=scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight);i.style.transform=`scaleX(${p.toFixed(3)})`;v.textContent=Math.round(p*100)+'%'};addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(u)},{passive:true});u()})();
-/* E3 orbit links */
-(function(){const o=document.querySelector('.e3 .orb3'),rg=o.querySelector('.rg3'),core=o.querySelector('.core');core.style.backgroundImage=`url(${snap(300,300,321,1.4,'dusk')})`;
-  const S=[['IG','Instagram'],['LI','LinkedIn'],['DR','Dribbble'],['BE','Behance'],['X','X / Twitter']];const ns=S.map((s,i)=>{const a=document.createElement('a');a.className='sn';a.href='#';a.innerHTML=`${s[0]}<span>${s[1]}</span>`;o.appendChild(a);return {e:a,a:i/S.length*Math.PI*2}});
-  let th=0,spd=1,tgt=1,vis=false,last=performance.now();ns.forEach(n=>{n.e.addEventListener('pointerenter',()=>tgt=0);n.e.addEventListener('pointerleave',()=>tgt=1)});
-  function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;spd+=(tgt-spd)*.08;if(!reduce)th+=dt*spd*.35;const W=o.offsetWidth,H=o.offsetHeight,rx=rg.offsetWidth/2,ry=rg.offsetHeight/2;
-    ns.forEach(n=>{const a=n.a+th,s=Math.sin(a),x=W/2+Math.cos(a)*rx,y=H/2+s*ry,sc=.78+.22*(s+1)/2;n.e.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc.toFixed(3)})`;n.e.style.zIndex=s>0?60:10;n.e.style.opacity=(.55+.45*(s+1)/2).toFixed(2)})}
-  frame(last);new IntersectionObserver(es=>{vis=es[0].isIntersecting;last=performance.now()}).observe(o);(function loop(now){if(vis)frame(now);requestAnimationFrame(loop)})(performance.now())})();
-/* E4 velocity marquee */
-(function(){const mq=document.querySelector('.e4 .mq'),tr=mq.querySelector('.tr4'),chip=mq.querySelector('.chip'),dot=snap(120,120,55,1.3,'dusk');
-  tr.innerHTML=`<span>hello@liquid.studio <i style="background-image:url(${dot})"></i></span>`.repeat(6);
-  let x=0,dir=-1,vel=0,hov=false,vis=false,last=performance.now(),w=0;const meas=()=>{w=tr.scrollWidth/2};meas();addEventListener('resize',meas);
-  if(ST)ScrollTrigger.create({trigger:'.e4',start:'top bottom',end:'bottom top',onUpdate:s=>{const v=s.getVelocity();vel=Math.min(30,Math.abs(v)/80);if(Math.abs(v)>40)dir=v>0?-1:1}});
-  function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;vel*=.92;const sp=(hov?20:90)+vel*60;x+=dir*sp*dt;if(x<-w)x+=w;if(x>0)x-=w;tr.style.transform=`translate3d(${x.toFixed(1)}px,0,0)`}
-  if(!reduce){new IntersectionObserver(es=>{vis=es[0].isIntersecting;last=performance.now()}).observe(mq);(function loop(now){if(vis)frame(now);requestAnimationFrame(loop)})(performance.now())}
-  mq.addEventListener('pointerenter',()=>hov=true);mq.addEventListener('pointerleave',()=>hov=false);
-  mq.addEventListener('pointermove',e=>{const b=mq.getBoundingClientRect();chip.style.transform=`translate(${e.clientX-b.left+16}px,${e.clientY-b.top+16}px)`});
-  mq.addEventListener('click',()=>{try{navigator.clipboard&&navigator.clipboard.writeText('hello@liquid.studio').catch(()=>{})}catch(e){}chip.textContent='Copied to clipboard';setTimeout(()=>chip.textContent='Click to copy',1600)})})();
+/* ---------- 10 footer (final) ---------- */
+(function(){const f=document.querySelector('.e1'),fmt=tz=>{try{return new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(new Date())}catch(e){return '--:--'}};
+  const clk=()=>{f.querySelector('.fz1').textContent=fmt('Europe/Lisbon');f.querySelector('.fz2').textContent=fmt('America/Toronto')};clk();setInterval(clk,15000);
+  const top=f.querySelector('.top9'),pg=top.querySelector('.pg9');top.addEventListener('click',e=>{e.preventDefault();scrollTo({top:0,behavior:reduce?'auto':'smooth'})});
+  let raf=0;const prog=()=>{raf=0;const p=scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight);pg.style.strokeDashoffset=(138*(1-p)).toFixed(1)};addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(prog)},{passive:true});prog();
+  const wm=f.querySelector('.wm'),sp=wm.querySelector('span');
+  if(fine){const st={x:0,a:0},u=()=>{sp.style.setProperty('--mx',st.x.toFixed(1)+'px');sp.style.setProperty('--ma',st.a.toFixed(3))};
+    const qx=G?gsap.quickTo(st,'x',{duration:reduce?.01:.8,ease:'power3',onUpdate:u}):null;
+    wm.addEventListener('pointerenter',e=>{st.x=e.clientX-sp.getBoundingClientRect().left;u();G?gsap.to(st,{a:1,duration:.6,onUpdate:u,overwrite:'auto'}):(st.a=1,u())});
+    wm.addEventListener('pointermove',e=>{const x=e.clientX-sp.getBoundingClientRect().left;G?qx(x):(st.x=x,u())});
+    wm.addEventListener('pointerleave',()=>{G?gsap.to(st,{a:0,duration:.8,onUpdate:u,overwrite:'auto'}):(st.a=0,u())})}})();
 
 function countUp(el){const to=+el.dataset.to,s=el.dataset.s||'';if(!G||reduce){el.textContent=to+s;return}const o={v:0};gsap.to(o,{v:to,duration:2,ease:'power3.out',onUpdate:()=>el.textContent=Math.round(o.v)+s})}
 if(!G||reduce){document.querySelectorAll('.cnt').forEach(countUp);return}
@@ -1114,13 +1020,12 @@ gsap.fromTo('.q5 .cl5 button',{x:-16,opacity:0},{x:0,opacity:1,duration:.9,stagg
 gsap.utils.toArray('.wtitle h2').forEach(h=>gsap.from(h,{y:40,autoAlpha:0,duration:1.2,ease:'expo.out',scrollTrigger:{trigger:h,start:'top 85%'}}));
 
 /* ---------- 10 footer: scroll motion ---------- */
-gsap.fromTo('.e1 .wm span',{yPercent:70},{yPercent:0,duration:1.6,stagger:.07,ease:'expo.out',clearProps:'transform',scrollTrigger:{trigger:'.e1',start:'top 70%'}});
-gsap.fromTo('.e5 .pb5 i',{scaleX:0},{scaleX:1,duration:1.6,ease:'expo.out',scrollTrigger:{trigger:'.e5 .wg',start:'top 85%'}});
-gsap.fromTo('.e5 .w',{y:30,opacity:0},{y:0,opacity:1,duration:1,stagger:.07,ease:'expo.out',scrollTrigger:{trigger:'.e5 .wg',start:'top 88%'}});
+gsap.fromTo('.e1 .wm span',{yPercent:75},{yPercent:0,duration:1.8,ease:'expo.out',scrollTrigger:{trigger:'.e1 .leg',start:'top 92%'}});
+gsap.fromTo('.e1 .gr > *',{y:30,opacity:0},{y:0,opacity:1,duration:1.1,stagger:.06,ease:'expo.out',scrollTrigger:{trigger:'.e1',start:'top 80%'}});
 
 /* ---------- Dock ---------- */
 const dl=[...document.querySelectorAll('.dock a')];
-[['hero'],['numbers'],['work'],['services'],['voices'],['pricing'],['journal'],['faq'],['contact'],['E1'],['E2'],['E3'],['E4'],['E5']].forEach(([id])=>{const el=document.getElementById(id);const end=(id==='hero'||id==='numbers'||id==='work'||id==='services'||id==='pricing'||id==='voices'||id==='journal'||id==='faq'||id==='contact')?el:el.nextElementSibling;
+[['hero'],['numbers'],['work'],['services'],['voices'],['pricing'],['journal'],['faq'],['contact'],['footer']].forEach(([id])=>{const el=document.getElementById(id);const end=(id==='hero'||id==='numbers'||id==='work'||id==='services'||id==='pricing'||id==='voices'||id==='journal'||id==='faq'||id==='contact'||id==='footer')?el:el.nextElementSibling;
   ScrollTrigger.create({trigger:el,start:'top 50%',endTrigger:end,end:'bottom 50%',onToggle:s=>{if(s.isActive)dl.forEach(a=>a.classList.toggle('on',a.dataset.t===id))}})});
 const dock=document.querySelector('.dock');let di;const wake=()=>{dock.classList.remove('idle');clearTimeout(di);di=setTimeout(()=>dock.classList.add('idle'),2800)};
 addEventListener('pointermove',wake);addEventListener('scroll',wake,{passive:true});dock.addEventListener('focusin',()=>{clearTimeout(di);dock.classList.remove('idle')});wake();
