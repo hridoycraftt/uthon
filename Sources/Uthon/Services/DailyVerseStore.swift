@@ -82,8 +82,9 @@ final class DailyVerseStore: ObservableObject {
 
     /// Number of the current period (local time), so a new text comes every `hours` hours.
     static func slotIndex(_ date: Date = Date(), hours: Int) -> Int {
-        let local = date.timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT(for: date)) - 1_577_836_800
-        return max(0, Int(local / (Double(max(hours, 1)) * 3600)))
+        // Whole seconds, so the boundary is exact for every interval (5 h, 7 h... no rounding drift).
+        let local = Int(date.timeIntervalSince1970.rounded(.down)) + TimeZone.current.secondsFromGMT(for: date) - 1_577_836_800
+        return max(0, local / (max(hours, 1) * 3600))
     }
 
     /// Identifies the current period, e.g. "6h-1234".
@@ -93,10 +94,12 @@ final class DailyVerseStore: ObservableObject {
 
     /// When the next text is due.
     static func nextChange(after date: Date = Date(), hours: Int) -> Date {
-        let h = Double(max(hours, 1)) * 3600
-        let offset = Double(TimeZone.current.secondsFromGMT(for: date))
-        let local = date.timeIntervalSince1970 + offset
-        return Date(timeIntervalSince1970: (floor(local / h) + 1) * h - offset)
+        let h = max(hours, 1) * 3600
+        let offset = TimeZone.current.secondsFromGMT(for: date)
+        let epoch = 1_577_836_800
+        let local = Int(date.timeIntervalSince1970.rounded(.down)) + offset - epoch
+        let next = (local / h + 1) * h
+        return Date(timeIntervalSince1970: TimeInterval(next - offset + epoch))
     }
 
     /// Day number since 2020, used to pick the same text for everyone on a given day.
