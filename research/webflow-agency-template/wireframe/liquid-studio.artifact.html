@@ -212,7 +212,7 @@ a:hover>.roll span,a:hover .lb .roll span,.roll:hover span{transform:translateY(
 
 /* ===== 05 · VOICES (final: postcards) ===== */
 .voices{position:relative}
-.voices .table{position:relative;height:100vh;min-height:700px;overflow:hidden;background:radial-gradient(70% 60% at 55% 55%,#16161f,var(--night));touch-action:pan-y}
+.voices .table{position:relative;height:100vh;min-height:860px;overflow:hidden;background:radial-gradient(70% 60% at 55% 55%,#16161f,var(--night));touch-action:pan-y}
 .voices .shead{position:absolute;left:0;right:0;top:0;z-index:60;border-bottom:0;pointer-events:none}
 .voices .head{position:absolute;z-index:60;left:var(--pad);top:clamp(64px,9vh,96px);display:flex;flex-direction:column;gap:12px;pointer-events:none}
 .voices .head h2{font:500 clamp(44px,5.4vw,104px)/.92 var(--sans);letter-spacing:-.06em}
@@ -577,6 +577,10 @@ html.lock{overflow:hidden}
 .voices .rate{top:calc(58px + clamp(56px,9vh,96px))}
 @media (max-width:860px){.svcs .pin{height:320vh}.voices .table{padding-top:280px}}
 
+
+/* ===== responsive pass ===== */
+@media (min-width:861px) and (max-width:1180px){.voices .table{min-height:1000px}}
+@media (min-width:861px) and (max-width:1240px){.e1 .tp{grid-column:1/-1;grid-row:auto;justify-self:end}.e1 .c1{grid-column:6/span 2}.e1 .c2{grid-column:8/span 2}.e1 .c3{grid-column:10/span 3}}
 /* ===== final pass: typography + mobile ===== */
 :where(a,button,input,[tabindex]):focus-visible{outline:2px solid var(--c2);outline-offset:3px}
 h1,h2,h3{text-wrap:balance}p{text-wrap:pretty}
