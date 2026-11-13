@@ -1,0 +1,2 @@
++[MTLLoader sliceIDForDevice:legacyDriverVersion:airntDriverVersion:]:685: failed assertion `Target device architecture is nil'
+snapshot step: tab-home

@@ -1,0 +1,430 @@
+Nook self-test: 428 passed, 0 failed
+
+PASS  Timer starts at 2:00
+PASS  Timer pauses
+PASS  Timer +1 min while paused
+PASS  Timer resumes
+PASS  Timer progress near 0 at start
+PASS  Timer cancels
+PASS  Format 65 s = 1:05  [1:05]
+PASS  Format 3725 s = 1:02:05  [1:02:05]
+PASS  Format tenths 5.37 = 0:05.3  [0:05.3]
+PASS  Stopwatch starts
+PASS  Stopwatch records a lap
+PASS  Stopwatch pauses and keeps time
+PASS  Stopwatch resets
+PASS  Empty to-do is ignored
+PASS  To-do can be ticked
+PASS  Clear done removes ticked items
+PASS  Shelf ignores duplicates
+PASS  Shelf removes items
+PASS  Shortcuts ignore duplicates
+PASS  Default Home uses 5 slots  [5]
+PASS  Full page refuses another widget
+PASS  Adding to a full page does nothing
+PASS  Removing frees a slot
+PASS  Widget added after freeing room
+PASS  A widget can't be on Home twice
+PASS  Drag reorder swaps Home widgets
+PASS  Up to 3 pages
+PASS  Widgets can go on page 2
+PASS  Never more than 3 pages
+PASS  Removing pages keeps what fits
+PASS  Widget can be made large
+PASS  Making a widget bigger shrinks its neighbour
+PASS  Large Batteries turns a large Music player medium  [music 2, batteries 3]
+PASS  Every widget on the page is still shown
+PASS  No room even at the smallest sizes is refused
+PASS  Music is never smaller than 2
+PASS  Widget color is saved
+PASS  Widget color can be reset
+PASS  An app can be added to Home
+PASS  App tile title
+PASS  Removing an app takes it off Home
+PASS  A missing app is ignored
+PASS  Folder is created on Home
+PASS  Folder keeps its apps
+PASS  Folder can be deleted
+PASS  Apps on this Mac are listed  [88 apps]
+PASS  Every built-in widget is offered
+PASS  Undo brings a removed widget back
+PASS  Preset 'Study' fits on its pages
+PASS  Preset 'Study' applies its theme
+PASS  Preset 'Office' fits on its pages
+PASS  Preset 'Office' applies its theme
+PASS  Preset 'Music' fits on its pages
+PASS  Preset 'Music' applies its theme
+PASS  Preset 'Family' fits on its pages
+PASS  Preset 'Family' applies its theme
+PASS  Saved profile restores its layout
+PASS  Profile can be deleted
+PASS  Bangla interface translates
+PASS  Unknown text stays as is
+PASS  English interface
+PASS  Theme 'Terracotta' gives a color
+PASS  Theme 'Ocean' gives a color
+PASS  Theme 'Forest' gives a color
+PASS  Theme 'Lavender' gives a color
+PASS  Theme 'Rose' gives a color
+PASS  Theme 'Sunset' gives a color
+PASS  Theme 'Graphite' gives a color
+PASS  Theme 'Mint' gives a color
+PASS  Theme 'Gold' gives a color
+PASS  Theme 'Custom' gives a color
+PASS  Custom hex color round-trips  [#3366CC]
+PASS  Prayer times are in order  [Fajr 04:46, Sunrise 06:01, Dhuhr 12:06, Asr 16:27, Maghrib 18:10, Isha 19:25]
+PASS  Dhaka Fajr about 4:40  [Fajr 04:46, Sunrise 06:01, Dhuhr 12:06, Asr 16:27, Maghrib 18:10, Isha 19:25]
+PASS  Dhaka Dhuhr about 12:05  [Fajr 04:46, Sunrise 06:01, Dhuhr 12:06, Asr 16:27, Maghrib 18:10, Isha 19:25]
+PASS  Dhaka Maghrib about 6:10 pm  [Fajr 04:46, Sunrise 06:01, Dhuhr 12:06, Asr 16:27, Maghrib 18:10, Isha 19:25]
+PASS  Special day countdown
+PASS  Yearly day counts today
+PASS  Bookmark without https still opens
+PASS  Version 0.10.0 is newer than 0.9.5
+PASS  Same version is not newer
+PASS  Older version is not newer
+PASS  Tag URL gives the version
+PASS  Non-version tag is ignored
+PASS  Update check works via the releases page  [found 0.6.15]
+PASS  Update check finds the latest release  [found 0.6.15]
+PASS  Gradient wallpaper renders
+PASS  Edit → Add Widget → close five times without crashing
+PASS  Home: scroll changes volume
+PASS  Volume scrolling can be turned off
+PASS  Editing: scroll is left to the lists
+PASS  Widget gallery: scroll is left to the gallery
+PASS  Other tabs: scroll is left to their lists
+PASS  Swipe changes page
+PASS  One page: swipe changes song
+PASS  Swipe can be turned off
+PASS  Swipe can change songs
+PASS  Small swipe steps add up to one page change  [[1]]
+PASS  A new swipe works again
+PASS  Gallery is tall enough for two full rows
+PASS  Keyboard and mouse are found with names  [Magic Keyboard with Touch ID 82%, Magic Mouse 9%]
+PASS  Nameless and Mac batteries are not listed as devices
+PASS  AirPods battery found (lowest earbud)
+PASS  Trackpad battery found
+PASS  Disconnected devices are not shown
+PASS  Keyboard icon
+PASS  Unknown device gets a battery icon (not headphones)
+PASS  Short names
+PASS  Devices on this Mac  [info: none connected]
+PASS  Battery on a child entry uses the parent's name
+PASS  Bluetooth addresses are recognised
+PASS  Real names are not mistaken for addresses
+PASS  Keyboard guessed from Bluetooth class
+PASS  Mouse guessed from Bluetooth class
+PASS  Address is turned into the device's real name  [64:0b:d7:1a:62:45=Magic Mouse, 10:cf:0f:e5:d4:da=Magic Keyboard]
+PASS  Battery colors
+PASS  Same device from two sources is listed once
+PASS  Every battery source runs without crashing  [Bluetooth: nothing | HID registry: nothing | ioreg: nothing | System Information: nothing | Power sources: nothing]
+PASS  System light/dark change rebuilds every surface
+PASS  App appearance setting changes the look key
+PASS  Glass setting changes the look key
+PASS  One app can be the only shortcut (no duplicates)
+PASS  Shortcut can be removed
+PASS  1 app: one big icon with its name  [Result(columns: 1, cell: 96.0, showNames: true)]
+PASS  2 apps fit side by side or stacked without overlap  [Result(columns: 1, cell: 61.0, showNames: false)]
+PASS  4 apps: 2×2  [Result(columns: 2, cell: 54.0, showNames: false)]
+PASS  4 apps in a wide widget: one row of 4  [Result(columns: 4, cell: 89.0, showNames: true)]
+PASS  1–12 apps always fit at every widget size
+PASS  Settings icon exists: General
+PASS  Settings icon exists: Look
+PASS  Settings icon exists: Home
+PASS  Settings icon exists: Island
+PASS  Settings icon exists: Widgets
+PASS  Settings icon exists: Quran & Hadith
+PASS  Settings icon exists: Internet & Wi-Fi
+PASS  Settings icon exists: Notifications
+PASS  Settings icon exists: Night Dimming
+PASS  Settings icon exists: Alerts
+PASS  Settings icon exists: Profiles
+PASS  Settings icon exists: Side Dock
+PASS  Settings icon exists: Bottom Dock
+PASS  Settings icon exists: Care
+PASS  Every settings section is in the sidebar
+PASS  No vibration on open by default
+PASS  Hover waits a moment before opening
+PASS  At least 6 presets  [8]
+PASS  Preset 'Essentials' fits and shows every widget
+PASS  Preset 'Essentials' icon exists
+PASS  Preset 'Work' fits and shows every widget
+PASS  Preset 'Work' icon exists
+PASS  Preset 'Music' fits and shows every widget
+PASS  Preset 'Music' icon exists
+PASS  Preset 'Study' fits and shows every widget
+PASS  Preset 'Study' icon exists
+PASS  Preset 'Family' fits and shows every widget
+PASS  Preset 'Family' icon exists
+PASS  Preset 'Prayer & Day' fits and shows every widget
+PASS  Preset 'Prayer & Day' icon exists
+PASS  Preset 'Mac Monitor' fits and shows every widget
+PASS  Preset 'Mac Monitor' icon exists
+PASS  Preset 'Minimal' fits and shows every widget
+PASS  Preset 'Minimal' icon exists
+PASS  No widget appears twice in a preset
+PASS  Applying a preset can be undone
+PASS  Music app gets a player tile
+PASS  Other apps stay normal tiles
+PASS  Spotify is supported
+PASS  Music app tile is a full player (2 slots)
+PASS  Music app tile can't be shrunk below 2 slots
+PASS  Other app tiles stay 1 slot
+PASS  SF Symbol exists: battery.100percent.bolt
+PASS  SF Symbol exists: gamecontroller.fill
+PASS  SF Symbol exists: applepencil
+PASS  SF Symbol exists: battery.75percent
+PASS  Island stays open while a menu is open
+PASS  Island closes after the menu
+PASS  Closing ends editing and the gallery
+PASS  Controls cap at 8
+PASS  Default controls
+PASS  Tabs can be reordered
+PASS  Home tab can't be hidden
+PASS  Island size setting scales the island
+PASS  Island fits a 1280-wide screen
+PASS  Island on this screen  [info: screen (1920.0, 1080.0), size 100%]
+PASS  Island fits this screen (auto)  [740.0 of 1920.0]
+PASS  Island fits a 1280×800 screen  [77%]
+PASS  Island fits a 1440×900 screen  [87%]
+PASS  Island fits a 1512×982 screen  [91%]
+PASS  Island fits a 1728×1117 screen  [100%]
+PASS  Island fits a 2560×1440 screen  [100%]
+PASS  Island fits a 1147×745 screen  [69%]
+PASS  Every pop-up type is distinct
+PASS  AppleScript number '12,5' = 12.5
+PASS  AppleScript number '215.0' = 215
+PASS  Weather: clear day is sunny
+PASS  Weather: thunderstorm
+PASS  AirPods Pro icon
+PASS  Magic Mouse icon
+PASS  SF Symbol exists: globe.asia.australia.fill
+PASS  SF Symbol exists: moon.stars.fill
+PASS  SF Symbol exists: gift.fill
+PASS  SF Symbol exists: bookmark.fill
+PASS  SF Symbol exists: folder.fill
+PASS  SF Symbol exists: arrow.down.app.fill
+PASS  SF Symbol exists: arrow.uturn.backward.circle.fill
+PASS  SF Symbol exists: paintpalette
+PASS  SF Symbol exists: puzzlepiece.extension
+PASS  SF Symbol exists: person.2.crop.square.stack
+PASS  SF Symbol exists: folder.badge.plus
+PASS  SF Symbol exists: airpodspro
+PASS  SF Symbol exists: magicmouse.fill
+PASS  SF Symbol exists: cloud.bolt.rain.fill
+PASS  SF Symbol exists: brain.head.profile
+PASS  SF Symbol exists: eyedropper.halffull
+PASS  SF Symbol exists: menubar.dock.rectangle
+PASS  SF Symbol exists: capslock.fill
+PASS  SF Symbol exists: speaker.wave.3.fill
+PASS  SF Symbol exists: rectangle.3.group.fill
+PASS  Control icon exists: Keep Awake
+PASS  Control icon exists: Appearance
+PASS  Control icon exists: Sound
+PASS  Control icon exists: Screenshot
+PASS  Control icon exists: Sleep Display
+PASS  Control icon exists: Empty Trash
+PASS  Control icon exists: Focus 25 min
+PASS  Control icon exists: Desktop Icons
+PASS  Control icon exists: Hidden Files
+PASS  Control icon exists: Mission Control
+PASS  Control icon exists: Color Picker
+PASS  Control icon exists: Calculator
+PASS  Control icon exists: Activity Monitor
+PASS  Control icon exists: Record Screen
+PASS  Widget icon exists: Music
+PASS  Widget icon exists: Calendar
+PASS  Widget icon exists: Weather
+PASS  Widget icon exists: Shortcuts
+PASS  Widget icon exists: System
+PASS  Widget icon exists: Batteries
+PASS  Widget icon exists: To-do
+PASS  Widget icon exists: Quick Controls
+PASS  Widget icon exists: Note
+PASS  Widget icon exists: Bookmarks
+PASS  Widget icon exists: World Clock
+PASS  Widget icon exists: Prayer Times
+PASS  Widget icon exists: Special Days
+PASS  Widget icon exists: Quran & Hadith
+PASS  Widget icon exists: Internet
+PASS  Tab icon exists: Home
+PASS  Tab icon exists: Controls
+PASS  Tab icon exists: Search
+PASS  Tab icon exists: Shelf
+PASS  Tab icon exists: Timer
+PASS  Tab icon exists: Clipboard
+PASS  Tab icon exists: Notes
+PASS  Tab icon exists: Mirror
+PASS  Search finds Safari  [Safari]
+PASS  Search finds Calculator
+PASS  Web search URL is encoded  [https://www.google.com/search?q=a%20b%26c]
+PASS  Meeting link found in notes  [https://zoom.us/j/123456]
+PASS  All-day event text  [All day]
+PASS  Keep Awake turns on
+PASS  Keep Awake turns off
+PASS  ⌃⌥Space shortcut registers
+PASS  Mac battery detection runs  [no battery (desktop)]
+PASS  Built-in display brightness  [info: not available on this Mac]
+PASS  Volume can be set and read  [read 0.3]
+PASS  SF Symbol exists: book.closed.fill
+PASS  SF Symbol exists: wifi
+PASS  SF Symbol exists: wifi.slash
+PASS  SF Symbol exists: dock.rectangle
+PASS  SF Symbol exists: app.badge.fill
+PASS  SF Symbol exists: moon.fill
+PASS  SF Symbol exists: cable.connector
+PASS  SF Symbol exists: speedometer
+PASS  SF Symbol exists: arrow.triangle.2.circlepath
+PASS  SF Symbol exists: battery.100percent.bolt
+PASS  SF Symbol exists: powerplug.fill
+PASS  SF Symbol exists: arrow.up.arrow.down
+PASS  SF Symbol exists: network
+PASS  SF Symbol exists: bell.badge.fill
+PASS  SF Symbol exists: clock.fill
+PASS  SF Symbol exists: cpu
+PASS  Settings icon exists: General
+PASS  Settings icon exists: Look
+PASS  Settings icon exists: Home
+PASS  Settings icon exists: Island
+PASS  Settings icon exists: Widgets
+PASS  Settings icon exists: Quran & Hadith
+PASS  Settings icon exists: Internet & Wi-Fi
+PASS  Settings icon exists: Notifications
+PASS  Settings icon exists: Night Dimming
+PASS  Settings icon exists: Alerts
+PASS  Settings icon exists: Profiles
+PASS  Settings icon exists: Side Dock
+PASS  Settings icon exists: Bottom Dock
+PASS  Settings icon exists: Care
+PASS  Every settings page is in the sidebar
+PASS  Bottom dock icon exists: Apps
+PASS  Bottom dock icon exists: Clock
+PASS  Bottom dock icon exists: Music
+PASS  Bottom dock icon exists: Weather
+PASS  Bottom dock icon exists: Battery
+PASS  Bottom dock icon exists: CPU & memory
+PASS  Bottom dock icon exists: Internet speed
+PASS  Ayah pick is stable for a day
+PASS  Ayah pick changes the next day
+PASS  Ayah pick stays in range
+PASS  Both: alternates between Quran and Hadith
+PASS  Quran only is always Quran
+PASS  Ayah parses reference  [Al-Baqara 2:255]
+PASS  Ayah keeps Arabic and meaning
+PASS  Ayah links to quran.com
+PASS  Hadith parses text
+PASS  Bangla text is recognised
+PASS  Arabic is not taken for Bangla
+PASS  English text is recognised
+PASS  Fit: room beside the Dock = full size
+PASS  Fit: shrinks when tight  [(scale: 0.7366666666666667, tooWide: false)]
+PASS  Fit: reports no room
+PASS  Island: big screen keeps full size
+PASS  Island: 14-inch MacBook fits  [0.9194594594594594]
+PASS  Island: larger-text MacBook leaves half the screen free  [0.6975]
+PASS  Island: can be made much smaller
+PASS  Match: bar exactly as tall as the Dock
+PASS  Match: bigger Dock, bigger bar
+PASS  Match: smaller Dock, smaller bar
+PASS  Match: no Accessibility, icons as big as Dock icons
+PASS  Match: fine-tune applies on top
+PASS  Match off: user size
+PASS  Match: hidden Dock falls back to user size
+PASS  Plan: drops the last items when tight  [apps]
+PASS  Plan: keeps everything when there is room
+PASS  Dock frame  [info: exact (646.0, 10.0, 628.0, 41.0), estimate (667.95, 0.0, 584.1, 47.0)]
+PASS  Dock width estimate is close (±15%)  [estimate 584 vs 628]
+PASS  New text every 1 h
+PASS  New text every 2 h
+PASS  New text every 3 h
+PASS  New text every 4 h
+PASS  New text every 5 h
+PASS  New text every 6 h
+PASS  New text every 7 h
+PASS  New text every 8 h
+PASS  New text every 12 h
+PASS  New text every 24 h
+PASS  Slot keys differ by interval
+PASS  Update reminder: due when never shown
+PASS  Update reminder: 3 a day means every 8 h
+PASS  Update reminder: 2 a day means every 12 h
+PASS  Update reminder: off means never
+PASS  Update reminder: nothing when up to date
+PASS  New ayah pop-up appears
+PASS  Tile drops trailing book references  [জারীর ইবনু আবদুল্লাহ (রাঃ) হতে বর্ণিত। অবশ্যই তোমরা তোমাদের রবকে দেখতে পাবে।]
+PASS  Tidy keeps text without references
+PASS  Empty hadith is rejected
+PASS  Hadith URL
+PASS  Quran + Bangla widget needs 2 slots
+PASS  Show on Home adds Quran & Hadith
+PASS  Show on Home adds Internet
+PASS  Pages never overflow
+PASS  Signal bars: strong
+PASS  Signal bars: fair
+PASS  Signal bars: none
+PASS  Rate text MB/s  [12.3 MB/s]
+PASS  Rate text KB/s  [840 KB/s]
+PASS  Rate never negative
+PASS  Interface counters  [info: down 209655808 up 1483776]
+PASS  Network monitor starts
+PASS  Network monitor stops when turned off
+PASS  Notification database locations known
+PASS  Full Disk Access  [info: yes]
+PASS  Notification can show for half a second
+PASS  Notification can show for 10 seconds
+PASS  Notification record parses
+PASS  Empty notification is skipped
+PASS  Allowed app is shown
+PASS  Muted app is hidden
+PASS  Nothing shows when the feature is off
+PASS  Private mode hides the message
+PASS  Normal mode shows sender and message
+PASS  Notification appears on the island
+PASS  Notification peek is a card
+PASS  Every pop-up has a duration setting
+PASS  Download pop-up can be set to half a second
+PASS  Durations are capped at 30 s
+PASS  Download pop-up shows
+PASS  Download pop-up leaves after the chosen 0.5 s (not the old 6 s)
+PASS  Offline pop-up appears
+PASS  Dhaka sunrise in June ≈ 5:11  [5:11]
+PASS  Dhaka sunset in June ≈ 18:49  [18:47]
+PASS  No dimming at noon
+PASS  Full dimming at midnight
+PASS  Full dimming at 23:00
+PASS  Halfway at sunset (fading in)  [0.5]
+PASS  Fading in before sunset
+PASS  No dimming well before sunset
+PASS  Fading out after sunrise  [0.25]
+PASS  No dimming mid-morning
+PASS  Dark Mode schedule follows the system
+PASS  Off means no dimming
+PASS  Preview dims at the chosen strength  [0.3]
+PASS  Not tonight pauses dimming
+PASS  Resume works
+PASS  Screen dimming layer survives a preview
+PASS  Sits right of the Dock  [(1066.0, 6.0, 300.0, 58.0)]
+PASS  Sits left of the Dock with distance  [(126.0, 6.0, 300.0, 58.0)]
+PASS  Without Accessibility: bottom-right corner
+PASS  Never runs off the screen
+PASS  Auto-hidden macOS Dock: sits at the bottom
+PASS  Width grows with apps
+PASS  Width follows size
+PASS  Turning an item on keeps the order
+PASS  No duplicates
+PASS  Turning an item off removes it
+PASS  Bottom dock appears when turned on
+PASS  Bottom dock follows the Dock  [info: scale 0.7884615384615384, dock (646.0, 10.0, 628.0, 41.0)]
+PASS  Bottom dock hides when turned off
+PASS  Bangla for new screens
+PASS  English stays English
+PASS  Clipboard item can be pinned
+PASS  Clear keeps pinned items
+PASS  Pinned item can be removed
+PASS  Clipboard history records copied text
+PASS  Clipboard skips passwords
+PASS  Quran ayah downloads (Bangla)  [আল্লাহ ছাড়া অন্য কোন উপাস্য নেই, তিনি জীবিত, সবকিছুর ধারক। তাঁকে তন্দ্রাও স্পর্শ করতে পারে না এ]
+PASS  Quran ayah downloads (English)  [Al-Faatiha 1:1]
+PASS  Hadith downloads (Bangla)  [Sahih al-Bukhari 1 وَقَوْلُ اللهِ جَلَّ ذِكْرُهُ (إِنَّا أَوْحَيْنَا إِلَيْكَ كَمَا أَوْحَيْنَا إِلَى نُوحٍ وَالنَّبِيِّ]
+PASS  Hadith has Arabic
+PASS  Hadith meaning is in Bangla

@@ -1,0 +1,5 @@
+ProductName:		macOS
+ProductVersion:		15.7.9
+BuildVersion:		24G830
+tour (light) did not finish cleanly
+tour (dark) did not finish cleanly
