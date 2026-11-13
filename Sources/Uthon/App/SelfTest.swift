@@ -791,6 +791,19 @@ enum SelfTest {
             IslandController.shared.dismissPeek()
             library.notificationsEnabled = false
         }
+        step("Pop-up durations")
+        let savedDurations = library.peekDurations
+        check("Every pop-up has a duration setting", PeekType.allCases.allSatisfy { library.peekSeconds($0) >= 0.5 })
+        library.setPeekSeconds(.download, 0.5)
+        check("Download pop-up can be set to half a second", library.peekSeconds(.download) == 0.5)
+        library.setPeekSeconds(.download, 99)
+        check("Durations are capped at 30 s", library.peekSeconds(.download) == 30)
+        library.setPeekSeconds(.download, 0.5)
+        IslandController.shared.showPeek(.download(URL(fileURLWithPath: "/System/Applications/Calculator.app")), duration: 6)
+        check("Download pop-up shows", IslandModel.shared.peek?.kind.type == .download)
+        RunLoop.main.run(until: Date().addingTimeInterval(1.3))
+        check("Download pop-up leaves after the chosen 0.5 s (not the old 6 s)", IslandModel.shared.peek == nil)
+        library.peekDurations = savedDurations
         IslandController.shared.showPeek(.network(online: false))
         check("Offline pop-up appears", IslandModel.shared.peek?.kind == .network(online: false))
         IslandController.shared.dismissPeek()

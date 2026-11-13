@@ -124,6 +124,10 @@ final class UserLibrary: ObservableObject {
     @Published var verseIntervalHours: Int { didSet { d.set(verseIntervalHours, forKey: "verseIntervalHours") } }
     /// Show a new ayah/hadith on the island when it arrives.
     @Published var verseNewPeek: Bool { didSet { d.set(verseNewPeek, forKey: "verseNewPeek") } }
+    /// How long each kind of pop-up stays (seconds); missing = built-in time.
+    @Published var peekDurations: [String: Double] { didSet { Persist.save(peekDurations, key: "peekDurations") } }
+    /// Keep a pop-up while the mouse is over it (so its buttons can be used).
+    @Published var peekStayOnHover: Bool { didSet { d.set(peekStayOnHover, forKey: "peekStayOnHover") } }
     /// Update reminders per day while a new version is waiting (0 = never).
     @Published var updateRemindersPerDay: Int { didSet { d.set(updateRemindersPerDay, forKey: "updateRemindersPerDay") } }
     // Internet & Wi-Fi
@@ -187,6 +191,8 @@ final class UserLibrary: ObservableObject {
         let savedInterval = d.object(forKey: "verseIntervalHours") as? Int ?? 24
         verseIntervalHours = DailyVerseStore.intervals.contains(savedInterval) ? savedInterval : 24
         verseNewPeek = d.object(forKey: "verseNewPeek") as? Bool ?? true
+        peekDurations = Persist.load([String: Double].self, key: "peekDurations") ?? [:]
+        peekStayOnHover = d.object(forKey: "peekStayOnHover") as? Bool ?? true
         updateRemindersPerDay = min(max(d.object(forKey: "updateRemindersPerDay") as? Int ?? 3, 0), 3)
         networkEnabled = d.object(forKey: "networkEnabled") as? Bool ?? true
         networkPeeks = d.object(forKey: "networkPeeks") as? Bool ?? true
@@ -217,6 +223,17 @@ final class UserLibrary: ObservableObject {
 }
 
 extension UserLibrary {
+    /// Seconds a pop-up of this type stays on the island.
+    func peekSeconds(_ type: PeekType) -> Double {
+        if type == .notification { return notificationSeconds }
+        return peekDurations[type.rawValue] ?? type.defaultSeconds
+    }
+
+    func setPeekSeconds(_ type: PeekType, _ seconds: Double) {
+        let value = min(max(seconds, 0.5), 30)
+        if type == .notification { notificationSeconds = min(value, 10) } else { peekDurations[type.rawValue] = value }
+    }
+
     var bottomDockAppURLs: [URL] {
         bottomDockApps.filter { FileManager.default.fileExists(atPath: $0) }.map { URL(fileURLWithPath: $0) }
     }

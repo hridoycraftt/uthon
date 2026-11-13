@@ -814,6 +814,7 @@ private struct AlertsSettings: View {
                 }
                 Toggle(L("Clipboard history"), isOn: $settings.clipboardEnabled)
             }
+            PopupDurationSettings()
         }
         .formStyle(.grouped)
         .onAppear { trusted = MediaKeyTap.isTrusted }
@@ -1018,5 +1019,47 @@ enum IslandSizePreset: String, CaseIterable, Identifiable {
     }
     static func matching(_ value: Double) -> IslandSizePreset? {
         allCases.first { abs($0.value - value) < 0.001 }
+    }
+}
+
+/// How long every kind of island pop-up stays, one slider each (0.5 s and up), plus one
+/// slider to set them all at once.
+private struct PopupDurationSettings: View {
+    @ObservedObject private var library = UserLibrary.shared
+    @State private var all: Double = 3
+
+    private func format(_ v: Double) -> String {
+        (v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : String(format: "%.1f", v)) + " " + L("sec")
+    }
+
+    var body: some View {
+        Section {
+            HStack {
+                LabeledSlider(title: "All pop-ups", value: $all, range: 0.5...10, step: 0.5, format: format)
+                Button(L("Apply to all")) {
+                    for type in PeekType.allCases { library.setPeekSeconds(type, all) }
+                }
+            }
+            ForEach(PeekType.allCases) { type in
+                HStack(spacing: 8) {
+                    Image(systemName: type.symbol)
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 18)
+                    LabeledSlider(title: type.title,
+                                  value: Binding(get: { library.peekSeconds(type) },
+                                                 set: { library.setPeekSeconds(type, $0) }),
+                                  range: 0.5...(type == .notification ? 10 : 30), step: 0.5, format: format)
+                }
+            }
+            Toggle(L("Keep a pop-up open while the mouse is over it"), isOn: $library.peekStayOnHover)
+            Button(L("Back to the built-in times")) {
+                library.peekDurations = [:]
+                library.notificationSeconds = PeekType.notification.defaultSeconds
+            }
+        } header: {
+            Text(L("How long pop-ups stay"))
+        } footer: {
+            Text(L("Each kind of pop-up on the island stays as long as you set here, from half a second."))
+        }
     }
 }

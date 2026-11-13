@@ -195,7 +195,9 @@ final class IslandController {
 
     // MARK: Peeks
 
-    func showPeek(_ kind: PeekKind, duration: TimeInterval = 2.2) {
+    /// Shows a pop-up for as long as the user chose for its type in Settings (Alerts).
+    func showPeek(_ kind: PeekKind, duration _: TimeInterval = 2.2) {
+        let duration = UserLibrary.shared.peekSeconds(kind.type)
         guard AppSettings.shared.islandEnabled, screen != nil else { return }
         if let current = model.peek, current.kind.category == kind.category {
             model.peek?.kind = kind   // update in place: no new pop animation
@@ -209,7 +211,7 @@ final class IslandController {
     func updatePeek(_ kind: PeekKind) {
         guard let current = model.peek, current.kind.category == kind.category else { return }
         withAnimation(.easeOut(duration: 0.25)) { model.peek?.kind = kind }
-        peekDeadline = Date().addingTimeInterval(3)
+        peekDeadline = Date().addingTimeInterval(UserLibrary.shared.peekSeconds(kind.type))
     }
 
     func dismissPeek() {
@@ -227,7 +229,8 @@ final class IslandController {
 
         checkCapsLock()
 
-        if model.peek != nil, let deadline = peekDeadline, Date() > deadline, !peekHovered {
+        if model.peek != nil, let deadline = peekDeadline, Date() > deadline,
+           !(peekHovered && UserLibrary.shared.peekStayOnHover) {
             dismissPeek()
         }
 

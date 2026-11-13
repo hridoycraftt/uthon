@@ -83,6 +83,29 @@ enum PeekKind: Equatable {
         }
     }
 
+    /// Which kind of pop-up this is, for its own "how long it stays" setting.
+    var type: PeekType {
+        switch self {
+        case .volume: return .volume
+        case .brightness: return .brightness
+        case .capsLock: return .capsLock
+        case .charging: return .charging
+        case .headphones: return .headphones
+        case .track: return .track
+        case .download: return .download
+        case .meeting: return .meeting
+        case .lowBattery: return .lowBattery
+        case .timerDone: return .timerDone
+        case .screenshot: return .screenshot
+        case .update: return .update
+        case .prayer: return .prayer
+        case .specialDay: return .specialDay
+        case .network: return .network
+        case .notification: return .notification
+        case .verse: return .verse
+        }
+    }
+
     /// Small one-line pill (vs. a bigger card).
     var isSlim: Bool {
         switch self {
@@ -249,5 +272,77 @@ final class IslandModel: ObservableObject {
         if settings.liveTimers, TimerStore.shared.stopwatchRunning { return .stopwatch }
         if settings.liveMusic, NowPlayingStore.shared.track?.isPlaying == true { return .music }
         return nil
+    }
+}
+
+/// Every kind of island pop-up, with how long it stays unless the user changes it.
+enum PeekType: String, CaseIterable, Identifiable {
+    case notification, download, screenshot, track, headphones, volume, brightness, capsLock, charging,
+         lowBattery, meeting, timerDone, prayer, specialDay, network, verse, update
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .notification: return "Notifications from other apps"
+        case .download: return "Finished downloads"
+        case .screenshot: return "New screenshots"
+        case .track: return "New song"
+        case .headphones: return "AirPods and headphones"
+        case .volume: return "Volume"
+        case .brightness: return "Brightness"
+        case .capsLock: return "Caps Lock"
+        case .charging: return "Charging"
+        case .lowBattery: return "Low battery"
+        case .meeting: return "Upcoming meeting"
+        case .timerDone: return "Timer finished"
+        case .prayer: return "Prayer time"
+        case .specialDay: return "Special day"
+        case .network: return "Internet on/off"
+        case .verse: return "New ayah or hadith"
+        case .update: return "New version"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .notification: return "app.badge.fill"
+        case .download: return "arrow.down.circle.fill"
+        case .screenshot: return "camera.viewfinder"
+        case .track: return "music.note"
+        case .headphones: return "airpodspro"
+        case .volume: return "speaker.wave.2.fill"
+        case .brightness: return "sun.max.fill"
+        case .capsLock: return "capslock.fill"
+        case .charging: return "bolt.fill"
+        case .lowBattery: return "battery.25percent"
+        case .meeting: return "video.fill"
+        case .timerDone: return "timer"
+        case .prayer: return "moon.stars.fill"
+        case .specialDay: return "gift.fill"
+        case .network: return "wifi"
+        case .verse: return "book.closed.fill"
+        case .update: return "arrow.down.app.fill"
+        }
+    }
+
+    /// The built-in time, in seconds.
+    var defaultSeconds: Double {
+        switch self {
+        case .notification: return 4
+        case .download: return 6
+        case .screenshot: return 8
+        case .track: return 3.5
+        case .headphones: return 5
+        case .volume, .brightness, .capsLock: return 1.6
+        case .charging: return 3.5
+        case .lowBattery: return 6
+        case .meeting: return 15
+        case .timerDone: return 30
+        case .prayer: return 20
+        case .specialDay: return 15
+        case .network: return 3
+        case .verse: return 10
+        case .update: return 15
+        }
     }
 }
