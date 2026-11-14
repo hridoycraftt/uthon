@@ -271,6 +271,10 @@ enum SnapshotTour {
             IslandController.shared.expand(tab: .home, sticky: true)
         }
         add("capture-home") { capture("screen-island-home") }
+        add("live-hijri-header") { UserLibrary.shared.hijriInHeader = true }
+        add("capture-hijri-header") { capture("screen-island-hijri-header") }
+        add("live-hijri-header-off") { UserLibrary.shared.hijriInHeader = false }
+        add("capture-hijri-header-off") { capture("screen-island-hijri-header-off") }
         add("live-controls") { model.tab = .controls }
         add("capture-controls") { capture("screen-island-controls") }
         // Opening animation: frames taken while the island grows, to check it grows out of
@@ -312,7 +316,7 @@ enum SnapshotTour {
         add("capture-settings-look") { capture("screen-settings-look") }
         add("live-settings-widgets") { SettingsWindowController.shared.show(tab: .widgets) }
         add("capture-settings-widgets") { capture("screen-settings-widgets") }
-        for tab in [SettingsTab.verse, .network, .notifications, .night, .bottomDock] {
+        for tab in [SettingsTab.verse, .network, .notifications, .night, .bottomDock, .ramadan, .dock] {
             add("live-settings-\(tab.rawValue)") { SettingsWindowController.shared.show(tab: tab) }
             add("capture-settings-\(tab.rawValue)") { capture("screen-settings-\(tab.rawValue)") }
         }
