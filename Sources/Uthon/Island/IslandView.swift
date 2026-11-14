@@ -98,7 +98,15 @@ struct IslandView: View {
             // The open island's content is always there, centred at its final spot; opening
             // and closing only fade it in and out. It is never inserted or removed, so it can
             // never slide in from a side (it used to, for the first few frames).
-            ExpandedIsland()
+            Group {
+                // Loaded only while needed (see IslandController.prewarm): a closed island
+                // then has nothing to update. Same frame either way, so nothing ever moves.
+                if model.contentMounted || mode == .open {
+                    ExpandedIsland()
+                } else {
+                    Color.clear
+                }
+            }
                 .frame(width: base.width, height: base.height)
                 .overlay(alignment: .center) {
                     if model.debugMarkers {

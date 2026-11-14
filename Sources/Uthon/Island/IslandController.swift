@@ -148,10 +148,8 @@ final class IslandController {
         if let tab { model.tab = tab }
         if sticky { stickyOpen = true }
         guard !model.expanded else { return }
-        // The open island stays loaded between openings, so freshen what it shows.
         if !AppSettings.shared.visibleIslandTabs.contains(model.tab) { model.tab = .home }
-        QuickActions.shared.refresh()
-        DownloadsStore.shared.refresh()
+        prewarm()
         if screen == nil { layout() }
         panel.ignoresMouseEvents = false
         outsideSince = nil
@@ -163,8 +161,44 @@ final class IslandController {
         if AppSettings.shared.hapticOnOpen {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
         }
-        NowPlayingStore.shared.setActive(true)
-        CalendarStore.shared.refresh()
+        // Anything else waits until the opening animation is done, so it runs smoothly.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, self.model.expanded, !self.nowPlayingActive else { return }
+            self.nowPlayingActive = true
+            NowPlayingStore.shared.setActive(true)
+        }
+    }
+
+    // MARK: Loading the open island's content
+
+    private var unmountWork: DispatchWorkItem?
+    private var nowPlayingActive = false
+    private var lastContentRefresh = Date.distantPast
+
+    /// Loads the open island's content and freshens what it shows. Called as soon as the
+    /// pointer heads for the island (during the short hover delay) and on opening, so the
+    /// opening animation itself has nothing else to do.
+    func prewarm() {
+        unmountWork?.cancel()
+        unmountWork = nil
+        if !model.contentMounted { model.contentMounted = true }
+        if Date().timeIntervalSince(lastContentRefresh) > 3 {
+            lastContentRefresh = Date()
+            QuickActions.shared.refresh()
+            DownloadsStore.shared.refresh()
+            CalendarStore.shared.refresh()
+        }
+    }
+
+    /// A while after closing, let the content go: a closed island then does no work at all.
+    private func scheduleUnmount() {
+        unmountWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, !self.model.expanded, self.hoverSince == nil else { return }
+            self.model.contentMounted = false
+        }
+        unmountWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
     }
 
     func collapse() {
@@ -182,7 +216,11 @@ final class IslandController {
         model.openFolder = nil
         panel?.ignoresMouseEvents = true
         if panel?.isKeyWindow == true { panel?.resignKey() }
-        NowPlayingStore.shared.setActive(false)
+        if nowPlayingActive {
+            nowPlayingActive = false
+            NowPlayingStore.shared.setActive(false)
+        }
+        scheduleUnmount()
     }
 
     func toggleFromShortcut() {
@@ -277,7 +315,10 @@ final class IslandController {
             let draggingFiles = pressed && (NSPasteboard(name: .drag).types ?? []).contains(.fileURL)
             // Open only when the pointer rests for a moment, so passing over the menu bar
             // never flicks the island open and shut.
-            if hoverSince == nil { hoverSince = Date() }
+            if hoverSince == nil {
+                hoverSince = Date()
+                prewarm()
+            }
             if draggingFiles || Date().timeIntervalSince(hoverSince ?? Date()) >= Self.hoverDelay {
                 hoverSince = nil
                 expand(tab: draggingFiles ? .shelf : nil)

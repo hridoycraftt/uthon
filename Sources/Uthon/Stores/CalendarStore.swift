@@ -18,12 +18,16 @@ final class CalendarStore: ObservableObject {
     }
 
     private func updateAccess() {
+        let new: Access
         switch EKEventStore.authorizationStatus(for: .event) {
-        case .fullAccess: access = .granted
-        case .notDetermined: access = .notDetermined
-        default: access = .denied
+        case .fullAccess: new = .granted
+        case .notDetermined: new = .notDetermined
+        default: new = .denied
         }
+        if access != new { access = new }
     }
+
+    private let queryQueue = DispatchQueue(label: "nook.calendar.query", qos: .utility)
 
     func requestAccess() {
         store.requestFullAccessToEvents { [weak self] granted, _ in
@@ -38,17 +42,28 @@ final class CalendarStore: ObservableObject {
     func refresh() {
         updateAccess()
         guard access == .granted else {
-            events = []
+            if !events.isEmpty { events = [] }
             return
         }
-        let cal = Calendar.current
-        let now = Date()
-        let start = cal.startOfDay(for: now)
-        guard let end = cal.date(byAdding: .day, value: 2, to: start) else { return }
-        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
-        let upcoming = store.events(matching: predicate)
-            .filter { $0.endDate > now }
-            .sorted { $0.startDate < $1.startDate }
-        events = Array(upcoming.prefix(4))
+        // The calendar database is read off the main thread, so opening the island never waits.
+        let store = self.store
+        queryQueue.async { [weak self] in
+            let cal = Calendar.current
+            let now = Date()
+            let start = cal.startOfDay(for: now)
+            guard let end = cal.date(byAdding: .day, value: 2, to: start) else { return }
+            let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
+            let upcoming = Array(store.events(matching: predicate)
+                .filter { $0.endDate > now }
+                .sorted { $0.startDate < $1.startDate }
+                .prefix(4))
+            DispatchQueue.main.async {
+                guard let self else { return }
+                func key(_ e: [EKEvent]) -> [String] {
+                    e.map { "\($0.eventIdentifier ?? "")|\($0.startDate.timeIntervalSince1970)|\($0.endDate.timeIntervalSince1970)|\($0.title ?? "")" }
+                }
+                if key(self.events) != key(upcoming) { self.events = upcoming }
+            }
+        }
     }
 }

@@ -24,6 +24,7 @@ final class SystemStatsStore: ObservableObject {
 
     private var timer: Timer?
     private var lastTicks: (busy: UInt64, total: UInt64)?
+    private var diskCheckedAt: Date?
 
     var memoryFraction: Double {
         memoryTotal == 0 ? 0 : Double(memoryUsed) / Double(memoryTotal)
@@ -47,12 +48,22 @@ final class SystemStatsStore: ObservableObject {
     }
 
     func refresh() {
-        cpu = readCPU()
-        memoryUsed = readMemoryUsed()
-        battery = readBattery()
-        let values = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey])
-        diskFree = values?.volumeAvailableCapacityForImportantUsage
-        diskTotal = values?.volumeTotalCapacity.map(Int64.init)
+        // Only changed values are published (each change redraws the widgets showing them).
+        let newCPU = (readCPU() * 100).rounded() / 100
+        if cpu != newCPU { cpu = newCPU }
+        let newMemory = readMemoryUsed() / (16 << 20) * (16 << 20)    // 16 MB steps
+        if memoryUsed != newMemory { memoryUsed = newMemory }
+        let newBattery = readBattery()
+        if battery != newBattery { battery = newBattery }
+        // The disk changes slowly; asking for it costs a file-system call, so every 30 s is plenty.
+        if diskCheckedAt.map({ Date().timeIntervalSince($0) > 30 }) ?? true {
+            diskCheckedAt = Date()
+            let values = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey])
+            let free = values?.volumeAvailableCapacityForImportantUsage
+            let total = values?.volumeTotalCapacity.map(Int64.init)
+            if diskFree != free { diskFree = free }
+            if diskTotal != total { diskTotal = total }
+        }
     }
 
     private func readCPU() -> Double {

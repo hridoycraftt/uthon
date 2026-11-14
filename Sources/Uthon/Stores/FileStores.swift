@@ -155,7 +155,11 @@ final class DownloadsStore: ObservableObject {
                 return Item(url: url, date: date)
             }
             let newest = Array(items.sorted { $0.date > $1.date }.prefix(6))
-            DispatchQueue.main.async { self?.recent = newest }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                // Unchanged: do not redraw (this runs every time the island opens).
+                if self.recent.map(\.url) != newest.map(\.url) { self.recent = newest }
+            }
         }
     }
 }

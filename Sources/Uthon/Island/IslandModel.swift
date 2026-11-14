@@ -138,6 +138,9 @@ final class IslandModel: ObservableObject {
     static let shared = IslandModel()
 
     @Published var expanded = false
+    /// The open island's content is loaded (it is prepared as the pointer heads for the island
+    /// and let go a while after it closes, so a closed island does no work).
+    @Published var contentMounted = false
     @Published var tab: IslandTab = .home
     @Published var hasNotch = false
     @Published var notchSize = CGSize(width: 190, height: 32)

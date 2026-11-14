@@ -72,10 +72,12 @@ final class NetworkStore: NSObject, ObservableObject, CLLocationManagerDelegate 
 
     private func update(path: NWPath) {
         let online = path.status == .satisfied
-        if !online { link = .offline }
-        else if path.usesInterfaceType(.wifi) { link = .wifi }
-        else if path.usesInterfaceType(.wiredEthernet) { link = .ethernet }
-        else { link = .other }
+        let newLink: Link
+        if !online { newLink = .offline }
+        else if path.usesInterfaceType(.wifi) { newLink = .wifi }
+        else if path.usesInterfaceType(.wiredEthernet) { newLink = .ethernet }
+        else { newLink = .other }
+        if link != newLink { link = newLink }
         if let was = wasOnline, was != online, UserLibrary.shared.networkPeeks {
             IslandController.shared.showPeek(.network(online: online), duration: 3)
         }
@@ -83,24 +85,28 @@ final class NetworkStore: NSObject, ObservableObject, CLLocationManagerDelegate 
     }
 
     private func tick() {
+        // Only changed values are published: every published change redraws whatever shows it.
+        var newRSSI: Int?, newRate: Double?, newSSID: String?
         if let interface = CWWiFiClient.shared().interface(), interface.powerOn() {
             let value = interface.rssiValue()
-            rssi = value == 0 ? nil : value
+            newRSSI = value == 0 ? nil : value
             let rate = interface.transmitRate()
-            linkRate = rate > 0 ? rate : nil
-            ssid = interface.ssid()
-        } else {
-            rssi = nil
-            linkRate = nil
-            ssid = nil
+            newRate = rate > 0 ? rate : nil
+            newSSID = interface.ssid()
         }
+        if rssi != newRSSI { rssi = newRSSI }
+        if linkRate != newRate { linkRate = newRate }
+        if ssid != newSSID { ssid = newSSID }
         let now = Date()
         let bytes = Self.interfaceBytes()
         if let last = lastBytes {
             let dt = now.timeIntervalSince(last.at)
             if dt > 0.2 {
-                downRate = bytes.down >= last.down ? Double(bytes.down - last.down) / dt : 0
-                upRate = bytes.up >= last.up ? Double(bytes.up - last.up) / dt : 0
+                // Rounded to 100 bytes/s so a quiet connection does not redraw for nothing.
+                let down = ((bytes.down >= last.down ? Double(bytes.down - last.down) / dt : 0) / 100).rounded() * 100
+                let up = ((bytes.up >= last.up ? Double(bytes.up - last.up) / dt : 0) / 100).rounded() * 100
+                if downRate != down { downRate = down }
+                if upRate != up { upRate = up }
             }
         }
         lastBytes = (bytes.down, bytes.up, now)

@@ -79,13 +79,37 @@ final class NowPlayingStore: ObservableObject {
         return Self.players.first { ids.contains($0.bundleID) }
     }
 
+    /// AppleScript talks to another app and can take a while (or hang if that app is busy),
+    /// so it always runs on this queue, never on the main thread.
+    private static let scriptQueue = DispatchQueue(label: "nook.nowplaying.script", qos: .utility)
+    private var refreshing = false
+    private var refreshAgain = false
+
     func refresh() {
         guard let player = runningPlayer() else {
             clear()
             return
         }
-        let source = """
-        tell application "\(player.name)"
+        if refreshing { refreshAgain = true; return }
+        refreshing = true
+        let source = Self.stateScript(player.name)
+        Self.scriptQueue.async { [weak self] in
+            let result = Self.run(source)?.stringValue
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.refreshing = false
+                self.apply(result, player: player)
+                if self.refreshAgain {
+                    self.refreshAgain = false
+                    self.refresh()
+                }
+            }
+        }
+    }
+
+    private static func stateScript(_ name: String) -> String {
+        """
+        tell application "\(name)"
             if player state is stopped then return ""
             set s to "0"
             if player state is playing then set s to "1"
@@ -112,7 +136,10 @@ final class NowPlayingStore: ObservableObject {
             return s & linefeed & n & linefeed & a & linefeed & al & linefeed & (p as text) & linefeed & (d as text)
         end tell
         """
-        guard let result = run(source)?.stringValue, !result.isEmpty else {
+    }
+
+    private func apply(_ result: String?, player: (name: String, bundleID: String)) {
+        guard let result, !result.isEmpty else {
             clear()
             return
         }
@@ -131,6 +158,11 @@ final class NowPlayingStore: ObservableObject {
             duration: duration,
             fetchedAt: Date()
         )
+        // Same song, same state and the position where we expected it: nothing to redraw.
+        if let old = track, old.key == new.key, old.isPlaying == new.isPlaying, old.duration == new.duration,
+           abs(old.currentPosition(at: new.fetchedAt) - new.position) < 1.5 {
+            return
+        }
         let isNewSong = new.key != track?.key && track != nil && new.isPlaying
         track = new
         if new.key != artworkKey {
@@ -152,7 +184,8 @@ final class NowPlayingStore: ObservableObject {
     }
 
     private func loadArtwork(for track: Track) {
-        artwork = nil
+        if artwork != nil { artwork = nil }
+        let key = track.key
         if track.player == "Music" {
             let source = """
             tell application "Music"
@@ -162,20 +195,21 @@ final class NowPlayingStore: ObservableObject {
                 return ""
             end tell
             """
-            if let descriptor = run(source),
-               let image = NSImage(data: descriptor.data) {
-                artwork = image
+            Self.scriptQueue.async { [weak self] in
+                guard let data = Self.run(source)?.data, let image = NSImage(data: data) else { return }
+                DispatchQueue.main.async { if self?.artworkKey == key { self?.artwork = image } }
             }
         } else if track.player == "Spotify" {
-            guard let urlString = run("tell application \"Spotify\" to return artwork url of current track")?.stringValue,
-                  let url = URL(string: urlString) else { return }
-            let key = track.key
-            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-                guard let data, let image = NSImage(data: data) else { return }
-                DispatchQueue.main.async {
-                    if self?.artworkKey == key { self?.artwork = image }
-                }
-            }.resume()
+            Self.scriptQueue.async { [weak self] in
+                guard let urlString = Self.run("tell application \"Spotify\" to return artwork url of current track")?.stringValue,
+                      let url = URL(string: urlString) else { return }
+                URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+                    guard let data, let image = NSImage(data: data) else { return }
+                    DispatchQueue.main.async {
+                        if self?.artworkKey == key { self?.artwork = image }
+                    }
+                }.resume()
+            }
         }
     }
 
@@ -189,14 +223,14 @@ final class NowPlayingStore: ObservableObject {
 
     /// Send a command to one specific player (launches it if needed).
     func command(_ command: String, player: String) {
-        _ = run("tell application \"\(player)\" to \(command)")
+        Self.scriptQueue.async { _ = Self.run("tell application \"\(player)\" to \(command)") }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.refresh() }
     }
 
     /// "playpause", "next track" or "previous track"
     func command(_ command: String) {
         guard let player = track?.player ?? runningPlayer()?.name else { return }
-        _ = run("tell application \"\(player)\" to \(command)")
+        Self.scriptQueue.async { _ = Self.run("tell application \"\(player)\" to \(command)") }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.refresh() }
     }
 
@@ -212,7 +246,7 @@ final class NowPlayingStore: ObservableObject {
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
-    private func run(_ source: String) -> NSAppleEventDescriptor? {
+    private static func run(_ source: String) -> NSAppleEventDescriptor? {
         guard let script = NSAppleScript(source: source) else { return nil }
         var error: NSDictionary?
         let output = script.executeAndReturnError(&error)

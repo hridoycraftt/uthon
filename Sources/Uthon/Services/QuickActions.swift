@@ -18,7 +18,8 @@ final class QuickActions: ObservableObject {
     }
 
     func refresh() {
-        darkMode = Self.systemIsDark()
+        let dark = Self.systemIsDark()
+        if darkMode != dark { darkMode = dark }
     }
 
     /// Stop the Mac and display from sleeping (like `caffeinate`).
