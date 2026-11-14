@@ -494,6 +494,7 @@ struct WidgetTile<Content: View>: View {
 
 struct WeatherTile: View {
     @ObservedObject private var weather = WeatherStore.shared
+    @ObservedObject private var library = UserLibrary.shared
 
     var body: some View {
         WidgetTile {
@@ -511,7 +512,7 @@ struct WeatherTile: View {
                             .font(.system(size: 20))
                     }
                     Spacer(minLength: 0)
-                    if AppSettings.shared.slots(of: HomeItem(.weather)) >= 2, !weather.hourly.isEmpty {
+                    if library.weatherHourly, AppSettings.shared.slots(of: HomeItem(.weather)) >= 2, !weather.hourly.isEmpty {
                         // Wider tile: the next hours, with the chance of rain.
                         HStack(spacing: 0) {
                             ForEach(weather.hourly.prefix(AppSettings.shared.slots(of: HomeItem(.weather)) >= 3 ? 7 : 5)) { hour in

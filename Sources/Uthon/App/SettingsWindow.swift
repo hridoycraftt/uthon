@@ -253,6 +253,7 @@ private struct GeneralSettings: View {
                     ForEach([15, 30, 45, 60, 90, 120], id: \.self) { Text("\($0) " + L("minutes before")).tag($0) }
                 }
                 .disabled(!library.rainAlerts)
+                Toggle(L("Hourly forecast in the weather widget (wide widget)"), isOn: $library.weatherHourly)
             }
             Section(L("Updates")) {
                 Toggle(L("Check for updates automatically"), isOn: $library.autoCheckUpdates)

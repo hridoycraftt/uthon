@@ -145,6 +145,7 @@ final class UserLibrary: ObservableObject {
     // Rain alerts
     @Published var rainAlerts: Bool { didSet { d.set(rainAlerts, forKey: "rainAlerts") } }
     @Published var rainLeadMinutes: Int { didSet { d.set(rainLeadMinutes, forKey: "rainLeadMinutes") } }
+    @Published var weatherHourly: Bool { didSet { d.set(weatherHourly, forKey: "weatherHourly") } }
     /// How long each kind of pop-up stays (seconds); missing = built-in time.
     @Published var peekDurations: [String: Double] { didSet { Persist.save(peekDurations, key: "peekDurations") } }
     /// Keep a pop-up while the mouse is over it (so its buttons can be used).
@@ -228,6 +229,7 @@ final class UserLibrary: ObservableObject {
         prayerSound = d.string(forKey: "prayerSound") ?? "Glass"
         rainAlerts = d.object(forKey: "rainAlerts") as? Bool ?? true
         rainLeadMinutes = d.object(forKey: "rainLeadMinutes") as? Int ?? 60
+        weatherHourly = d.object(forKey: "weatherHourly") as? Bool ?? true
         peekStayOnHover = d.object(forKey: "peekStayOnHover") as? Bool ?? true
         updateRemindersPerDay = min(max(d.object(forKey: "updateRemindersPerDay") as? Int ?? 3, 0), 3)
         networkEnabled = d.object(forKey: "networkEnabled") as? Bool ?? true

@@ -60,6 +60,7 @@ extension Localization {
         "Your own audio file stays on your Mac; Nook only plays it.": "তোমার অডিও ফাইল তোমার Mac-এই থাকে; Nook শুধু বাজায়।",
         "Rain alert": "বৃষ্টির সতর্কতা", "Rain in about": "বৃষ্টি আসছে প্রায়", "minutes": "মিনিটে",
         "Rain alert: tell me before it starts raining": "বৃষ্টির সতর্কতা: বৃষ্টি শুরুর আগে জানাও", "Warn me up to": "কতক্ষণ আগে জানাবে",
+        "Hourly forecast in the weather widget (wide widget)": "আবহাওয়া উইজেটে ঘণ্টাভিত্তিক পূর্বাভাস (চওড়া উইজেটে)",
         "All pop-ups": "সব পপ-আপ", "Apply to all": "সবগুলোতে দাও", "How long pop-ups stay": "পপ-আপ কতক্ষণ থাকবে",
         "Each kind of pop-up on the island stays as long as you set here, from half a second.": "আইল্যান্ডের প্রতিটা পপ-আপ এখানে যতক্ষণ ঠিক করবে ততক্ষণ থাকবে, আধা সেকেন্ড থেকে শুরু।",
         "Keep a pop-up open while the mouse is over it": "মাউস পপ-আপের ওপর থাকলে খোলা রাখো",
