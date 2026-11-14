@@ -70,6 +70,15 @@ jobs:
           done
           ls -la shots/anim-*.mov || true
 
+      # Where the time goes: CPU, late frames and a profile while the island works.
+      - name: Performance check
+        continue-on-error: true
+        run: |
+          mkdir -p shots/perf
+          perl -e 'alarm 90; exec @ARGV' ./dist/Nook.app/Contents/MacOS/Nook --perf-test "$PWD/shots/perf" \
+            > shots/perf/perf-run.txt 2>&1 || echo "perf test did not finish" >> shots/perf/perf-run.txt
+          cat shots/perf/perf-report.txt || true
+
       - name: Snapshot tour (light and dark)
         id: tour
         continue-on-error: true

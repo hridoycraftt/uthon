@@ -49,6 +49,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if PerfTest.isActive {
+            // The whole app starts as usual; the measurements begin once it has settled.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { PerfTest.run() }
+        }
+
         if SnapshotTour.isActive {
             DockController.shared.start()
             IslandController.shared.start()
