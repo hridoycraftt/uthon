@@ -61,6 +61,11 @@ final class DockController {
             .sink { [weak self] _ in DispatchQueue.main.async { self?.reposition() } }
             .store(in: &cancellables)
 
+        AppSettings.shared.$dockFitContent
+            .dropFirst()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.reposition(animated: true) } }
+            .store(in: &cancellables)
+
         AppSettings.shared.$edge
             .dropFirst()
             .sink { [weak self] _ in DispatchQueue.main.async { self?.reposition() } }
@@ -124,22 +129,48 @@ final class DockController {
 
     // MARK: Geometry
 
+    /// The height the dock's content wants, in unscaled points (reported by the view).
+    private var contentHeight: CGFloat?
+
+    func setContentHeight(_ height: CGFloat) {
+        guard height > 0, abs(height - (contentHeight ?? 0)) > 0.5 else { return }
+        contentHeight = height
+        DispatchQueue.main.async { self.reposition(animated: true) }
+    }
+
     private func frame(on screen: NSScreen, shown: Bool) -> NSRect {
         let visible = screen.visibleFrame
         let slide: CGFloat = shown ? 0 : 28
-        let height = visible.height - margin * 2
+        let full = visible.height - margin * 2
+        // Fit the widgets (as Notification Center does), top-aligned under the menu bar;
+        // never taller than the screen (then it scrolls).
+        var height = full
+        if AppSettings.shared.dockFitContent, let content = contentHeight {
+            height = min(full, max(160, ceil(content * DockController.scale)))
+        }
         let x: CGFloat
         switch AppSettings.shared.edge {
         case .right: x = visible.maxX - width - margin + slide
         case .left: x = visible.minX + margin - slide
         }
-        return NSRect(x: x, y: visible.minY + margin, width: width, height: height)
+        return NSRect(x: x, y: visible.maxY - margin - height, width: width, height: height)
     }
 
-    private func reposition() {
+    private func reposition(animated: Bool = false) {
         guard let panel, isShown, let scr = screen else { return }
         if !NSScreen.screens.contains(scr) { screen = NSScreen.main }
-        if let s = screen { panel.setFrame(frame(on: s, shown: true), display: true) }
+        guard let s = screen else { return }
+        let target = frame(on: s, shown: true)
+        guard target != panel.frame else { return }
+        if animated {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.22
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                panel.animator().setFrame(target, display: true)
+            }
+        } else {
+            panel.setFrame(target, display: true)
+        }
     }
 
     private func screenUnderMouse() -> NSScreen? {

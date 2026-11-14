@@ -26,6 +26,18 @@ enum Hijri {
         return "\(day) \(monthsEnglish[month - 1]) \(year)"
     }
 
+    static let monthsEnglishShort = ["Muh", "Saf", "Rab I", "Rab II", "Jum I", "Jum II",
+                                     "Raj", "Sha", "Ram", "Shaw", "Dhul Q", "Dhul H"]
+    static let monthsBanglaShort = ["মুহাররম", "সফর", "রবি. ১", "রবি. ২", "জমা. ১", "জমা. ২",
+                                    "রজব", "শাবান", "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"]
+
+    /// "15 Ram" / "১৫ রমজান": day and month, no year, for tight places.
+    static func shortText(for date: Date = Date(), adjust: Int = UserLibrary.shared.hijriAdjust, bangla: Bool = Localization.isBangla) -> String {
+        let c = components(for: date, adjust: adjust)
+        guard let day = c.day, let month = c.month, (1...12).contains(month) else { return "" }
+        return bangla ? "\(digits(day)) \(monthsBanglaShort[month - 1])" : "\(day) \(monthsEnglishShort[month - 1])"
+    }
+
     static func digits(_ n: Int) -> String {
         let bn = Array("০১২৩৪৫৬৭৮৯")
         return String(String(n).map { $0.isNumber ? bn[Int(String($0))!] : $0 })
@@ -104,48 +116,128 @@ enum Ramadan {
 struct RamadanTile: View {
     @ObservedObject private var library = UserLibrary.shared
     @ObservedObject private var weather = WeatherStore.shared
+    @ObservedObject private var settings = AppSettings.shared
+
+    private var wide: Bool { settings.slots(of: HomeItem(.ramadan)) >= 2 }
 
     var body: some View {
         WidgetTile {
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        SectionLabel(Hijri.ramadanActive ? "Ramadan" : "Hijri date")
-                        Spacer(minLength: 2)
-                        Image(systemName: "moon.stars.fill").font(.system(size: 11)).foregroundStyle(Theme.accent)
-                    }
-                    Text(Hijri.text(for: context.date))
-                        .font(.system(size: 13, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    if Hijri.ramadanActive {
-                        if let next = Ramadan.next(after: context.date) {
-                            let iftarFirst = next.iftar < next.sehriEnds
-                            let target = iftarFirst ? next.iftar : next.sehriEnds
-                            Spacer(minLength: 0)
-                            Text(L(iftarFirst ? "Iftar in" : "Sehri ends in"))
-                                .font(.system(size: 10, weight: .medium)).foregroundStyle(Color.secondary)
-                            Text(Ramadan.countdown(to: target, from: context.date))
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundStyle(Theme.accent)
-                                .lineLimit(1).minimumScaleFactor(0.7)
-                            Text(L(iftarFirst ? "Iftar" : "Sehri") + " " + target.formatted(.dateTime.hour().minute().locale(Localization.locale)))
-                                .font(.system(size: 10)).foregroundStyle(Color.secondary).lineLimit(1)
-                        } else {
-                            Spacer(minLength: 0)
-                            Button(L("Set your city")) { SettingsWindowController.shared.show(tab: .general) }
-                                .buttonStyle(.plain).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.accent)
-                        }
-                    } else {
-                        Spacer(minLength: 0)
-                        Text(Hijri.text(for: context.date, bangla: !Localization.isBangla))
-                            .font(.system(size: 10)).foregroundStyle(Color.secondary).lineLimit(1)
-                    }
+                // The roomiest layout that fits the tile's height; nothing is ever cut off.
+                ViewThatFits(in: .vertical) {
+                    full(now: context.date)
+                    medium(now: context.date)
+                    small(now: context.date)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .contextMenu {
             MenuButton("Settings…") { SettingsWindowController.shared.show(tab: .ramadan) }
+        }
+    }
+
+    // MARK: Pieces
+
+    private func header(_ now: Date) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "moon.stars.fill").font(.system(size: 10)).foregroundStyle(Theme.accent)
+            Text(L(Hijri.ramadanActive ? "Ramadan" : "Hijri date").uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Theme.accent)
+                .lineLimit(1)
+        }
+    }
+
+    private func hijri(_ now: Date, size: CGFloat) -> some View {
+        Text(Hijri.text(for: now))
+            .font(.system(size: size, weight: .semibold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+    }
+
+    /// The next of sehri end and iftar.
+    private func target(_ now: Date) -> (isIftar: Bool, time: Date)? {
+        guard let next = Ramadan.next(after: now) else { return nil }
+        return next.iftar < next.sehriEnds ? (true, next.iftar) : (false, next.sehriEnds)
+    }
+
+    private func clock(_ date: Date) -> String {
+        date.formatted(.dateTime.hour().minute().locale(Localization.locale))
+    }
+
+    private func countdown(_ t: (isIftar: Bool, time: Date), now: Date, size: CGFloat) -> some View {
+        Text(Ramadan.countdown(to: t.time, from: now))
+            .font(.system(size: size, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(Theme.accent)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+    }
+
+    private var setCity: some View {
+        Button(L("Set your city")) { SettingsWindowController.shared.show(tab: .general) }
+            .buttonStyle(.plain)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Theme.accent)
+            .lineLimit(1)
+    }
+
+    // MARK: Layouts
+
+    @ViewBuilder private func full(now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            header(now)
+            hijri(now, size: 13)
+            if Hijri.ramadanActive {
+                if let t = target(now) {
+                    Text(L(t.isIftar ? "Iftar in" : "Sehri ends in"))
+                        .font(.system(size: 10, weight: .medium)).foregroundStyle(Color.secondary).lineLimit(1)
+                        .padding(.top, 2)
+                    countdown(t, now: now, size: 20)
+                    if wide, let next = Ramadan.next(after: now) {
+                        HStack(spacing: 10) {
+                            Label(clock(next.sehriEnds), systemImage: "sunrise.fill")
+                            Label(clock(next.iftar), systemImage: "sunset.fill")
+                        }
+                        .font(.system(size: 10, weight: .medium)).foregroundStyle(Color.secondary).lineLimit(1)
+                    } else {
+                        Text(L(t.isIftar ? "Iftar" : "Sehri") + " " + clock(t.time))
+                            .font(.system(size: 10)).foregroundStyle(Color.secondary).lineLimit(1)
+                    }
+                } else {
+                    setCity.padding(.top, 2)
+                }
+            } else {
+                Text(Hijri.text(for: now, bangla: !Localization.isBangla))
+                    .font(.system(size: 10)).foregroundStyle(Color.secondary).lineLimit(1).minimumScaleFactor(0.7)
+            }
+        }
+    }
+
+    @ViewBuilder private func medium(now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            header(now)
+            if Hijri.ramadanActive, let t = target(now) {
+                countdown(t, now: now, size: 18)
+                Text(L(t.isIftar ? "Iftar" : "Sehri") + " " + clock(t.time))
+                    .font(.system(size: 10)).foregroundStyle(Color.secondary).lineLimit(1)
+            } else {
+                hijri(now, size: 13)
+            }
+        }
+    }
+
+    @ViewBuilder private func small(now: Date) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "moon.stars.fill").font(.system(size: 10)).foregroundStyle(Theme.accent)
+            if Hijri.ramadanActive, let t = target(now) {
+                countdown(t, now: now, size: 13)
+            } else {
+                Text(Hijri.shortText(for: now))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .lineLimit(1).minimumScaleFactor(0.6)
+            }
         }
     }
 }

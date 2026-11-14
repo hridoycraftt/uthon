@@ -137,6 +137,22 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: Binding(get: { Optional(router.tab) }, set: { if let tab = $0 { router.tab = tab } })) {
+                // The app's name scrolls with the list (as the account row in System Settings),
+                // so rows never slide underneath it.
+                Section {
+                    HStack(spacing: 10) {
+                        Image(nsImage: AppIcon.current)
+                            .resizable()
+                            .frame(width: 34, height: 34)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(L(AppInfo.name)).font(.system(size: 13, weight: .semibold))
+                            Text(L("Version") + " \(AppInfo.version)").font(.system(size: 10)).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
+                    .selectionDisabled()
+                }
                 ForEach(Array(SettingsTab.groups.enumerated()), id: \.offset) { _, group in
                     Section {
                         ForEach(group) { tab in
@@ -147,21 +163,6 @@ struct SettingsView: View {
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 260)
-            .safeAreaInset(edge: .top) {
-                HStack(spacing: 10) {
-                    Image(nsImage: AppIcon.current)
-                        .resizable()
-                        .frame(width: 34, height: 34)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(L(AppInfo.name)).font(.system(size: 13, weight: .semibold))
-                        Text(L("Version") + " \(AppInfo.version)").font(.system(size: 10)).foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 6)
-                .padding(.bottom, 4)
-            }
         } detail: {
             detail(for: router.tab)
                 .navigationTitle(L(router.tab.title))
@@ -917,16 +918,32 @@ private struct DockSettings: View {
 
     var body: some View {
         Form {
-            Section(L("Side dock")) {
+            Section {
                 Toggle(L("Show the side dock"), isOn: $settings.sideDockEnabled)
+            } footer: {
+                Text(L(settings.edge == .right
+                       ? "Move the pointer to the right edge of the screen to open it."
+                       : "Move the pointer to the left edge of the screen to open it."))
+            }
+            Section(L("Layout")) {
                 Picker(L("Screen edge"), selection: $settings.edge) {
                     ForEach(DockEdge.allCases) { Text(L($0.title)).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .disabled(!settings.sideDockEnabled)
+                Picker(L("Height"), selection: $settings.dockFitContent) {
+                    Text(L("Fit the widgets")).tag(true)
+                    Text(L("Full height")).tag(false)
+                }
+                .pickerStyle(.segmented)
+                LabeledSlider(title: L("Size"), value: $settings.dockScale, range: 0.85...1.4, step: 0.05,
+                              format: { "\(Int(($0 * 100).rounded()))%" })
                 Toggle(L("Keep visible (pinned)"), isOn: $settings.pinned)
-                    .disabled(!settings.sideDockEnabled)
+                HStack {
+                    Spacer()
+                    Button(L("Show now")) { DockController.shared.show(sticky: true) }
+                }
             }
+            .disabled(!settings.sideDockEnabled)
             Section {
                 ForEach(Array(settings.orderedWidgets.enumerated()), id: \.element) { index, kind in
                     ReorderRow(

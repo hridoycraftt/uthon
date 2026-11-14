@@ -168,6 +168,7 @@ final class UserLibrary: ObservableObject {
     @Published var dimStrength: Double { didSet { d.set(dimStrength, forKey: "dimStrength") } }
     @Published var dimSchedule: DimSchedule { didSet { d.set(dimSchedule.rawValue, forKey: "dimSchedule") } }
     @Published var dimTarget: DimTarget { didSet { d.set(dimTarget.rawValue, forKey: "dimTarget") } }
+    @Published var dimWarmth: Double { didSet { d.set(dimWarmth, forKey: "dimWarmth") } }
     @Published var dimStartHour: Int { didSet { d.set(dimStartHour, forKey: "dimStartHour") } }
     @Published var dimEndHour: Int { didSet { d.set(dimEndHour, forKey: "dimEndHour") } }
     // Bottom dock
@@ -244,7 +245,8 @@ final class UserLibrary: ObservableObject {
         dimEnabled = d.object(forKey: "dimEnabled") as? Bool ?? false
         dimStrength = d.object(forKey: "dimStrength") as? Double ?? 0.3
         dimSchedule = DimSchedule(rawValue: d.string(forKey: "dimSchedule") ?? "") ?? .sun
-        dimTarget = DimTarget(rawValue: d.string(forKey: "dimTarget") ?? "") ?? .uthon
+        dimTarget = DimTarget(rawValue: d.string(forKey: "dimTarget") ?? "") ?? .screen
+        dimWarmth = d.object(forKey: "dimWarmth") as? Double ?? 0.4
         dimStartHour = d.object(forKey: "dimStartHour") as? Int ?? 21
         dimEndHour = d.object(forKey: "dimEndHour") as? Int ?? 6
         bottomDockEnabled = d.object(forKey: "bottomDockEnabled") as? Bool ?? false

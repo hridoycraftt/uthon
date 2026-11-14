@@ -337,7 +337,34 @@ private struct IslandHeader: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var weather = WeatherStore.shared
     @ObservedObject private var batteries = DeviceBatteryStore.shared
+    @ObservedObject private var library = UserLibrary.shared
     @Namespace private var tabNamespace
+
+    private enum HijriStyle { case none, full, short }
+    private var hijriOn: Bool { library.hijriInHeader }
+
+    /// The right side, from roomiest to tightest. With the Hijri date on, it stays (in short
+    /// form) until only the clock is left; batteries go first, then the weather.
+    @ViewBuilder private func rightGroups(dockButton: Bool) -> some View {
+        ViewThatFits(in: .horizontal) {
+            if hijriOn {
+                rightGroup(hijri: .full, weather: true, batteries: true)
+                rightGroup(hijri: .short, weather: true, batteries: true)
+                rightGroup(hijri: .short, weather: true, batteries: false)
+                rightGroup(hijri: .short, weather: false, batteries: false)
+                rightGroup(hijri: .short, weather: false, batteries: false, clock: false)
+            } else {
+                rightGroup(weather: true, batteries: true)
+                rightGroup(weather: true, batteries: false)
+                rightGroup(weather: false, batteries: false)
+            }
+            rightGroup(weather: false, batteries: false, clock: false)
+            rightGroup(weather: false, batteries: false, clock: false, dockButton: false)
+        }
+        // A fresh layout whenever the setting flips: no items left half-moved.
+        .id(hijriOn)
+        .transaction { $0.animation = nil }
+    }
 
     /// Room the notch takes in the header (in the island's own, unscaled layout).
     private var notchGap: CGFloat { model.hasNotch ? model.notchSize.width / IslandModel.scale + 24 : 16 }
@@ -408,13 +435,7 @@ private struct IslandHeader: View {
                 }
                 .fixedSize()
                 Spacer(minLength: 0)
-                ViewThatFits(in: .horizontal) {
-                    rightGroup(weather: true, batteries: true)
-                    rightGroup(weather: true, batteries: false)
-                    rightGroup(weather: false, batteries: false)
-                    rightGroup(weather: false, batteries: false, clock: false)
-                    rightGroup(weather: false, batteries: false, clock: false, dockButton: false)
-                }
+                rightGroups(dockButton: false)
             }
             .frame(width: half, alignment: .trailing)
         }
@@ -429,18 +450,13 @@ private struct IslandHeader: View {
             Spacer(minLength: 16)
             // When space is short, drop the battery chips first, then the weather.
             // Nothing ever wraps onto two lines.
-            ViewThatFits(in: .horizontal) {
-                rightGroup(weather: true, batteries: true)
-                rightGroup(weather: true, batteries: false)
-                rightGroup(weather: false, batteries: false)
-                rightGroup(weather: false, batteries: false, clock: false)
-            }
-            .layoutPriority(1)
+            rightGroups(dockButton: true)
+                .layoutPriority(1)
         }
         .padding(.horizontal, inset)
     }
 
-    private func rightGroup(weather showWeather: Bool, batteries showBatteries: Bool,
+    private func rightGroup(hijri: HijriStyle = .none, weather showWeather: Bool, batteries showBatteries: Bool,
                             clock: Bool = true, dockButton: Bool = true) -> some View {
         HStack(spacing: 8) {
             if model.tab == .home || model.tab == .controls {
@@ -459,12 +475,16 @@ private struct IslandHeader: View {
                 .buttonStyle(.plain)
                 .help(L(model.editing ? "Finish editing" : "Add, remove or reorder"))
             }
-            if showWeather, UserLibrary.shared.hijriInHeader {
-                Text(Hijri.text())
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(1)
-                    .fixedSize()
+            if hijri != .none {
+                HStack(spacing: 3) {
+                    Image(systemName: "moon.stars.fill").font(.system(size: 9)).foregroundStyle(Theme.accent)
+                    Text(hijri == .full ? Hijri.text() : Hijri.shortText())
+                        .lineLimit(1)
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.secondary)
+                .fixedSize()
+                .help(Hijri.text())
             }
             if showWeather, let w = weather.current {
                 HStack(spacing: 3) {

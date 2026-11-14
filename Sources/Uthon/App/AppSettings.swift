@@ -260,6 +260,7 @@ final class AppSettings: ObservableObject {
         static let islandAutoSize = "islandAutoSize"
         static let tabIconSize = "tabIconSize"
         static let dockScale = "dockScale"
+        static let dockFitContent = "dockFitContent"
         static let controlOrder = "controlOrder"
         static let controlsEnabled = "controlsEnabled"
     }
@@ -304,6 +305,8 @@ final class AppSettings: ObservableObject {
     @Published var tabIconSize: Double { didSet { defaults.set(tabIconSize, forKey: Keys.tabIconSize) } }
     /// Overall size of the side dock (0.85 ... 1.4).
     @Published var dockScale: Double { didSet { defaults.set(dockScale, forKey: Keys.dockScale) } }
+    /// The side dock is only as tall as its widgets (otherwise the full screen height).
+    @Published var dockFitContent: Bool { didSet { defaults.set(dockFitContent, forKey: Keys.dockFitContent) } }
     @Published var controlOrder: [String] { didSet { defaults.set(controlOrder, forKey: Keys.controlOrder) } }
     @Published var enabledControls: Set<String> { didSet { defaults.set(Array(enabledControls), forKey: Keys.controlsEnabled) } }
     /// The Home tab: up to 3 pages, each an ordered list of items (5 slots per page).
@@ -361,6 +364,7 @@ final class AppSettings: ObservableObject {
         islandAutoSize = defaults.object(forKey: Keys.islandAutoSize) as? Bool ?? true
         tabIconSize = defaults.object(forKey: Keys.tabIconSize) as? Double ?? 15
         dockScale = defaults.object(forKey: Keys.dockScale) as? Double ?? 1.0
+        dockFitContent = defaults.object(forKey: Keys.dockFitContent) as? Bool ?? true
         controlOrder = defaults.stringArray(forKey: Keys.controlOrder) ?? ControlKind.allCases.map(\.rawValue)
         enabledControls = Set(defaults.stringArray(forKey: Keys.controlsEnabled) ?? ControlKind.defaults.map(\.rawValue))
         if let pages = defaults.array(forKey: Keys.homePages) as? [[String]], !pages.isEmpty {

@@ -296,13 +296,37 @@ struct NightSettings: View {
     @ObservedObject private var dimmer = NightDimmer.shared
     @ObservedObject private var weather = WeatherStore.shared
 
+    private var status: String {
+        if !library.dimEnabled { return L("Off") }
+        if dimmer.isPaused { return L("Paused until 6 AM") }
+        if dimmer.level > 0.001 { return L("Dimming now") + " · \(Int((dimmer.level * 100).rounded()))%" }
+        let w = dimmer.nightWindow(now: Date())
+        if library.dimSchedule == .darkMode { return L("Starts when macOS switches to Dark Mode") }
+        return L("Starts at") + " " + w.start.formatted(.dateTime.hour().minute().locale(Localization.locale))
+    }
+
     var body: some View {
         Form {
             Section {
-                Toggle(L("Dim at night"), isOn: $library.dimEnabled)
+                HStack(spacing: 14) {
+                    Image(systemName: dimmer.level > 0.001 ? "moon.fill" : "moon")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 46, height: 46)
+                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.indigo.gradient))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(isOn: $library.dimEnabled) {
+                            Text(L("Dim at night")).font(.system(size: 15, weight: .semibold))
+                        }
+                        .toggleStyle(.switch)
+                        Text(status).font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
             } footer: {
-                Text(L("Gently darkens the screen at night, fading in and out over half an hour. Works on a MacBook, an iMac and external displays."))
+                Text(L("Lowers the light of your screens at night and makes them a little warmer, gliding in and out over half an hour. Blacks stay black and text stays sharp. Works on a MacBook, an iMac and external displays."))
             }
+
             Section(L("When")) {
                 Picker(L("Schedule"), selection: $library.dimSchedule) {
                     ForEach(DimSchedule.allCases) { Text(L($0.title)).tag($0) }
@@ -310,7 +334,13 @@ struct NightSettings: View {
                 if library.dimSchedule == .sun {
                     if let place = weather.place,
                        let sun = NightDimmer.sunTimes(for: Date(), latitude: place.latitude, longitude: place.longitude, timeZone: place.timeZone) {
-                        LabeledContent(place.city, value: L("Sunset") + " " + clock(sun.sunset, place.timeZone) + " · " + L("Sunrise") + " " + clock(sun.sunrise, place.timeZone))
+                        LabeledContent(place.city) {
+                            HStack(spacing: 10) {
+                                Label(clock(sun.sunset, place.timeZone), systemImage: "sunset.fill")
+                                Label(clock(sun.sunrise, place.timeZone), systemImage: "sunrise.fill")
+                            }
+                            .foregroundStyle(.secondary)
+                        }
                     } else {
                         HStack {
                             Text(L("Set your city to follow sunset. Until then: 7 PM to 6 AM."))
@@ -330,25 +360,50 @@ struct NightSettings: View {
                 }
             }
             .disabled(!library.dimEnabled)
-            Section(L("How much")) {
-                LabeledSlider(title: "Strength", value: $library.dimStrength, range: 0.1...0.6, step: 0.05) { "\(Int(($0 * 100).rounded()))%" }
+
+            Section {
+                HStack(spacing: 8) {
+                    Text(L("Strength"))
+                    Image(systemName: "sun.max").foregroundStyle(.secondary)
+                    Slider(value: $library.dimStrength, in: 0.1...0.6, step: 0.05)
+                    Image(systemName: "sun.min").foregroundStyle(.secondary)
+                    Text("\(Int((library.dimStrength * 100).rounded()))%")
+                        .monospacedDigit().foregroundStyle(.secondary).frame(width: 40, alignment: .trailing)
+                }
+                HStack(spacing: 8) {
+                    Text(L("Warmth"))
+                    Image(systemName: "circle.fill").foregroundStyle(Color(white: 0.85))
+                    Slider(value: $library.dimWarmth, in: 0...1, step: 0.1)
+                    Image(systemName: "circle.fill").foregroundStyle(Color.orange)
+                    Text(library.dimWarmth < 0.05 ? L("None") : "\(Int((library.dimWarmth * 100).rounded()))%")
+                        .monospacedDigit().foregroundStyle(.secondary).frame(width: 40, alignment: .trailing)
+                }
                 Picker(L("Dim"), selection: $library.dimTarget) {
-                    ForEach(DimTarget.allCases) { Text(L($0.title)).tag($0) }
+                    Text(L("Every screen")).tag(DimTarget.screen)
+                    Text(L("Only Nook")).tag(DimTarget.uthon)
                 }
+                .pickerStyle(.segmented)
                 HStack {
-                    Button(dimmer.previewing ? L("Previewing…") : L("Preview")) { dimmer.preview() }
-                        .disabled(dimmer.previewing)
+                    Button {
+                        dimmer.preview()
+                    } label: {
+                        Label(dimmer.previewing ? L("Previewing…") : L("Preview"), systemImage: "eye")
+                    }
+                    .disabled(dimmer.previewing)
                     Spacer()
-                    Text(L("Now") + ": \(Int((dimmer.level * 100).rounded()))%")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                    Toggle(L("Not tonight (until 6 AM)"), isOn: Binding(
+                        get: { dimmer.isPaused },
+                        set: { $0 ? dimmer.pauseForTonight() : dimmer.resume() }
+                    ))
                 }
-                Toggle(L("Not tonight (until 6 AM)"), isOn: Binding(
-                    get: { dimmer.isPaused },
-                    set: { $0 ? dimmer.pauseForTonight() : dimmer.resume() }
-                ))
+            } header: {
+                Text(L("How much"))
+            } footer: {
+                Text(L("Moving a slider shows the result for a moment."))
             }
             .disabled(!library.dimEnabled)
+            .onChange(of: library.dimStrength) { _, _ in dimmer.preview(seconds: 2.5) }
+            .onChange(of: library.dimWarmth) { _, _ in dimmer.preview(seconds: 2.5) }
         }
         .formStyle(.grouped)
     }
@@ -530,57 +585,132 @@ struct AISettings: View {
 
 struct RamadanSettings: View {
     @ObservedObject private var library = UserLibrary.shared
+    @ObservedObject private var weather = WeatherStore.shared
+    @State private var playing = false
+
+    private func clock(_ date: Date) -> String {
+        date.formatted(.dateTime.hour().minute().locale(Localization.locale))
+    }
 
     var body: some View {
         Form {
+            // At a glance: today's Hijri date and, in Ramadan, the next sehri and iftar.
+            Section {
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    HStack(alignment: .center, spacing: 14) {
+                        Image(systemName: "moon.stars.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 46, height: 46)
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.mint.gradient))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(Hijri.text(for: context.date))
+                                .font(.system(size: 17, weight: .semibold))
+                            Text(context.date.formatted(.dateTime.weekday(.wide).day().month(.wide).year().locale(Localization.locale)))
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text(L(Hijri.ramadanActive ? "Ramadan mode is on" : "Ramadan mode is off"))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Hijri.ramadanActive ? Color.mint : Color.secondary)
+                        }
+                        Spacer(minLength: 8)
+                        if Hijri.ramadanActive, let next = Ramadan.next(after: context.date) {
+                            VStack(alignment: .trailing, spacing: 4) {
+                                timeChip(L("Sehri ends"), next.sehriEnds, symbol: "sunrise.fill", now: context.date)
+                                timeChip(L("Iftar"), next.iftar, symbol: "sunset.fill", now: context.date)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             Section {
                 Picker(L("Ramadan mode"), selection: $library.ramadanMode) {
-                    Text(L("Automatic (during Ramadan)")).tag("auto")
+                    Text(L("Automatic")).tag("auto")
                     Text(L("Always on")).tag("on")
                     Text(L("Off")).tag("off")
                 }
+                .pickerStyle(.segmented)
                 HomeWidgetToggle(widget: .ramadan)
-                LabeledContent(L("Today"), value: Hijri.text())
-                Stepper(L("Adjust the Hijri date") + ": " + (library.hijriAdjust == 0 ? L("none") : "\(library.hijriAdjust > 0 ? "+" : "")\(library.hijriAdjust)"),
-                        value: $library.hijriAdjust, in: -2...2)
-                Toggle(L("Show the Hijri date at the top of the island"), isOn: $library.hijriInHeader)
             } footer: {
-                Text(L("The Hijri date follows the Umm al-Qura calendar. Moon sighting can differ by a day or two in your country: adjust it here."))
+                Text(L("Automatic turns Ramadan mode on during the month of Ramadan only: the widget counts down to sehri and iftar, and the reminders below are sent."))
             }
-            Section(L("Reminders")) {
+
+            Section(L("Hijri date")) {
+                Toggle(L("Show the Hijri date at the top of the island"), isOn: $library.hijriInHeader)
+                Picker(L("Adjust for my country"), selection: $library.hijriAdjust) {
+                    ForEach(-2...2, id: \.self) { n in
+                        Text(n == 0 ? L("None") : (n > 0 ? "+\(n)" : "\(n)")).tag(n)
+                    }
+                }
+                .pickerStyle(.segmented)
+                LabeledContent(L("Today"), value: Hijri.text())
+                Text(L("The Hijri date follows the Umm al-Qura calendar. Moon sighting can differ by a day or two in your country: adjust it here."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
                 Picker(L("Before sehri ends"), selection: $library.sehriReminderMinutes) {
                     Text(L("Off")).tag(0)
                     ForEach([10, 15, 30, 45, 60], id: \.self) { Text("\($0) " + L("minutes before")).tag($0) }
                 }
                 Toggle(L("At iftar time"), isOn: $library.iftarReminder)
-                if let next = Ramadan.next() {
-                    LabeledContent(L("Next sehri ends"), value: next.sehriEnds.formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Localization.locale)))
-                    LabeledContent(L("Next iftar"), value: next.iftar.formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Localization.locale)))
-                } else {
-                    Text(L("Set your city to follow sunset. Until then: 7 PM to 6 AM."))
-                        .font(.caption).foregroundStyle(.secondary)
+                if weather.place == nil {
+                    HStack {
+                        Label(L("Set your city to get sehri and iftar times."), systemImage: "location.slash")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button(L("Set your city")) { SettingsWindowController.shared.show(tab: .general) }
+                    }
+                }
+            } header: {
+                Text(L("Reminders"))
+            } footer: {
+                if library.ramadanMode == "off" {
+                    Text(L("Turn on Ramadan mode to get these reminders."))
                 }
             }
             .disabled(library.ramadanMode == "off")
+
             Section {
-                Picker(L("Sound"), selection: $library.prayerSound) {
-                    Text(L("Off")).tag("off")
-                    ForEach(Ramadan.systemSounds, id: \.self) { Text($0).tag($0) }
-                    if library.prayerSound.hasPrefix("/") {
-                        Text((library.prayerSound as NSString).lastPathComponent).tag(library.prayerSound)
-                    }
-                }
                 HStack {
-                    Button(L("Choose my own sound (e.g. adhan)…")) { Ramadan.pickSoundFile() }
-                    Button(L("Play")) { Ramadan.playPrayerSound() }.disabled(library.prayerSound == "off")
-                    Button(L("Stop")) { Ramadan.stopSound() }
+                    Picker(L("Sound"), selection: $library.prayerSound) {
+                        Text(L("No sound")).tag("off")
+                        Divider()
+                        ForEach(Ramadan.systemSounds, id: \.self) { Text($0).tag($0) }
+                        if library.prayerSound.hasPrefix("/") {
+                            Divider()
+                            Text((library.prayerSound as NSString).lastPathComponent).tag(library.prayerSound)
+                        }
+                    }
+                    Button {
+                        if playing { Ramadan.stopSound(); playing = false }
+                        else { Ramadan.playPrayerSound(); playing = true }
+                    } label: {
+                        Image(systemName: playing ? "stop.fill" : "play.fill").frame(width: 14)
+                    }
+                    .help(L(playing ? "Stop" : "Play"))
+                    .disabled(library.prayerSound == "off")
                 }
+                Button(L("Choose my own sound (e.g. adhan)…")) { Ramadan.pickSoundFile() }
             } header: {
                 Text(L("Sound at prayer time and iftar"))
             } footer: {
                 Text(L("Your own audio file stays on your Mac; Nook only plays it."))
             }
+            .onChange(of: library.prayerSound) { _, _ in Ramadan.stopSound(); playing = false }
+            .onDisappear { Ramadan.stopSound(); playing = false }
         }
         .formStyle(.grouped)
+    }
+
+    private func timeChip(_ title: String, _ time: Date, symbol: String, now: Date) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol).foregroundStyle(Color.orange)
+            Text(title + " " + clock(time)).foregroundStyle(.primary)
+            Text(Ramadan.countdown(to: time, from: now)).foregroundStyle(.secondary).monospacedDigit()
+        }
+        .font(.system(size: 11, weight: .medium))
+        .lineLimit(1)
     }
 }

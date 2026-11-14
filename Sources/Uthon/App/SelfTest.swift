@@ -813,6 +813,9 @@ enum SelfTest {
         check("Hijri date in Bangla", Hijri.text(for: ramadanDay, adjust: 0, bangla: true).contains("রমজান"), Hijri.text(for: ramadanDay, adjust: 0, bangla: true))
         check("Hijri adjustment moves the day", Hijri.components(for: ramadanDay, adjust: 1).day != Hijri.components(for: ramadanDay, adjust: 0).day)
         check("Bangla digits", Hijri.digits(1447) == "১৪৪৭")
+        let short = Hijri.shortText(for: ramadanDay, adjust: 0, bangla: false)
+        check("Short Hijri date for the island header", short.hasSuffix("Ram") && !short.contains("1447"), short)
+        check("Short Hijri date in Bangla", Hijri.shortText(for: ramadanDay, adjust: 0, bangla: true).hasSuffix("রমজান"))
         check("Not Ramadan in November 2026", !Hijri.isRamadan(greg.date(from: DateComponents(year: 2026, month: 11, day: 14))!, adjust: 0))
         let soon = Date().addingTimeInterval(2 * 3600 + 15 * 60 + 30)
         let savedLanguage = settings.language
@@ -914,6 +917,14 @@ enum SelfTest {
         library.dimTarget = .screen
         dimmer.preview(seconds: 0.5)
         check("Screen dimming layer survives a preview", true)
+        let none = GammaDimmer.factors(level: 0, warmth: 1)
+        check("No dimming keeps the colours", none.r == 1 && none.g == 1 && none.b == 1)
+        let warm = GammaDimmer.factors(level: 0.3, warmth: 1)
+        check("Dimming lowers the light and warms it", abs(warm.r - 0.7) < 0.001 && warm.b < warm.g && warm.g < warm.r, "\(warm)")
+        let neutral = GammaDimmer.factors(level: 0.3, warmth: 0)
+        check("No warmth keeps it neutral", neutral.r == neutral.b)
+        dimmer.gamma.restore()
+        check("Display colours restored", dimmer.gamma.shown == 0)
         library.dimTarget = .uthon
         library.dimEnabled = false
         library.dimSchedule = .sun

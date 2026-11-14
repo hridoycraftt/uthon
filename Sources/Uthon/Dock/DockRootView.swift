@@ -23,10 +23,17 @@ struct DockRootView: View {
 struct DockContentView: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var care = CareReminders.shared
+    @State private var headerHeight: CGFloat = 0
+    @State private var listHeight: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
             header
+                .background(GeometryReader { g in
+                    Color.clear
+                        .onAppear { headerHeight = g.size.height; report() }
+                        .onChange(of: g.size.height) { _, h in headerHeight = h; report() }
+                })
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 10) {
                     if let kind = care.active {
@@ -36,38 +43,62 @@ struct DockContentView: View {
                         WidgetHost(kind: kind)
                     }
                     if settings.visibleWidgets.isEmpty {
-                        Text(L("All widgets are hidden. Turn them on in Settings."))
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 20)
+                        emptyState
                     }
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 12)
                 .animation(.easeOut(duration: 0.2), value: care.active)
+                .background(GeometryReader { g in
+                    Color.clear
+                        .onAppear { listHeight = g.size.height; report() }
+                        .onChange(of: g.size.height) { _, h in listHeight = h; report() }
+                })
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .clipShape(RoundedRectangle(cornerRadius: Theme.panelRadius, style: .continuous))
     }
 
+    /// Tells the window how tall the dock wants to be (it fits its widgets).
+    private func report() {
+        DockController.shared.setContentHeight(headerHeight + listHeight)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "square.dashed")
+                .font(.system(size: 26, weight: .light))
+                .foregroundStyle(Color.secondary)
+            Text(L("No widgets yet"))
+                .font(.system(size: 13, weight: .semibold))
+            Button(L("Choose widgets…")) { SettingsWindowController.shared.show(tab: .dock) }
+                .buttonStyle(AccentButtonStyle())
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+    }
+
+    /// Today's date on the left (as in Notification Center), the controls on the right.
     private var header: some View {
-        HStack(spacing: 6) {
-            Text(AppInfo.name)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-            Circle()
-                .fill(Theme.accent)
-                .frame(width: 5, height: 5)
-            Spacer()
+        HStack(spacing: 4) {
+            TimelineView(.everyMinute) { context in
+                Text(context.date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Localization.locale)))
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 6)
             IconButton(symbol: settings.pinned ? "pin.fill" : "pin",
-                       help: settings.pinned ? "Unpin (auto-hide)" : "Pin (keep visible)") {
+                       help: settings.pinned ? "Unpin (auto-hide)" : "Pin (keep visible)", size: 12) {
                 settings.pinned.toggle()
             }
-            IconButton(symbol: "slider.horizontal.3", help: "Settings") {
-                SettingsWindowController.shared.show()
+            IconButton(symbol: "gearshape", help: "Settings", size: 12) {
+                SettingsWindowController.shared.show(tab: .dock)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.leading, 16)
+        .padding(.trailing, 10)
         .padding(.top, 12)
         .padding(.bottom, 8)
     }
