@@ -49,6 +49,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if PerfTest.isActive {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { PerfTest.run() }
+        }
+
         if SnapshotTour.isActive {
             DockController.shared.start()
             IslandController.shared.start()
