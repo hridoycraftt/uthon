@@ -171,7 +171,6 @@ final class IslandController {
 
     // MARK: Loading the open island's content
 
-    private var unmountWork: DispatchWorkItem?
     private var nowPlayingActive = false
     private var lastContentRefresh = Date.distantPast
 
@@ -179,8 +178,6 @@ final class IslandController {
     /// pointer heads for the island (during the short hover delay) and on opening, so the
     /// opening animation itself has nothing else to do.
     func prewarm() {
-        unmountWork?.cancel()
-        unmountWork = nil
         if !model.contentMounted { model.contentMounted = true }
         if Date().timeIntervalSince(lastContentRefresh) > 3 {
             lastContentRefresh = Date()
@@ -190,16 +187,6 @@ final class IslandController {
         }
     }
 
-    /// A while after closing, let the content go: a closed island then does no work at all.
-    private func scheduleUnmount() {
-        unmountWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in
-            guard let self, !self.model.expanded, self.hoverSince == nil else { return }
-            self.model.contentMounted = false
-        }
-        unmountWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
-    }
 
     func collapse() {
         guard model.expanded else { return }
@@ -220,7 +207,6 @@ final class IslandController {
             nowPlayingActive = false
             NowPlayingStore.shared.setActive(false)
         }
-        scheduleUnmount()
     }
 
     func toggleFromShortcut() {
