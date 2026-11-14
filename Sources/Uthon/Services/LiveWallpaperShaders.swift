@@ -219,21 +219,23 @@ enum LiveStyle: String, CaseIterable, Identifiable {
         """
         case .water: return """
         float3 scene(float2 uv, float2 m, float t, float aspect, float k) {
-            float2 p = float2(uv.x * aspect, uv.y) * 3.0;
-            float2 mp = float2(m.x * aspect, m.y) * 3.0;
+            float2 p = float2(uv.x * aspect, uv.y);
+            float2 mp = float2(m.x * aspect, m.y);
             float d = length(p - mp);
-            float2 q = p + normalize(p - mp + 0.0001) * k * sin(d * 9.0 - t * 3.0) * exp(-d * 1.1) * 0.12;
-            float v = 0.0;
+            // Rings spreading from the cursor bend the light patterns.
+            float2 q = p * 7.0 + normalize(p - mp + 0.0001) * k * sin(d * 40.0 - t * 4.0) * exp(-d * 5.0) * 0.35;
+            float c = 0.0;
             float2 w = q;
-            for (int n = 0; n < 5; n++) {
-                w += float2(sin(w.y * 1.3 + t * 0.5), cos(w.x * 1.1 - t * 0.4)) * 0.35;
-                v += 0.5 + 0.5 * sin(w.x + w.y);
+            for (int n = 0; n < 3; n++) {
+                float fn = float(n) + 1.0;
+                w = q + float2(sin(w.y * 0.9 / fn + t * 0.45), cos(w.x * 0.8 / fn - t * 0.4)) * 1.2;
+                c += abs(sin(w.x) * sin(w.y));
             }
-            v /= 5.0;
-            float caustic = pow(v, 6.0) * 2.2;
-            float3 col = mix(float3(0.0, 0.14, 0.27), float3(0.0, 0.50, 0.60), uv.y * 0.6 + 0.2);
-            col += caustic * float3(0.65, 0.95, 1.0);
-            col += k * 0.18 * exp(-d * 2.0) * float3(0.6, 0.9, 1.0) * (0.5 + 0.5 * sin(d * 9.0 - t * 3.0));
+            c /= 3.0;
+            float caustic = pow(1.0 - c, 8.0);
+            float3 col = mix(float3(0.0, 0.10, 0.20), float3(0.0, 0.33, 0.42), uv.y);
+            col += caustic * float3(0.45, 0.85, 0.95) * 0.75;
+            col += k * 0.10 * exp(-d * 6.0) * float3(0.6, 0.9, 1.0) * (0.5 + 0.5 * sin(d * 40.0 - t * 4.0));
             return col;
         }
         """
@@ -320,41 +322,40 @@ enum LiveStyle: String, CaseIterable, Identifiable {
         }
         """
         case .torus: return """
-        float torusSDF(float3 p, float t) {
-            p.xy = rot(t * 0.25) * p.xy;
-            p.yz = rot(t * 0.18) * p.yz;
-            float2 q = float2(length(p.xz) - 1.25, p.y);
-            float a = atan2(p.z, p.x);
-            q = rot(a * 1.5 + t * 0.4) * q;
-            return length(q * float2(1.0, 1.8)) - 0.32;
+        float ringSDF(float3 p, float t) {
+            p.yz = rot(0.9 + 0.25 * sin(t * 0.3)) * p.yz;
+            p.xz = rot(t * 0.35) * p.xz;
+            float2 q = float2(length(p.xz) - 1.3, p.y);
+            return length(q) - 0.36;
         }
         float3 scene(float2 uv, float2 m, float t, float aspect, float k) {
             float2 p = (uv - 0.5) * float2(aspect, 1.0);
-            float3 ro = float3(0.0, 0.0, 4.6);
-            float3 rd = normalize(float3(p, -1.45));
+            float3 ro = float3(0.0, 0.0, 4.4);
+            float3 rd = normalize(float3(p, -1.5));
             float yaw = (m.x - 0.5) * 1.4 * k;
             float pitch = (m.y - 0.5) * 0.9 * k;
             ro.xz = rot(yaw) * ro.xz; rd.xz = rot(yaw) * rd.xz;
             ro.yz = rot(pitch) * ro.yz; rd.yz = rot(pitch) * rd.yz;
-            float3 bg = mix(float3(0.02, 0.02, 0.03), float3(0.10, 0.10, 0.12), uv.y);
+            float3 bg = mix(float3(0.02, 0.02, 0.03), float3(0.09, 0.09, 0.11), uv.y);
             float dist = 0.0;
-            for (int i = 0; i < 80; i++) {
-                float h = torusSDF(ro + rd * dist, t) * 0.7;
-                if (h < 0.002 || dist > 10.0) { break; }
+            for (int i = 0; i < 72; i++) {
+                float h = ringSDF(ro + rd * dist, t);
+                if (h < 0.001 || dist > 10.0) { break; }
                 dist += h;
             }
             if (dist > 10.0) { return bg + float3(0.5, 0.55, 0.7) * exp(-length(p) * 2.5) * 0.08; }
             float3 pos = ro + rd * dist;
             float2 e = float2(0.002, 0.0);
-            float3 n = normalize(float3(torusSDF(pos + e.xyy, t) - torusSDF(pos - e.xyy, t),
-                                        torusSDF(pos + e.yxy, t) - torusSDF(pos - e.yxy, t),
-                                        torusSDF(pos + e.yyx, t) - torusSDF(pos - e.yyx, t)));
+            float3 n = normalize(float3(ringSDF(pos + e.xyy, t) - ringSDF(pos - e.xyy, t),
+                                        ringSDF(pos + e.yxy, t) - ringSDF(pos - e.yxy, t),
+                                        ringSDF(pos + e.yyx, t) - ringSDF(pos - e.yyx, t)));
             float3 r = reflect(rd, n);
-            float env = 0.5 + 0.5 * r.y;
-            float3 chrome = mix(float3(0.08, 0.08, 0.1), float3(0.85, 0.88, 0.95), smoothstep(0.35, 0.75, env));
-            chrome += float3(1.0, 0.55, 0.35) * smoothstep(0.92, 1.0, 1.0 - abs(r.x)) * 0.25;
+            // A studio: soft top light, dark floor, a warm and a cool strip light.
+            float3 env = mix(float3(0.06, 0.06, 0.08), float3(0.9, 0.92, 0.98), smoothstep(-0.1, 0.6, r.y));
+            env += float3(1.0, 0.55, 0.35) * smoothstep(0.85, 1.0, r.x) * 0.6;
+            env += float3(0.35, 0.6, 1.0) * smoothstep(0.85, 1.0, -r.x) * 0.5;
             float fres = pow(1.0 - max(dot(n, -rd), 0.0), 4.0);
-            return chrome * (0.75 + 0.25 * fres);
+            return env * (0.8 + 0.2 * fres);
         }
         """
         case .horizon: return """
@@ -433,11 +434,12 @@ enum LiveStyle: String, CaseIterable, Identifiable {
             float2 w = (id + 0.5) / cells;
             float dm = length(w - float2(m.x * aspect, m.y));
             float wave = 0.5 + 0.5 * sin(t * 0.9 - length(w - float2(aspect * 0.5, 0.5)) * 9.0);
-            float r = 0.08 + 0.06 * wave + 0.26 * k * exp(-dm * 7.0);
-            float dot1 = smoothstep(r, r - 0.06, length(f));
+            float near = k * exp(-dm * 6.0);
+            float r = 0.13 + 0.06 * wave + 0.22 * near;
+            float dot1 = smoothstep(r, r - 0.08, length(f));
             float3 tint = mix(float3(0.35, 0.55, 1.0), float3(0.85, 0.45, 1.0), uv.x);
             float3 col = float3(0.02, 0.02, 0.035);
-            col += tint * dot1 * (0.25 + 0.5 * wave * 0.4 + 0.75 * k * exp(-dm * 6.0));
+            col += tint * dot1 * (0.28 + 0.22 * wave + 0.8 * near);
             return col;
         }
         """
@@ -445,24 +447,24 @@ enum LiveStyle: String, CaseIterable, Identifiable {
         float3 scene(float2 uv, float2 m, float t, float aspect, float k) {
             float2 p = float2(uv.x * aspect, uv.y);
             float dm = length(p - float2(m.x * aspect, m.y));
-            float h = fbm(p * 1.6 + float2(t * 0.025, t * 0.015)) + k * 0.35 * exp(-dm * 3.5);
-            float v = h * 14.0;
-            float line = smoothstep(0.08, 0.0, abs(fract(v) - 0.5) - 0.42);
-            float3 bg = mix(float3(0.04, 0.05, 0.07), float3(0.07, 0.08, 0.11), uv.y);
+            float h = fbm(p * 1.5 + float2(t * 0.025, t * 0.015)) + k * 0.3 * exp(-dm * 3.5);
+            float a = abs(fract(h * 14.0) - 0.5);
+            float line = smoothstep(0.40, 0.48, a);
+            float3 bg = mix(float3(0.03, 0.04, 0.06), float3(0.06, 0.07, 0.10), uv.y);
             float3 tint = mix(float3(0.30, 0.85, 0.75), float3(0.55, 0.55, 1.0), smoothstep(0.3, 0.8, h));
-            return bg + tint * line * 0.55;
+            return bg + tint * line * 0.7 + tint * 0.08 * k * exp(-dm * 4.0);
         }
         """
         case .prism: return """
         float3 scene(float2 uv, float2 m, float t, float aspect, float k) {
             float2 p = (uv - 0.5) * float2(aspect, 1.0);
-            float2 c = (m - 0.5) * float2(aspect, 1.0) * k;
-            float2 q = p - c * 0.6;
-            float v = sin(q.x * 3.0 + t * 0.4) + sin(q.y * 4.0 - t * 0.3) + sin((q.x + q.y) * 2.5 + t * 0.25)
-                    + sin(length(q) * 5.0 - t * 0.5);
-            float3 col = hsv(fract(v * 0.08 + t * 0.02), 0.45, 0.9);
-            col *= 0.55 + 0.45 * smoothstep(1.4, 0.0, length(p));
-            return col * 0.85;
+            float2 q = p - (m - 0.5) * float2(aspect, 1.0) * k * 0.6;
+            float v = sin(q.x * 2.6 + t * 0.35) + sin(q.y * 3.4 - t * 0.28) + sin((q.x + q.y) * 2.2 + t * 0.22)
+                    + sin(length(q) * 4.5 - t * 0.45);
+            float hue = 0.58 + 0.22 * sin(v * 0.6 + t * 0.05);
+            float sheen = pow(0.5 + 0.5 * sin(v * 1.4), 3.0);
+            float3 col = float3(0.03, 0.03, 0.06) + hsv(hue, 0.55, 1.0) * (0.12 + 0.75 * sheen);
+            return col * (0.7 + 0.3 * smoothstep(1.3, 0.0, length(p)));
         }
         """
         case .flow: return """
