@@ -108,7 +108,7 @@ struct PeekView: View {
         case .ramadan(let isIftar, let time):
             PeekRow(symbol: "moon.stars.fill", tint: Theme.accent,
                     title: L(isIftar ? "Time for iftar" : "Sehri ends soon"),
-                    subtitle: (isIftar ? L("Iftar") : L("Sehri ends at")) + " " + time.formatted(.dateTime.hour().minute().locale(Localization.locale))) {
+                    subtitle: (isIftar ? L("Iftar") : L("Sehri ends at")) + " " + Ramadan.clock(time)) {
                 Button(L("OK")) {
                     IslandController.shared.dismissPeek()
                     Ramadan.stopSound()

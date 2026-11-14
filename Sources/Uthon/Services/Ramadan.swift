@@ -72,6 +72,15 @@ enum Ramadan {
         return (sehri, iftar)
     }
 
+    /// A sehri or iftar time on the city's own clock (as the prayer times widget shows it).
+    static func clock(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Localization.locale
+        f.timeZone = WeatherStore.shared.place?.timeZone ?? .current
+        f.timeStyle = .short
+        return f.string(from: date)
+    }
+
     /// "2 h 15 m" / "২ ঘ ১৫ মি"
     static func countdown(to date: Date, from now: Date = Date()) -> String {
         let minutes = max(0, Int(date.timeIntervalSince(now) / 60))
@@ -162,9 +171,7 @@ struct RamadanTile: View {
         return next.iftar < next.sehriEnds ? (true, next.iftar) : (false, next.sehriEnds)
     }
 
-    private func clock(_ date: Date) -> String {
-        date.formatted(.dateTime.hour().minute().locale(Localization.locale))
-    }
+    private func clock(_ date: Date) -> String { Ramadan.clock(date) }
 
     private func countdown(_ t: (isIftar: Bool, time: Date), now: Date, size: CGFloat) -> some View {
         Text(Ramadan.countdown(to: t.time, from: now))

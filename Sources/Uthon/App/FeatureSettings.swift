@@ -588,9 +588,7 @@ struct RamadanSettings: View {
     @ObservedObject private var weather = WeatherStore.shared
     @State private var playing = false
 
-    private func clock(_ date: Date) -> String {
-        date.formatted(.dateTime.hour().minute().locale(Localization.locale))
-    }
+    private func clock(_ date: Date) -> String { Ramadan.clock(date) }
 
     var body: some View {
         Form {
