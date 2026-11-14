@@ -65,7 +65,7 @@ final class NotificationMirror: ObservableObject {
     func start() {
         guard UserLibrary.shared.notificationsEnabled, timer == nil else { return }
         checkAccess()
-        lastID = latestID() ?? -1
+        lastID = -1   // the first (background) read finds where the newest one is
         let t = Timer(timeInterval: 2, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
@@ -103,44 +103,55 @@ final class NotificationMirror: ObservableObject {
         return db
     }
 
-    private func latestID() -> Int64? {
-        guard let path = Self.databasePath, let db = Self.open(path) else { return nil }
-        defer { sqlite3_close(db) }
-        var stmt: OpaquePointer?
-        defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, "SELECT max(rec_id) FROM record", -1, &stmt, nil) == SQLITE_OK,
-              sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-        return sqlite3_column_int64(stmt, 0)
-    }
+    /// The notification database is read on this queue, never on the main thread (it is a
+    /// file that macOS may be writing to at that moment).
+    private static let dbQueue = DispatchQueue(label: "nook.notifications.db", qos: .utility)
+    private var polling = false
 
     private func poll() {
-        guard let path = Self.databasePath, let db = Self.open(path) else {
-            if hasAccess { hasAccess = false }
-            return
+        guard !polling else { return }
+        polling = true
+        let since = lastID
+        Self.dbQueue.async { [weak self] in
+            let result = Self.read(since: since)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.polling = false
+                if self.hasAccess != result.access { self.hasAccess = result.access }
+                guard result.access else { return }
+                self.lastID = max(self.lastID, result.lastID)
+                for item in result.items { self.deliver(item) }
+            }
         }
+    }
+
+    /// New notifications after `since` (or, the first time, just where the newest one is).
+    private static func read(since: Int64) -> (access: Bool, lastID: Int64, items: [Item]) {
+        guard let path = databasePath, let db = open(path) else { return (false, since, []) }
         defer { sqlite3_close(db) }
-        if !hasAccess { hasAccess = true }
-        if lastID < 0 {
-            lastID = latestID() ?? 0
-            return
-        }
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
+        if since < 0 {
+            guard sqlite3_prepare_v2(db, "SELECT max(rec_id) FROM record", -1, &stmt, nil) == SQLITE_OK,
+                  sqlite3_step(stmt) == SQLITE_ROW else { return (true, 0, []) }
+            return (true, sqlite3_column_int64(stmt, 0), [])
+        }
         let sql = "SELECT r.rec_id, a.identifier, r.data FROM record r JOIN app a ON a.app_id = r.app_id WHERE r.rec_id > ? ORDER BY r.rec_id LIMIT 20"
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-        sqlite3_bind_int64(stmt, 1, lastID)
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return (true, since, []) }
+        sqlite3_bind_int64(stmt, 1, since)
+        var newest = since
         var fresh: [Item] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
             let id = sqlite3_column_int64(stmt, 0)
-            lastID = max(lastID, id)
+            newest = max(newest, id)
             let bundle = sqlite3_column_text(stmt, 1).map { String(cString: $0) } ?? ""
             var data = Data()
             if let bytes = sqlite3_column_blob(stmt, 2) {
                 data = Data(bytes: bytes, count: Int(sqlite3_column_bytes(stmt, 2)))
             }
-            if let item = Self.parse(id: id, bundleID: bundle, data: data) { fresh.append(item) }
+            if let item = parse(id: id, bundleID: bundle, data: data) { fresh.append(item) }
         }
-        for item in fresh { deliver(item) }
+        return (true, newest, fresh)
     }
 
     /// Notification records are binary property lists: { app, date, req: { titl, subt, body } }.

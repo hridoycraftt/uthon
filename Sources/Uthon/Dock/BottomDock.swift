@@ -225,6 +225,8 @@ final class BottomDockController: ObservableObject {
 
     private var lastFrame: CGRect = .zero
     private var lastDockCheck = Date.distantPast
+    private var dockReadInFlight = false
+    private static let dockQueue = DispatchQueue(label: "nook.bottomdock.ax", qos: .userInitiated)
 
     /// How much to shrink a bar of width `base` so it fits beside the Dock.
     static func fit(base: CGFloat, screen: CGRect, dock: CGRect?, side: BottomDockSide, offset: CGFloat) -> (scale: CGFloat, tooWide: Bool) {
@@ -283,11 +285,30 @@ final class BottomDockController: ObservableObject {
             hide()
             return
         }
-        if force || Date().timeIntervalSince(lastDockCheck) > 0.5 {
+        if force || dockFrame == nil {
             let exact = Self.readDockFrame()
             dockFrame = exact ?? Self.estimatedDockFrame(on: screen)
             if exactDock != (exact != nil) { exactDock = exact != nil }
             lastDockCheck = Date()
+        } else if Date().timeIntervalSince(lastDockCheck) > 0.5, !dockReadInFlight {
+            // Asking the Dock (Accessibility) talks to another app and can take a while when
+            // it is busy, so it is done in the background; the bar follows when the answer comes.
+            lastDockCheck = Date()
+            dockReadInFlight = true
+            Self.dockQueue.async { [weak self] in
+                let exact = Self.readDockFrame()
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.dockReadInFlight = false
+                    let frame = exact ?? Self.dockScreen().flatMap { Self.estimatedDockFrame(on: $0) }
+                    let changed = frame != self.dockFrame || self.exactDock != (exact != nil)
+                    if self.exactDock != (exact != nil) { self.exactDock = exact != nil }
+                    if changed {
+                        self.dockFrame = frame
+                        self.layout()
+                    }
+                }
+            }
         }
         // Track the Dock's size: when it grows or shrinks, so does the bar.
         let atBottom = dockFrame.map { $0.width > $0.height } ?? false
