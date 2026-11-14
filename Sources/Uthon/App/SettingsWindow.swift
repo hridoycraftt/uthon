@@ -672,7 +672,7 @@ private struct WidgetDataSettings: View {
                 ForEach($library.bookmarks) { $bookmark in
                     HStack {
                         TextField(L("Name"), text: $bookmark.title).labelsHidden().frame(width: 140)
-                        TextField(L("https://"), text: $bookmark.url)
+                        TextField("", text: $bookmark.url, prompt: Text(verbatim: "https://")).labelsHidden()
                         Button { library.bookmarks.removeAll { $0.id == bookmark.id } } label: {
                             Image(systemName: "minus.circle.fill").foregroundStyle(.red)
                         }
