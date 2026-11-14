@@ -828,9 +828,11 @@ enum SelfTest {
 
         step("Rain alert")
         let base = Date(timeIntervalSince1970: 1_790_000_000)
-        let noonUTC = Date(timeIntervalSince1970: 1_790_000_000 - 1_790_000_000 % 86400 + 12 * 3600)
-        let dhakaHour = WeatherTile.hourLabel(noonUTC, zone: TimeZone(identifier: "Asia/Dhaka"))
-        check("Hourly forecast uses the city's clock", dhakaHour.contains("6") || dhakaHour.contains("18") || dhakaHour.contains("৬") || dhakaHour.contains("১৮"), dhakaHour)
+        let dayStart: TimeInterval = 1_789_948_800          // a midnight, UTC
+        let noonUTC = Date(timeIntervalSince1970: dayStart + 43_200)
+        let dhakaHour: String = WeatherTile.hourLabel(noonUTC, zone: TimeZone(identifier: "Asia/Dhaka"))
+        let hourMarks: [String] = ["6", "18", "৬", "১৮"]
+        check("Hourly forecast uses the city's clock", hourMarks.contains { dhakaHour.contains($0) }, dhakaHour)
         let dry = (0..<8).map { (time: base.addingTimeInterval(Double($0) * 900), mm: 0.0) }
         var wet = dry
         wet[3].mm = 0.6
