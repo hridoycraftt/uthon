@@ -127,9 +127,9 @@ struct WallpaperSettings: View {
 
             Section {
                 Picker(L("Quality"), selection: $library.liveQuality) {
-                    Text(L("Battery saver")).tag("saver")
+                    Text(L("Sharp (native)")).tag("high")
                     Text(L("Balanced")).tag("balanced")
-                    Text(L("Sharpest")).tag("high")
+                    Text(L("Battery saver")).tag("saver")
                 }
                 .pickerStyle(.segmented)
                 Picker(L("Smoothness"), selection: $library.liveFPS) {
@@ -146,7 +146,7 @@ struct WallpaperSettings: View {
             } header: {
                 Text(L("Performance"))
             } footer: {
-                Text(L("Balanced at 30 fps looks the same as Sharpest for these soft designs and uses far less power. It always rests while nobody can see it."))
+                Text(L("Sharp draws every pixel of your screen. It always rests while nobody can see it, so it costs little power."))
             }
 
             DesktopPictureSection()

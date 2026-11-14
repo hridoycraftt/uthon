@@ -1071,12 +1071,12 @@ enum SelfTest {
         info("Slowest first frame (incl. compile)", "\(slowest.name) \(Int(slowest.ms)) ms")
         // Steady-state cost of one full-HD frame for the heaviest designs.
         var frameReport: [String] = []
-        for style in [LiveStyle.orbs, .torus, .nebula, .aurora] {
+        for style in LiveStyle.allCases {
             let start = CACurrentMediaTime()
-            for i in 0..<5 { _ = LiveRenderer.snapshot(style, width: 1152, height: 720, time: Float(i)) }
-            frameReport.append("\(style.rawValue) \(Int((CACurrentMediaTime() - start) * 1000 / 5)) ms")
+            for i in 0..<3 { _ = LiveRenderer.snapshot(style, width: 2560, height: 1600, time: Float(i)) }
+            frameReport.append("\(style.rawValue) \(Int((CACurrentMediaTime() - start) * 1000 / 3))")
         }
-        info("Frame time at Balanced quality (CI GPU, incl. read-back)", frameReport.joined(separator: ", "))
+        info("Frame time at 2560×1600 native (ms, CI GPU, incl. read-back)", frameReport.joined(separator: ", "))
 
         check("Pause rules: battery", LiveWallpaper.pauseReason(asleep: false, battery: true, lowPower: false, allCovered: false,
                                                                 pauseOnBattery: true, pauseLowPower: true, pauseCovered: true) != nil)

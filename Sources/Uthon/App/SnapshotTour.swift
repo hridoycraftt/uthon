@@ -366,11 +366,13 @@ enum SnapshotTour {
             LiveWallpaper.shared.start()
         }
         add("capture-live-aurora") { capture("screen-live-aurora") }
-        add("live-wallpaper-orbs") {
-            UserLibrary.shared.liveStyle = "orbs"
-            CGWarpMouseCursorPosition(CGPoint(x: 200, y: 500))
+        add("live-wallpaper-glass") {
+            UserLibrary.shared.liveStyle = "glass"
+            CGWarpMouseCursorPosition(CGPoint(x: 300, y: 450))
         }
-        add("capture-live-orbs") { capture("screen-live-orbs") }
+        add("capture-live-glass") { capture("screen-live-glass") }
+        add("live-wallpaper-crystal") { UserLibrary.shared.liveStyle = "crystal" }
+        add("capture-live-crystal") { capture("screen-live-crystal") }
         add("live-wallpaper-settings") { SettingsWindowController.shared.show(tab: .wallpaper) }
         add("live-wallpaper-settings-wait") { }
         add("capture-live-settings") { capture("screen-settings-wallpaper") }
@@ -469,7 +471,7 @@ enum SnapshotTour {
     /// Every live wallpaper, each drawn with the mouse on the left and on the right, so the
     /// reaction can be seen side by side.
     private static func writeLiveSheet() {
-        let w = 320, h = 200, columns = 4
+        let w = 480, h = 300, columns = 4
         let styles = LiveStyle.allCases
         let rows = (styles.count + columns - 1) / columns
         guard let ctx = CGContext(data: nil, width: w * 2 * columns + (columns - 1) * 12, height: rows * (h + 12),

@@ -224,7 +224,7 @@ final class UserLibrary: ObservableObject {
         liveSpeed = d.object(forKey: "liveSpeed") as? Double ?? 1.0
         liveReact = d.object(forKey: "liveReact") as? Double ?? 0.7
         liveHue = d.object(forKey: "liveHue") as? Double ?? 0
-        liveQuality = d.string(forKey: "liveQuality") ?? "balanced"
+        liveQuality = d.string(forKey: "liveQuality") ?? "high"
         liveFPS = d.object(forKey: "liveFPS") as? Int ?? 30
         liveAllScreens = d.object(forKey: "liveAllScreens") as? Bool ?? true
         livePauseOnBattery = d.object(forKey: "livePauseOnBattery") as? Bool ?? true

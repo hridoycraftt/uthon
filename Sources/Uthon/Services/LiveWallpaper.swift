@@ -200,10 +200,11 @@ final class LiveWallpaper: ObservableObject {
     var testOnBattery: Bool?
 
     static var qualityScale: CGFloat {
+        // Native resolution by default: every line and edge stays sharp.
         switch UserLibrary.shared.liveQuality {
-        case "saver": return 0.35
-        case "high": return 1.0
-        default: return 0.6
+        case "saver": return 0.5
+        case "balanced": return 0.75
+        default: return 1.0
         }
     }
 
@@ -411,8 +412,8 @@ final class LiveThumbnails: ObservableObject {
         started = true
         DispatchQueue.global(qos: .userInitiated).async {
             for style in LiveStyle.allCases {
-                guard let cg = LiveRenderer.snapshot(style, width: 320, height: 200) else { continue }
-                let image = NSImage(cgImage: cg, size: NSSize(width: 160, height: 100))
+                guard let cg = LiveRenderer.snapshot(style, width: 400, height: 250) else { continue }
+                let image = NSImage(cgImage: cg, size: NSSize(width: 200, height: 125))
                 DispatchQueue.main.async { self.images[style] = image }
             }
         }
