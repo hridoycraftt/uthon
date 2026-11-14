@@ -365,9 +365,9 @@ enum LiveStyle: String, CaseIterable, Identifiable {
             float2 lp = mix(float2(aspect * 0.7, 0.9), mp, k);
             float3 L = normalize(float3(lp - p, 0.6));
             float diff = max(dot(n, L), 0.0);
-            float spec = pow(max(dot(reflect(-L, n), float3(0.0, 0.0, 1.0)), 0.0), 80.0);
-            float3 col = mix(float3(0.03, 0.04, 0.09), float3(0.22, 0.28, 0.62), diff * diff);
-            col += spec * float3(0.9, 0.95, 1.0) * 0.7;
+            float spec = pow(max(dot(reflect(-L, n), float3(0.0, 0.0, 1.0)), 0.0), 220.0);
+            float3 col = mix(float3(0.03, 0.04, 0.09), float3(0.20, 0.26, 0.58), diff * diff);
+            col += spec * float3(0.9, 0.95, 1.0) * 0.35;
             float3 edgeTint = hsv(fract(id1.x * 0.13 + id1.y * 0.07 + t * 0.02), 0.45, 1.0);
             col += edgeTint * line * (0.25 + 0.5 * diff);
             return col;
@@ -396,7 +396,7 @@ enum LiveStyle: String, CaseIterable, Identifiable {
             float pulse = 0.5 + 0.5 * sin(t * 1.1 - length(id - float2(aspect * 0.5, 0.5)) * 5.0);
             float3 tint = mix(float3(0.20, 0.80, 1.0), float3(0.70, 0.45, 1.0), uv.x);
             float3 col = mix(float3(0.015, 0.02, 0.04), float3(0.03, 0.035, 0.07), uv.y);
-            col += tint * line * (0.10 + 0.08 * pulse + 0.85 * near);
+            col += tint * line * (0.22 + 0.14 * pulse + 0.75 * near);
             col += tint * near * 0.10 * smoothstep(0.0, 0.3, edge);
             return col;
         }
@@ -545,8 +545,8 @@ enum LiveStyle: String, CaseIterable, Identifiable {
         float ringSDF(float3 p, float t) {
             p.yz = rot(0.9 + 0.25 * sin(t * 0.3)) * p.yz;
             p.xz = rot(t * 0.35) * p.xz;
-            float2 q = float2(length(p.xz) - 1.3, p.y);
-            return length(q) - 0.36;
+            float2 q = float2(length(p.xz) - 1.0, p.y);
+            return length(q) - 0.26;
         }
         float3 scene(float2 uv, float2 m, float t, float aspect, float k, float px) {
             float2 p = (uv - 0.5) * float2(aspect, 1.0);
@@ -558,7 +558,7 @@ enum LiveStyle: String, CaseIterable, Identifiable {
             ro.yz = rot(pitch) * ro.yz; rd.yz = rot(pitch) * rd.yz;
             float3 bg = mix(float3(0.02, 0.02, 0.03), float3(0.09, 0.09, 0.11), uv.y);
             float b = dot(ro, rd);
-            float c = dot(ro, ro) - 1.9 * 1.9;
+            float c = dot(ro, ro) - 1.4 * 1.4;
             if (b * b - c < 0.0) { return bg + float3(0.5, 0.55, 0.7) * exp(-length(p) * 2.5) * 0.08; }
             float dist = max(0.0, -b - sqrt(b * b - c));
             for (int i = 0; i < 72; i++) {
@@ -574,7 +574,8 @@ enum LiveStyle: String, CaseIterable, Identifiable {
                                         ringSDF(pos + e.yyx, t) - ringSDF(pos - e.yyx, t)));
             float3 r = reflect(rd, n);
             // A studio: soft top light, dark floor, a warm and a cool strip light.
-            float3 env = mix(float3(0.06, 0.06, 0.08), float3(0.9, 0.92, 0.98), smoothstep(-0.1, 0.6, r.y));
+            float3 env = mix(float3(0.10, 0.10, 0.12), float3(0.95, 0.96, 1.0), smoothstep(-0.35, 0.45, r.y));
+            env += float3(1.0) * smoothstep(0.92, 1.0, r.z) * 0.5;
             env += float3(1.0, 0.55, 0.35) * smoothstep(0.85, 1.0, r.x) * 0.6;
             env += float3(0.35, 0.6, 1.0) * smoothstep(0.85, 1.0, -r.x) * 0.5;
             float fres = pow(1.0 - max(dot(n, -rd), 0.0), 4.0);
@@ -619,7 +620,7 @@ enum LiveStyle: String, CaseIterable, Identifiable {
             float3 film = 0.5 + 0.5 * cos(6.2831853 * (cosv * 1.6 + float3(0.0, 0.33, 0.67) + t * 0.02));
             float3 r = reflect(rd, n);
             float env = smoothstep(-0.2, 0.8, r.y);
-            float3 col = mix(float3(0.05, 0.05, 0.07), float3(0.85, 0.87, 0.95), env) * 0.55 + film * 0.55;
+            float3 col = mix(float3(0.05, 0.05, 0.07), float3(0.85, 0.87, 0.95), env) * 0.6 + film * 0.42;
             col += pow(max(dot(r, normalize(float3(0.4, 0.8, 0.4))), 0.0), 80.0) * 1.2;
             col *= 0.75 + 0.25 * pow(1.0 - cosv, 2.0);
             return col;
