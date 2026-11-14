@@ -1,0 +1,14 @@
+349.423 screen 1024.0x768.0 scale 1.0 island scale 0.6227027027027027
+351.430 open 1
+352.834 close 1
+354.067 open 2
+355.967 close 2
+356.447 open 3
+361.942 done
+365.318 screen 1024.0x768.0 scale 1.0 island scale 0.6227027027027027
+367.321 open 1
+368.729 close 1
+369.930 open 2
+371.767 close 2
+372.385 open 3
+377.735 done
