@@ -194,15 +194,18 @@ enum LiveStyle: String, CaseIterable, Identifiable {
         """
         case .glass: return """
         float3 glassBackdrop(float2 p, float t) {
-            float g = 0.5 + 0.5 * sin(p.x * 1.3 + t * 0.20);
-            float h = 0.5 + 0.5 * sin(p.y * 1.7 - t * 0.15 + p.x * 0.5);
-            float3 col = mix(mix(float3(0.08, 0.30, 0.95), float3(0.70, 0.22, 0.95), g), float3(0.02, 0.78, 0.80), h * 0.55);
+            float g = 0.5 + 0.5 * sin(p.x * 2.2 + t * 0.20);
+            float h = 0.5 + 0.5 * sin(p.y * 2.6 - t * 0.15 + p.x * 0.9);
+            float j = 0.5 + 0.5 * sin((p.x - p.y) * 3.1 + t * 0.12);
+            float3 col = mix(mix(float3(0.06, 0.28, 0.95), float3(0.72, 0.20, 0.95), g), float3(0.02, 0.80, 0.82), h * 0.6);
+            col = mix(col, float3(0.98, 0.42, 0.55), j * j * 0.35);
             return col * 0.9;
         }
         float glassH(float2 p, float2 mp, float t, float k) {
-            float h = sin(dot(p, float2(1.0, 0.6)) * 6.0 + t * 1.1) * 0.010
-                    + sin(dot(p, float2(-0.7, 1.0)) * 8.0 + t * 1.4) * 0.007
-                    + sin(dot(p, float2(0.3, -1.0)) * 11.0 - t * 1.7) * 0.004;
+            float h = sin(dot(p, float2(1.0, 0.6)) * 6.0 + t * 1.1) * 0.016
+                    + sin(dot(p, float2(-0.7, 1.0)) * 8.5 + t * 1.4) * 0.011
+                    + sin(dot(p, float2(0.3, -1.0)) * 12.0 - t * 1.7) * 0.007
+                    + (noise(p * 9.0 + float2(t * 0.6, -t * 0.4)) - 0.5) * 0.010;
             float d = length(p - mp);
             return h + k * 0.022 * sin(d * 48.0 - t * 5.0) * exp(-d * 4.5);
         }
@@ -214,11 +217,11 @@ enum LiveStyle: String, CaseIterable, Identifiable {
             float nx = (glassH(p + float2(e, 0.0), mp, t, k) - h) / e;
             float ny = (glassH(p + float2(0.0, e), mp, t, k) - h) / e;
             float3 n = normalize(float3(-nx, -ny, 1.0));
-            float3 col = glassBackdrop(p + n.xy * 0.35, t);
+            float3 col = glassBackdrop(p + n.xy * 0.8, t);
             float3 L = normalize(float3(-0.45, 0.65, 1.0));
             float3 H = normalize(L + float3(0.0, 0.0, 1.0));
-            col += pow(max(dot(n, H), 0.0), 600.0) * 1.4;
-            col += pow(max(dot(n, normalize(float3(0.5, -0.3, 1.0))), 0.0), 900.0) * float3(0.9, 0.95, 1.0) * 0.8;
+            col += pow(max(dot(n, H), 0.0), 260.0) * 0.9;
+            col += pow(max(dot(n, normalize(float3(0.5, -0.3, 1.0))), 0.0), 420.0) * float3(0.9, 0.95, 1.0) * 0.6;
             return col;
         }
         """
