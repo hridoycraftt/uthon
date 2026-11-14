@@ -1152,20 +1152,27 @@ enum SelfTest {
         info("Settings first open", "\(Int(first)) ms")
         var worst: (tab: SettingsTab, ms: Double) = (.general, 0)
         var report: [String] = []
+        var worstAgain: (tab: SettingsTab, ms: Double) = (.general, 0)
         for round in 0..<2 {
             for tab in SettingsTab.allCases {
                 let t = ms { SettingsRouter.shared.tab = tab; controller.flush() }
-                if round == 1 { report.append("\(tab.rawValue) \(Int(t))") }
+                if round == 1 {
+                    report.append("\(tab.rawValue) \(Int(t))")
+                    if t > worstAgain.ms { worstAgain = (tab, t) }
+                }
                 if t > worst.ms { worst = (tab, t) }
             }
         }
         info("Settings page switch (ms, second visit)", report.joined(separator: ", "))
+        check("Settings pages switch quickly once built", worstAgain.ms < 1000, "\(worstAgain.tab.rawValue) \(Int(worstAgain.ms)) ms")
         controller.hide()
         let again = ms { controller.show(tab: .general); controller.flush() }
         info("Settings re-open", "\(Int(again)) ms")
         controller.hide()
         // The CI Mac is a slow virtual machine: a real Mac is several times quicker.
-        check("No Settings page takes long to open", worst.ms < 1500,
+        // First visits build the page (slow and noisy on the CI virtual machine); later visits
+        // must be quick. A page that takes many seconds (as the time zone menu once did) fails.
+        check("No Settings page takes long to open", worst.ms < 4000,
               "slowest \(worst.tab.rawValue) \(Int(worst.ms)) ms, first open \(Int(first)) ms")
         check("Settings re-opens quickly", again < 800, "\(Int(again)) ms")
     }
