@@ -72,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MediaKeyTap.shared.update()
         Updater.shared.start()
         WallpaperChanger.shared.start()
+        if !SelfTest.isActive { LiveWallpaper.shared.start() }
         NightDimmer.shared.start()
         // Build the Settings window quietly while the user is not waiting for it.
         if !SelfTest.isActive {
@@ -168,6 +169,7 @@ struct MenuContent: View {
                 Button((settings.themeColor == theme ? "✓ " : "") + L(theme.title)) { settings.themeColor = theme }
             }
         }
+        Button((UserLibrary.shared.liveEnabled ? "✓ " : "") + L("Live wallpaper")) { UserLibrary.shared.liveEnabled.toggle() }
         if UserLibrary.shared.wallpaperSource != .off {
             Button(L("Next wallpaper")) { WallpaperChanger.shared.next() }
         }

@@ -110,6 +110,23 @@ final class UserLibrary: ObservableObject {
     @Published var wallpaperSource: WallpaperSource { didSet { d.set(wallpaperSource.rawValue, forKey: "wallpaperSource") } }
     @Published var wallpaperFolder: String { didSet { d.set(wallpaperFolder, forKey: "wallpaperFolder") } }
     @Published var wallpaperDaily: Bool { didSet { d.set(wallpaperDaily, forKey: "wallpaperDaily") } }
+    // Live wallpaper
+    @Published var liveEnabled: Bool { didSet { d.set(liveEnabled, forKey: "liveEnabled") } }
+    @Published var liveMode: String { didSet { d.set(liveMode, forKey: "liveMode") } }
+    @Published var liveStyle: String { didSet { d.set(liveStyle, forKey: "liveStyle") } }
+    @Published var liveSpeed: Double { didSet { d.set(liveSpeed, forKey: "liveSpeed") } }
+    @Published var liveReact: Double { didSet { d.set(liveReact, forKey: "liveReact") } }
+    @Published var liveHue: Double { didSet { d.set(liveHue, forKey: "liveHue") } }
+    @Published var liveQuality: String { didSet { d.set(liveQuality, forKey: "liveQuality") } }
+    @Published var liveFPS: Int { didSet { d.set(liveFPS, forKey: "liveFPS") } }
+    @Published var liveAllScreens: Bool { didSet { d.set(liveAllScreens, forKey: "liveAllScreens") } }
+    @Published var livePauseOnBattery: Bool { didSet { d.set(livePauseOnBattery, forKey: "livePauseOnBattery") } }
+    @Published var livePauseLowPower: Bool { didSet { d.set(livePauseLowPower, forKey: "livePauseLowPower") } }
+    @Published var livePauseCovered: Bool { didSet { d.set(livePauseCovered, forKey: "livePauseCovered") } }
+    @Published var videoPath: String { didSet { d.set(videoPath, forKey: "videoPath") } }
+    @Published var videoFill: Bool { didSet { d.set(videoFill, forKey: "videoFill") } }
+    @Published var videoSound: Bool { didSet { d.set(videoSound, forKey: "videoSound") } }
+    @Published var videoVolume: Double { didSet { d.set(videoVolume, forKey: "videoVolume") } }
     @Published var profiles: [LayoutProfile] { didSet { Persist.save(profiles, key: "profiles") } }
     /// Apps in the Home "Shortcuts" widget, in order (separate from the side dock's shortcuts).
     @Published var homeShortcuts: [String] { didSet { d.set(homeShortcuts, forKey: "homeShortcuts") } }
@@ -201,6 +218,22 @@ final class UserLibrary: ObservableObject {
         wallpaperSource = WallpaperSource(rawValue: d.string(forKey: "wallpaperSource") ?? "") ?? .off
         wallpaperFolder = d.string(forKey: "wallpaperFolder") ?? ""
         wallpaperDaily = d.object(forKey: "wallpaperDaily") as? Bool ?? true
+        liveEnabled = d.object(forKey: "liveEnabled") as? Bool ?? false
+        liveMode = d.string(forKey: "liveMode") ?? "live"
+        liveStyle = d.string(forKey: "liveStyle") ?? "aurora"
+        liveSpeed = d.object(forKey: "liveSpeed") as? Double ?? 1.0
+        liveReact = d.object(forKey: "liveReact") as? Double ?? 0.7
+        liveHue = d.object(forKey: "liveHue") as? Double ?? 0
+        liveQuality = d.string(forKey: "liveQuality") ?? "balanced"
+        liveFPS = d.object(forKey: "liveFPS") as? Int ?? 30
+        liveAllScreens = d.object(forKey: "liveAllScreens") as? Bool ?? true
+        livePauseOnBattery = d.object(forKey: "livePauseOnBattery") as? Bool ?? true
+        livePauseLowPower = d.object(forKey: "livePauseLowPower") as? Bool ?? true
+        livePauseCovered = d.object(forKey: "livePauseCovered") as? Bool ?? true
+        videoPath = d.string(forKey: "videoPath") ?? ""
+        videoFill = d.object(forKey: "videoFill") as? Bool ?? true
+        videoSound = d.object(forKey: "videoSound") as? Bool ?? false
+        videoVolume = d.object(forKey: "videoVolume") as? Double ?? 0.5
         profiles = Persist.load([LayoutProfile].self, key: "profiles") ?? []
         activeProfile = d.string(forKey: "activeProfile").flatMap(UUID.init(uuidString:))
         homeShortcuts = d.stringArray(forKey: "homeShortcuts") ?? [

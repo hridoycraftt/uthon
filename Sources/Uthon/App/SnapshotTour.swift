@@ -354,6 +354,30 @@ enum SnapshotTour {
             IslandController.shared.expand(tab: .home, sticky: true)
         }
         add("capture-night") { capture("screen-night-dim") }
+        add("live-wallpaper-sheet") { writeLiveSheet() }
+        add("live-wallpaper-on") {
+            IslandController.shared.collapse()
+            let lib = UserLibrary.shared
+            lib.livePauseCovered = false
+            lib.livePauseOnBattery = false
+            lib.liveMode = "live"
+            lib.liveStyle = "aurora"
+            lib.liveEnabled = true
+            LiveWallpaper.shared.start()
+        }
+        add("capture-live-aurora") { capture("screen-live-aurora") }
+        add("live-wallpaper-orbs") {
+            UserLibrary.shared.liveStyle = "orbs"
+            CGWarpMouseCursorPosition(CGPoint(x: 200, y: 500))
+        }
+        add("capture-live-orbs") { capture("screen-live-orbs") }
+        add("live-wallpaper-settings") { SettingsWindowController.shared.show(tab: .wallpaper) }
+        add("live-wallpaper-settings-wait") { }
+        add("capture-live-settings") { capture("screen-settings-wallpaper") }
+        add("live-wallpaper-off") {
+            SettingsWindowController.shared.hide()
+            UserLibrary.shared.liveEnabled = false
+        }
         add("live-onboarding") {
             IslandController.shared.collapse()
             UserLibrary.shared.bottomDockEnabled = false
@@ -440,6 +464,35 @@ enum SnapshotTour {
             return
         }
         try? png.write(to: folder.appendingPathComponent("\(name)-\(suffix).png"))
+    }
+
+    /// Every live wallpaper, each drawn with the mouse on the left and on the right, so the
+    /// reaction can be seen side by side.
+    private static func writeLiveSheet() {
+        let w = 320, h = 200, columns = 4
+        let styles = LiveStyle.allCases
+        let rows = (styles.count + columns - 1) / columns
+        guard let ctx = CGContext(data: nil, width: w * 2 * columns + (columns - 1) * 12, height: rows * (h + 12),
+                                  bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
+        ctx.setFillColor(CGColor(gray: 0.5, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: ctx.width, height: ctx.height))
+        for (i, style) in styles.enumerated() {
+            let col = i % columns, row = i / columns
+            let x = col * (w * 2 + 12), y = ctx.height - (row + 1) * (h + 12)
+            if let a = LiveRenderer.snapshot(style, width: w, height: h, mouse: [0.2, 0.3], react: 1) {
+                ctx.draw(a, in: CGRect(x: x, y: y, width: w, height: h))
+            }
+            if let b = LiveRenderer.snapshot(style, width: w, height: h, mouse: [0.8, 0.75], react: 1) {
+                ctx.draw(b, in: CGRect(x: x + w, y: y, width: w, height: h))
+            }
+        }
+        guard let image = ctx.makeImage() else { return }
+        let rep = NSBitmapImageRep(cgImage: image)
+        try? rep.representation(using: .png, properties: [:])?.write(to: folder.appendingPathComponent("live-wallpapers-\(suffix).png"))
+        for style in styles where LiveRenderer.errors[style] != nil {
+            print("live wallpaper \(style.rawValue) error: \(LiveRenderer.errors[style] ?? "")")
+        }
     }
 
     /// Screenshot without waiting, so an animation keeps running while frames are taken.

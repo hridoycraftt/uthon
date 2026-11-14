@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import QuartzCore
 import EventKit
+import AVFoundation
 
 /// Functional self-test. Launch with `--self-test <report.txt>`: exercises the logic of
 /// every feature on a real Mac, writes a PASS/FAIL report and exits with 1 on any failure.
@@ -606,7 +607,7 @@ enum SelfTest {
             board.setString("secret-password", forType: .string)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 check("Clipboard skips passwords", !clipboard.items.contains { $0.text == "secret-password" })
-                onlineChecks()
+                liveWallpaperChecks { onlineChecks() }
             }
         }
     }
@@ -983,6 +984,161 @@ enum SelfTest {
     }
 
     /// Real requests to the Quran and Hadith sources (the CI Mac is online).
+    /// Brightness statistics of a picture: (mean, spread), 0...255.
+    private static func stats(_ image: CGImage) -> (mean: Double, spread: Double, pixels: [UInt8]) {
+        let w = image.width, h = image.height
+        var data = [UInt8](repeating: 0, count: w * h * 4)
+        let drawn: Bool = data.withUnsafeMutableBytes { raw in
+            guard let ctx = CGContext(data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+            return true
+        }
+        guard drawn else { return (0, 0, []) }
+        var lum = [Double]()
+        lum.reserveCapacity(w * h)
+        for i in stride(from: 0, to: data.count, by: 4) {
+            lum.append(0.3 * Double(data[i]) + 0.59 * Double(data[i + 1]) + 0.11 * Double(data[i + 2]))
+        }
+        let mean = lum.reduce(0, +) / Double(max(lum.count, 1))
+        let variance = lum.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(max(lum.count, 1))
+        return (mean, variance.squareRoot(), data)
+    }
+
+    /// A one-second test video, made on the spot.
+    private static func makeTestVideo() -> URL? {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("nook-test-video.mov")
+        try? FileManager.default.removeItem(at: url)
+        guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mov) else { return nil }
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264,
+                                                                           AVVideoWidthKey: 320, AVVideoHeightKey: 180])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey as String: 320, kCVPixelBufferHeightKey as String: 180])
+        writer.add(input)
+        guard writer.startWriting() else { return nil }
+        writer.startSession(atSourceTime: .zero)
+        for frame in 0..<30 {
+            while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.005) }
+            guard let pool = adaptor.pixelBufferPool else { break }
+            var buffer: CVPixelBuffer?
+            CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer)
+            guard let pb = buffer else { continue }
+            CVPixelBufferLockBaseAddress(pb, [])
+            if let base = CVPixelBufferGetBaseAddress(pb) {
+                memset(base, Int32(frame * 8), CVPixelBufferGetDataSize(pb))
+            }
+            CVPixelBufferUnlockBaseAddress(pb, [])
+            adaptor.append(pb, withPresentationTime: CMTime(value: CMTimeValue(frame), timescale: 30))
+        }
+        input.markAsFinished()
+        let done = DispatchSemaphore(value: 0)
+        writer.finishWriting { done.signal() }
+        done.wait()
+        return writer.status == .completed ? url : nil
+    }
+
+    private static func liveWallpaperChecks(then next: @escaping () -> Void) {
+        step("Live wallpaper")
+        let library = UserLibrary.shared
+        check("At least 15 built-in live wallpapers", LiveStyle.allCases.count >= 15, "\(LiveStyle.allCases.count)")
+        var broken: [String] = [], flat: [String] = [], still: [String] = []
+        var slowest = (name: "", ms: 0.0)
+        for style in LiveStyle.allCases {
+            guard LiveRenderer.pipeline(style) != nil else {
+                broken.append("\(style.rawValue): \(LiveRenderer.errors[style] ?? "?")")
+                continue
+            }
+            let start = CACurrentMediaTime()
+            guard let a = LiveRenderer.snapshot(style, width: 192, height: 120, mouse: [0.2, 0.3], react: 1) else {
+                broken.append("\(style.rawValue): no picture"); continue
+            }
+            let ms = (CACurrentMediaTime() - start) * 1000
+            if ms > slowest.ms { slowest = (style.rawValue, ms) }
+            let sa = stats(a)
+            if sa.mean < 4 || sa.spread < 1.5 { flat.append("\(style.rawValue) mean \(Int(sa.mean)) spread \(String(format: "%.1f", sa.spread))") }
+            if let b = LiveRenderer.snapshot(style, width: 192, height: 120, mouse: [0.8, 0.75], react: 1) {
+                let sb = stats(b)
+                var diff = 0.0
+                for i in 0..<min(sa.pixels.count, sb.pixels.count) { diff += abs(Double(sa.pixels[i]) - Double(sb.pixels[i])) }
+                diff /= Double(max(sa.pixels.count, 1))
+                if diff < 0.4 { still.append("\(style.rawValue) \(String(format: "%.2f", diff))") }
+            }
+        }
+        check("Every live wallpaper compiles and draws", broken.isEmpty, broken.joined(separator: "; "))
+        check("No live wallpaper is blank or flat", flat.isEmpty, flat.joined(separator: ", "))
+        check("Every live wallpaper reacts to the mouse", still.isEmpty, still.joined(separator: ", "))
+        info("Slowest first frame (incl. compile)", "\(slowest.name) \(Int(slowest.ms)) ms")
+        // Steady-state cost of one full-HD frame for the heaviest designs.
+        var frameReport: [String] = []
+        for style in [LiveStyle.orbs, .torus, .nebula, .aurora] {
+            let start = CACurrentMediaTime()
+            for i in 0..<5 { _ = LiveRenderer.snapshot(style, width: 1152, height: 720, time: Float(i)) }
+            frameReport.append("\(style.rawValue) \(Int((CACurrentMediaTime() - start) * 1000 / 5)) ms")
+        }
+        info("Frame time at Balanced quality (CI GPU, incl. read-back)", frameReport.joined(separator: ", "))
+
+        check("Pause rules: battery", LiveWallpaper.pauseReason(asleep: false, battery: true, lowPower: false, allCovered: false,
+                                                                pauseOnBattery: true, pauseLowPower: true, pauseCovered: true) != nil)
+        check("Pause rules: battery allowed", LiveWallpaper.pauseReason(asleep: false, battery: true, lowPower: false, allCovered: false,
+                                                                        pauseOnBattery: false, pauseLowPower: true, pauseCovered: true) == nil)
+        check("Pause rules: covered", LiveWallpaper.pauseReason(asleep: false, battery: false, lowPower: false, allCovered: true,
+                                                                pauseOnBattery: true, pauseLowPower: true, pauseCovered: true) != nil)
+        check("Pause rules: plays when seen", LiveWallpaper.pauseReason(asleep: false, battery: false, lowPower: false, allCovered: false,
+                                                                        pauseOnBattery: true, pauseLowPower: true, pauseCovered: true) == nil)
+
+        let live = LiveWallpaper.shared
+        live.testOnBattery = false
+        live.start()
+        library.livePauseCovered = false
+        library.liveMode = "live"
+        library.liveStyle = "halo"
+        library.liveEnabled = true
+        live.apply()
+        let desktop = Int(CGWindowLevelForKey(.desktopWindow))
+        check("Live wallpaper covers every screen", live.windows.count == NSScreen.screens.count, "\(live.windows.count)")
+        check("It sits at desktop level, behind the icons", live.windows.allSatisfy { $0.level.rawValue == desktop })
+        check("Clicks go through to the desktop", live.windows.allSatisfy { $0.ignoresMouseEvents })
+        check("Draws the chosen style", (live.windows.first?.contentView as? LiveMetalView)?.style == .halo)
+        library.liveFPS = 60
+        live.apply()
+        check("Frame rate setting applies", (live.windows.first?.contentView as? LiveMetalView)?.preferredFramesPerSecond == 60)
+        library.liveFPS = 30
+        live.testOnBattery = true
+        library.livePauseOnBattery = true
+        live.updatePause()
+        check("Pauses on battery", (live.windows.first?.contentView as? LiveMetalView)?.isPaused == true && !live.pauseReason.isEmpty)
+        live.testOnBattery = false
+        live.updatePause()
+        check("Plays again on power", (live.windows.first?.contentView as? LiveMetalView)?.isPaused == false)
+
+        guard let video = makeTestVideo() else {
+            check("Test video could be made", false)
+            library.liveEnabled = false
+            live.apply()
+            next()
+            return
+        }
+        library.videoPath = video.path
+        library.liveMode = "video"
+        live.apply()
+        check("Video mode uses a video layer", live.windows.first?.contentView is LiveVideoView)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            let player = live.videoPlayer
+            check("Video plays", player?.currentItem?.status == .readyToPlay && (player?.rate ?? 0) > 0,
+                  "status \(player?.currentItem?.status.rawValue ?? -1) rate \(player?.rate ?? -1)")
+            check("Video is silent by default", player?.isMuted == true)
+            library.liveEnabled = false
+            live.apply()
+            check("Turning it off removes it", live.windows.isEmpty && live.videoPlayer == nil)
+            library.liveMode = "live"
+            library.videoPath = ""
+            library.livePauseCovered = true
+            live.testOnBattery = nil
+            next()
+        }
+    }
+
     /// How long the Settings window takes to open and to switch pages.
     private static func settingsSpeed() {
         step("Settings speed")

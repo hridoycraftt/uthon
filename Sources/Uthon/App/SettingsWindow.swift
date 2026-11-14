@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 import CoreBluetooth
 
 enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
-    case general, look, home, island, ai, widgets, verse, ramadan, network, notifications, night, alerts, profiles, dock, bottomDock, care
+    case general, look, wallpaper, home, island, ai, widgets, verse, ramadan, network, notifications, night, alerts, profiles, dock, bottomDock, care
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .general: return "General"
         case .look: return "Look"
+        case .wallpaper: return "Wallpaper"
         case .home: return "Home"
         case .island: return "Island"
         case .widgets: return "Widgets"
@@ -35,6 +36,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .general: return "gearshape.fill"
         case .look: return "paintpalette.fill"
+        case .wallpaper: return "photo.on.rectangle.angled"
         case .home: return "square.grid.2x2.fill"
         case .island: return "capsule.tophalf.filled"
         case .widgets: return "puzzlepiece.extension.fill"
@@ -57,6 +59,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .general: return Color(white: 0.55)
         case .look: return .purple
+        case .wallpaper: return .cyan
         case .home: return .blue
         case .island: return Color(white: 0.2)
         case .widgets: return .orange
@@ -75,7 +78,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
     }
 
     /// The sidebar groups, as in System Settings.
-    static let groups: [[SettingsTab]] = [[.general, .look], [.home, .island, .ai, .widgets], [.verse, .ramadan, .network, .notifications, .night],
+    static let groups: [[SettingsTab]] = [[.general, .look, .wallpaper], [.home, .island, .ai, .widgets], [.verse, .ramadan, .network, .notifications, .night],
                                           [.alerts, .profiles], [.dock, .bottomDock, .care]]
 }
 
@@ -198,6 +201,7 @@ struct SettingsView: View {
         switch tab {
         case .general: GeneralSettings()
         case .look: LookSettings()
+        case .wallpaper: WallpaperSettings()
         case .home: HomeSettings()
         case .island: IslandSettings()
         case .widgets: WidgetDataSettings()
@@ -309,26 +313,7 @@ private struct GeneralSettings: View {
                 }
             }
             Section(L("Wallpaper")) {
-                Picker(L("Change wallpaper"), selection: $library.wallpaperSource) {
-                    ForEach(WallpaperSource.allCases) { Text(L($0.title)).tag($0) }
-                }
-                if library.wallpaperSource == .folder {
-                    HStack {
-                        Text(library.wallpaperFolder.isEmpty ? L("No folder chosen") : library.wallpaperFolder)
-                            .lineLimit(1).truncationMode(.middle).foregroundStyle(.secondary)
-                        Spacer()
-                        Button(L("Choose…")) {
-                            let panel = NSOpenPanel()
-                            panel.canChooseDirectories = true
-                            panel.canChooseFiles = false
-                            if panel.runModal() == .OK, let url = panel.url { library.wallpaperFolder = url.path }
-                        }
-                    }
-                }
-                if library.wallpaperSource != .off {
-                    Toggle(L("A new wallpaper every day"), isOn: $library.wallpaperDaily)
-                    Button(L("Change wallpaper now")) { WallpaperChanger.shared.next() }
-                }
+                Button(L("Live wallpapers and desktop picture…")) { SettingsRouter.shared.tab = .wallpaper }
             }
             Section(L("Privacy")) {
                 Text(L("Everything stays on this Mac: no account, no tracking, no cloud. Clipboard history skips passwords, and only pinned text is saved."))
