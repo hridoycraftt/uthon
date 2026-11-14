@@ -24,6 +24,10 @@ final class NotificationMirror: ObservableObject {
     @Published private(set) var seenApps: [String] = []
     @Published private(set) var hasAccess = false
     @Published private(set) var lastItem: Item?
+    /// Notifications of the last 24 hours (newest first), for the summary. Kept in memory only.
+    @Published private(set) var recent: [Item] = []
+
+    func clearRecent() { recent = [] }
 
     private var timer: Timer?
     private var lastID: Int64 = -1
@@ -167,6 +171,13 @@ final class NotificationMirror: ObservableObject {
     func deliver(_ item: Item) {
         let library = UserLibrary.shared
         if !seenApps.contains(item.bundleID) { seenApps.append(item.bundleID) }
+        guard library.notificationsEnabled, !library.mutedNotificationApps.contains(item.bundleID),
+              item.bundleID != Bundle.main.bundleIdentifier else { return }
+        // The summary counts every allowed notification, also from the app in front.
+        var kept = recent.filter { ($0.date ?? .distantPast) > Date().addingTimeInterval(-86400) }
+        kept.insert(item.date == nil ? Item(id: item.id, bundleID: item.bundleID, appName: item.appName, title: item.title,
+                                            subtitle: item.subtitle, body: item.body, date: Date()) : item, at: 0)
+        recent = Array(kept.prefix(200))
         guard Self.shouldShow(item, library: library) else { return }
         lastItem = item
         IslandController.shared.showPeek(.notification(Self.peekContent(item, hideContent: library.notificationHideContent)),

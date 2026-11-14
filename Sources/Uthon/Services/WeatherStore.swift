@@ -23,6 +23,21 @@ final class WeatherStore: ObservableObject {
         let timeZone: TimeZone
     }
 
+    /// The next hours: time, temperature, chance of rain (%), weather code.
+    struct Hour: Equatable, Identifiable {
+        let time: Date
+        let temperature: Double
+        let rainChance: Int
+        let code: Int
+        var id: Date { time }
+        var symbol: String { WeatherStore.symbol(code: code, isDay: true) }
+    }
+
+    @Published private(set) var hourly: [Hour] = []
+    /// 15-minute rain amounts (mm) for the next hours.
+    @Published private(set) var rainSlots: [(time: Date, mm: Double)] = []
+    private var lastRainAlert: Date?
+
     @Published private(set) var current: Current?
     /// The city's location, also used for prayer times.
     @Published private(set) var place: Place?
@@ -31,7 +46,8 @@ final class WeatherStore: ObservableObject {
 
     func start() {
         refresh()
-        let t = Timer(timeInterval: 1800, repeats: true) { [weak self] _ in self?.refresh() }
+        // Every 15 minutes, so a rain alert comes in time.
+        let t = Timer(timeInterval: 900, repeats: true) { [weak self] _ in self?.refresh() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
         AppSettings.shared.$weatherCity
@@ -76,6 +92,10 @@ final class WeatherStore: ObservableObject {
             URLQueryItem(name: "longitude", value: String(lon)),
             URLQueryItem(name: "current", value: "temperature_2m,weather_code,is_day"),
             URLQueryItem(name: "daily", value: "temperature_2m_max,temperature_2m_min"),
+            URLQueryItem(name: "hourly", value: "temperature_2m,precipitation_probability,weather_code"),
+            URLQueryItem(name: "minutely_15", value: "precipitation"),
+            URLQueryItem(name: "forecast_hours", value: "12"),
+            URLQueryItem(name: "forecast_minutely_15", value: "16"),
             URLQueryItem(name: "forecast_days", value: "1"),
             URLQueryItem(name: "timezone", value: "auto"),
             URLQueryItem(name: "temperature_unit", value: AppSettings.shared.weatherFahrenheit ? "fahrenheit" : "celsius"),
@@ -84,6 +104,10 @@ final class WeatherStore: ObservableObject {
         Self.fetchJSON(url) { [weak self] json in
             guard let now = json?["current"] as? [String: Any],
                   let temp = now["temperature_2m"] as? Double else { return }
+            let zone = self?.place?.timeZone ?? .current
+            self?.hourly = Self.parseHourly(json?["hourly"] as? [String: Any], zone: zone)
+            self?.rainSlots = Self.parseRain(json?["minutely_15"] as? [String: Any], zone: zone)
+            self?.checkRain()
             let daily = json?["daily"] as? [String: Any]
             let high = (daily?["temperature_2m_max"] as? [Double])?.first
             let low = (daily?["temperature_2m_min"] as? [Double])?.first
@@ -96,6 +120,59 @@ final class WeatherStore: ObservableObject {
                 low: low
             )
         }
+    }
+
+    /// Open-Meteo gives local times like "2026-11-14T15:00" (the city's time zone).
+    static func parseTime(_ text: String, zone: TimeZone) -> Date? {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = zone
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        return f.date(from: text)
+    }
+
+    static func parseHourly(_ hourly: [String: Any]?, zone: TimeZone, now: Date = Date()) -> [Hour] {
+        guard let times = hourly?["time"] as? [String] else { return [] }
+        let temps = hourly?["temperature_2m"] as? [Double] ?? []
+        let chances = hourly?["precipitation_probability"] as? [Any] ?? []
+        let codes = hourly?["weather_code"] as? [Any] ?? []
+        var result: [Hour] = []
+        for (i, text) in times.enumerated() {
+            guard let time = parseTime(text, zone: zone), time > now.addingTimeInterval(-3600), i < temps.count else { continue }
+            let chance = (chances.indices.contains(i) ? chances[i] as? Int : nil) ?? 0
+            let code = (codes.indices.contains(i) ? codes[i] as? Int : nil) ?? 0
+            result.append(Hour(time: time, temperature: temps[i], rainChance: chance, code: code))
+        }
+        return Array(result.prefix(8))
+    }
+
+    static func parseRain(_ minutely: [String: Any]?, zone: TimeZone) -> [(time: Date, mm: Double)] {
+        guard let times = minutely?["time"] as? [String], let amounts = minutely?["precipitation"] as? [Any] else { return [] }
+        return times.enumerated().compactMap { i, text in
+            guard let time = parseTime(text, zone: zone), amounts.indices.contains(i) else { return nil }
+            let mm = (amounts[i] as? Double) ?? Double(amounts[i] as? Int ?? 0)
+            return (time, mm)
+        }
+    }
+
+    /// Minutes until rain starts within the next `lead` minutes, if it is not raining now.
+    static func minutesUntilRain(_ slots: [(time: Date, mm: Double)], now: Date = Date(), lead: Int) -> Int? {
+        let threshold = 0.1
+        let current = slots.last { $0.time <= now }
+        if let current, current.mm >= threshold { return nil }       // already raining
+        guard let first = slots.first(where: { $0.time > now && $0.mm >= threshold }) else { return nil }
+        let minutes = Int(first.time.timeIntervalSince(now) / 60)
+        return minutes <= lead ? max(1, minutes) : nil
+    }
+
+    /// Pops up "Rain in about 30 minutes" once per shower (at most every 3 hours).
+    func checkRain(now: Date = Date()) {
+        let library = UserLibrary.shared
+        guard library.rainAlerts, AppSettings.shared.islandEnabled,
+              let minutes = Self.minutesUntilRain(rainSlots, now: now, lead: library.rainLeadMinutes) else { return }
+        if let last = lastRainAlert, now.timeIntervalSince(last) < 3 * 3600 { return }
+        lastRainAlert = now
+        IslandController.shared.showPeek(.rain(minutes: minutes))
     }
 
     /// Calls back on the main queue.

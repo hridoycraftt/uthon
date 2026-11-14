@@ -112,7 +112,7 @@ struct HomeItem: CustomizableItem {
 /// Widgets that can be placed on the island's Home tab.
 enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
     case music, calendar, weather, shortcuts, system, batteries, todo, controls, notes
-    case bookmarks, worldClock, prayer, countdown, verse, network
+    case bookmarks, worldClock, prayer, countdown, verse, network, digest, ramadan
 
     var id: String { rawValue }
 
@@ -139,6 +139,8 @@ enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
         case .countdown: return "Special Days"
         case .verse: return "Quran & Hadith"
         case .network: return "Internet"
+        case .digest: return "Notification summary"
+        case .ramadan: return "Ramadan & Hijri"
         }
     }
 
@@ -159,6 +161,8 @@ enum HomeWidget: String, CaseIterable, Identifiable, CustomizableItem {
         case .countdown: return "gift.fill"
         case .verse: return "book.closed.fill"
         case .network: return "wifi"
+        case .digest: return "text.bubble.fill"
+        case .ramadan: return "moon.stars.fill"
         }
     }
 
@@ -398,7 +402,9 @@ final class AppSettings: ObservableObject {
 
     /// Home is always available so the island is never empty.
     var visibleIslandTabs: [IslandTab] {
-        orderedIslandTabs.filter { $0 == .home || !hiddenIslandTabs.contains($0.rawValue) }
+        orderedIslandTabs.filter {
+            $0 == .home || (!hiddenIslandTabs.contains($0.rawValue) && ($0 != .assistant || UserLibrary.shared.aiEnabled))
+        }
     }
 
     func setTabVisible(_ tab: IslandTab, _ visible: Bool) {

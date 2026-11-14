@@ -326,6 +326,7 @@ struct ExpandedIsland: View {
         case .clipboard: IslandClipboard()
         case .notes: IslandNotes()
         case .mirror: IslandMirror()
+        case .assistant: IslandAssistant()
         }
     }
 }
@@ -457,6 +458,13 @@ private struct IslandHeader: View {
                 }
                 .buttonStyle(.plain)
                 .help(L(model.editing ? "Finish editing" : "Add, remove or reorder"))
+            }
+            if showWeather, UserLibrary.shared.hijriInHeader {
+                Text(Hijri.text())
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             }
             if showWeather, let w = weather.current {
                 HStack(spacing: 3) {

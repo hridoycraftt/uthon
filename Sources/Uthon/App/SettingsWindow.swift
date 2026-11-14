@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 import CoreBluetooth
 
 enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
-    case general, look, home, island, widgets, verse, network, notifications, night, alerts, profiles, dock, bottomDock, care
+    case general, look, home, island, ai, widgets, verse, ramadan, network, notifications, night, alerts, profiles, dock, bottomDock, care
 
     var id: String { rawValue }
 
@@ -24,6 +24,8 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .network: return "Internet & Wi-Fi"
         case .notifications: return "Notifications"
         case .night: return "Night Dimming"
+        case .ai: return "AI Assistant"
+        case .ramadan: return "Ramadan & Hijri"
         case .care: return "Care"
         }
     }
@@ -43,6 +45,8 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .network: return "wifi"
         case .notifications: return "app.badge.fill"
         case .night: return "moon.fill"
+        case .ai: return "sparkles"
+        case .ramadan: return "moon.stars.fill"
         case .care: return "heart.fill"
         }
     }
@@ -63,12 +67,14 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .network: return .blue
         case .notifications: return .orange
         case .night: return .indigo
+        case .ai: return .purple
+        case .ramadan: return .mint
         case .care: return .pink
         }
     }
 
     /// The sidebar groups, as in System Settings.
-    static let groups: [[SettingsTab]] = [[.general, .look], [.home, .island, .widgets], [.verse, .network, .notifications, .night],
+    static let groups: [[SettingsTab]] = [[.general, .look], [.home, .island, .ai, .widgets], [.verse, .ramadan, .network, .notifications, .night],
                                           [.alerts, .profiles], [.dock, .bottomDock, .care]]
 }
 
@@ -183,6 +189,8 @@ struct SettingsView: View {
         case .network: NetworkSettings()
         case .notifications: NotificationSettings()
         case .night: NightSettings()
+        case .ai: AISettings()
+        case .ramadan: RamadanSettings()
         }
     }
 }
@@ -240,6 +248,11 @@ private struct GeneralSettings: View {
                 .pickerStyle(.segmented)
                 Text(L("Uses the free Open-Meteo service. Only the city name is sent."))
                     .font(.footnote).foregroundStyle(.secondary)
+                Toggle(L("Rain alert: tell me before it starts raining"), isOn: $library.rainAlerts)
+                Picker(L("Warn me up to"), selection: $library.rainLeadMinutes) {
+                    ForEach([15, 30, 45, 60, 90, 120], id: \.self) { Text("\($0) " + L("minutes before")).tag($0) }
+                }
+                .disabled(!library.rainAlerts)
             }
             Section(L("Updates")) {
                 Toggle(L("Check for updates automatically"), isOn: $library.autoCheckUpdates)
@@ -764,6 +777,11 @@ private struct WidgetDataSettings: View {
             }
             Section(L("Clipboard")) {
                 Toggle(L("Also keep copied images"), isOn: $library.clipboardImages)
+                Toggle(L("Smart clipboard: offer the next step for what I copy"), isOn: $library.smartClipEnabled)
+                Toggle(L("Show it as a pop-up on the island"), isOn: $library.smartClipPeek)
+                    .disabled(!library.smartClipEnabled)
+                Text(L("Links open, addresses show on the map, dates go to Calendar, phone numbers call, emails open a new message, and English or Bangla text can be translated. Detected on this Mac."))
+                    .font(.footnote).foregroundStyle(.secondary)
                 Stepper(L("Keep the last") + " \(library.clipboardLimit) " + L("items"), value: $library.clipboardLimit, in: 5...100, step: 5)
                 Text(L("Right-click an item in the Clipboard tab to pin it. Pinned text is kept even after restarting."))
                     .font(.footnote).foregroundStyle(.secondary)

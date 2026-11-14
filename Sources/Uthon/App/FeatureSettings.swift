@@ -224,6 +224,24 @@ struct NotificationSettings: View {
                 Text(L("Permission"))
             }
             .disabled(!library.notificationsEnabled)
+            Section {
+                Toggle(L("Show a summary of new notifications"), isOn: $library.digestEnabled)
+                Picker(L("Every"), selection: $library.digestIntervalHours) {
+                    ForEach([1, 2, 3, 4, 6, 8, 12], id: \.self) { Text("\($0) " + L($0 == 1 ? "hour" : "hours")).tag($0) }
+                }
+                .disabled(!library.digestEnabled)
+                Toggle(L("Summarize in words with Apple Intelligence (on this Mac)"), isOn: $library.digestUseAI)
+                    .disabled(!library.digestEnabled || !AIService.shared.isAvailable)
+                if !AIService.shared.isAvailable {
+                    Text(L(AIService.shared.availability.message) + " — " + L("without it the summary lists who wrote and how often."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                HomeWidgetToggle(widget: .digest)
+                Button(L("Show the summary now")) { NotificationDigest.shared.showNow() }
+            } header: {
+                Text(L("Summary"))
+            }
+            .disabled(!library.notificationsEnabled)
             Section(L("How they look")) {
                 Toggle(L("Hide the message (show only the app)"), isOn: $library.notificationHideContent)
                 Toggle(L("Skip notifications from the app I'm using"), isOn: $library.notificationQuietWhenFocused)
@@ -454,5 +472,115 @@ struct BottomDockSettings: View {
             let now = AXIsProcessTrusted()
             if now != trusted { trusted = now }
         }
+    }
+}
+
+// MARK: AI assistant
+
+struct AISettings: View {
+    @ObservedObject private var library = UserLibrary.shared
+    @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var ai = AIService.shared
+    @State private var testAnswer = ""
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(L("Show the AI tab on the island"), isOn: $library.aiEnabled)
+                HStack {
+                    Image(systemName: ai.isAvailable ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(ai.isAvailable ? .green : .orange)
+                    Text(L(ai.availability.message))
+                    Spacer()
+                    if ai.availability == .notEnabled {
+                        Button(L("Open settings…")) { ai.openAppleIntelligenceSettings() }
+                    }
+                }
+            } footer: {
+                Text(L("Uses Apple Intelligence on this Mac: private, free, works offline. Ask questions, summarize, fix writing, translate between Bangla and English, write replies."))
+            }
+            Section(L("Answers")) {
+                Picker(L("Answer in"), selection: $library.aiAnswerLanguage) {
+                    Text(L("Same as Nook")).tag("auto")
+                    Text("বাংলা").tag("bn")
+                    Text("English").tag("en")
+                }
+                .pickerStyle(.segmented)
+                HStack {
+                    Button(L("Try it")) {
+                        testAnswer = "…"
+                        Task {
+                            let answer = (try? await ai.ask("Say hello in one short friendly sentence.",
+                                                            instructions: "Reply in \(AIService.answerLanguage)."))
+                                ?? L("Could not answer that. Try rephrasing.")
+                            await MainActor.run { testAnswer = answer }
+                        }
+                    }
+                    .disabled(!ai.isAvailable || ai.busy)
+                    Text(testAnswer).foregroundStyle(.secondary).lineLimit(2)
+                }
+            }
+            .disabled(!library.aiEnabled)
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: Ramadan & Hijri
+
+struct RamadanSettings: View {
+    @ObservedObject private var library = UserLibrary.shared
+
+    var body: some View {
+        Form {
+            Section {
+                Picker(L("Ramadan mode"), selection: $library.ramadanMode) {
+                    Text(L("Automatic (during Ramadan)")).tag("auto")
+                    Text(L("Always on")).tag("on")
+                    Text(L("Off")).tag("off")
+                }
+                HomeWidgetToggle(widget: .ramadan)
+                LabeledContent(L("Today"), value: Hijri.text())
+                Stepper(L("Adjust the Hijri date") + ": " + (library.hijriAdjust == 0 ? L("none") : "\(library.hijriAdjust > 0 ? "+" : "")\(library.hijriAdjust)"),
+                        value: $library.hijriAdjust, in: -2...2)
+                Toggle(L("Show the Hijri date at the top of the island"), isOn: $library.hijriInHeader)
+            } footer: {
+                Text(L("The Hijri date follows the Umm al-Qura calendar. Moon sighting can differ by a day or two in your country: adjust it here."))
+            }
+            Section(L("Reminders")) {
+                Picker(L("Before sehri ends"), selection: $library.sehriReminderMinutes) {
+                    Text(L("Off")).tag(0)
+                    ForEach([10, 15, 30, 45, 60], id: \.self) { Text("\($0) " + L("minutes before")).tag($0) }
+                }
+                Toggle(L("At iftar time"), isOn: $library.iftarReminder)
+                if let next = Ramadan.next() {
+                    LabeledContent(L("Next sehri ends"), value: next.sehriEnds.formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Localization.locale)))
+                    LabeledContent(L("Next iftar"), value: next.iftar.formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Localization.locale)))
+                } else {
+                    Text(L("Set your city to follow sunset. Until then: 7 PM to 6 AM."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .disabled(library.ramadanMode == "off")
+            Section {
+                Picker(L("Sound"), selection: $library.prayerSound) {
+                    Text(L("Off")).tag("off")
+                    ForEach(Ramadan.systemSounds, id: \.self) { Text($0).tag($0) }
+                    if library.prayerSound.hasPrefix("/") {
+                        Text((library.prayerSound as NSString).lastPathComponent).tag(library.prayerSound)
+                    }
+                }
+                HStack {
+                    Button(L("Choose my own sound (e.g. adhan)…")) { Ramadan.pickSoundFile() }
+                    Button(L("Play")) { Ramadan.playPrayerSound() }.disabled(library.prayerSound == "off")
+                    Button(L("Stop")) { Ramadan.stopSound() }
+                }
+            } header: {
+                Text(L("Sound at prayer time and iftar"))
+            } footer: {
+                Text(L("Your own audio file stays on your Mac; Nook only plays it."))
+            }
+        }
+        .formStyle(.grouped)
     }
 }

@@ -46,6 +46,7 @@ final class ClipboardStore: ObservableObject {
             let wasPinned = items.contains { $0.text == text && $0.pinned }
             items.removeAll { $0.text == text && !$0.isImage }
             insert(Item(text: text, image: nil, date: Date(), pinned: wasPinned))
+            SmartClip.didCopy(text)
         } else if UserLibrary.shared.clipboardImages,
                   board.canReadObject(forClasses: [NSImage.self], options: nil),
                   let image = NSImage(pasteboard: board) {

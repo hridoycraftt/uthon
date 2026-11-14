@@ -87,6 +87,41 @@ struct PeekView: View {
                 IslandController.shared.dismissPeek()
                 VerseReader.show()
             }
+        case .digest(let count, let text):
+            PeekRow(symbol: "text.bubble.fill", tint: Theme.accent,
+                    title: "\(count) " + L("notifications"), subtitle: text) {
+                Button(L("Open")) {
+                    IslandController.shared.dismissPeek()
+                    IslandController.shared.expand(tab: .home, sticky: true)
+                }
+                .buttonStyle(AccentButtonStyle())
+            }
+        case .smartClip(let clip):
+            PeekRow(symbol: clip.symbol, tint: Theme.accent, title: L(clip.headline),
+                    subtitle: String(clip.source.prefix(80))) {
+                Button(L(clip.actionTitle)) {
+                    IslandController.shared.dismissPeek()
+                    clip.perform()
+                }
+                .buttonStyle(AccentButtonStyle())
+            }
+        case .ramadan(let isIftar, let time):
+            PeekRow(symbol: "moon.stars.fill", tint: Theme.accent,
+                    title: L(isIftar ? "Time for iftar" : "Sehri ends soon"),
+                    subtitle: (isIftar ? L("Iftar") : L("Sehri ends at")) + " " + time.formatted(.dateTime.hour().minute().locale(Localization.locale))) {
+                Button(L("OK")) {
+                    IslandController.shared.dismissPeek()
+                    Ramadan.stopSound()
+                }
+                .buttonStyle(AccentButtonStyle())
+            }
+        case .rain(let minutes):
+            PeekRow(symbol: "cloud.rain.fill", tint: Color.blue,
+                    title: L("Rain in about") + " " + (Localization.isBangla ? Hijri.digits(minutes) : "\(minutes)") + " " + L("minutes"),
+                    subtitle: WeatherStore.shared.place.map { $0.city } ?? "") {
+                Button(L("OK")) { IslandController.shared.dismissPeek() }
+                    .buttonStyle(AccentButtonStyle())
+            }
         case .prayer(let name, let time):
             PeekRow(symbol: "moon.stars.fill", tint: Theme.accent, title: L("Time for") + " " + L(name),
                     subtitle: time.formatted(date: .omitted, time: .shortened)) {
@@ -294,7 +329,7 @@ private struct PeekRow<Accessory: View>: View {
                 .background(Circle().fill(tint.opacity(0.16)))
             VStack(alignment: .leading, spacing: 2) {
                 Text(L(title)).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                Text(L(subtitle)).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(1)
+                Text(L(subtitle)).font(.system(size: 11)).foregroundStyle(Color.secondary).lineLimit(2).minimumScaleFactor(0.9)
             }
             Spacer(minLength: 0)
             accessory()

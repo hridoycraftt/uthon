@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { on in DispatchQueue.main.async { on ? NotificationMirror.shared.start() : NotificationMirror.shared.stop() } }
             .store(in: &cancellables)
         DailyVerseStore.shared.start()
+        NotificationDigest.shared.start()
         library.$verseIntervalHours
             .dropFirst()
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)

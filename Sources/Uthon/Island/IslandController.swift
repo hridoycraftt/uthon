@@ -301,7 +301,9 @@ final class IslandController {
     private func slowTick() {
         MediaKeyTap.shared.update()
         checkPrayer()
+        checkRamadan()
         checkSpecialDays()
+        WeatherStore.shared.checkRain()
         guard AppSettings.shared.peekMeetings, AppSettings.shared.islandEnabled else { return }
         let calendar = CalendarStore.shared
         calendar.refresh()
@@ -332,7 +334,31 @@ final class IslandController {
             if since >= 0, since < 120, !notifiedPrayers.contains(key) {
                 notifiedPrayers.insert(key)
                 showPeek(.prayer(name: prayer.name, time: prayer.time), duration: 20)
-                NSSound(named: "Glass")?.play()
+                Ramadan.playPrayerSound()
+            }
+        }
+    }
+
+    /// Ramadan: a reminder before sehri ends, and at iftar (with the chosen sound).
+    private func checkRamadan(now: Date = Date()) {
+        let library = UserLibrary.shared
+        guard Hijri.ramadanActive, AppSettings.shared.islandEnabled, let next = Ramadan.next(after: now.addingTimeInterval(-150)) else { return }
+        if library.sehriReminderMinutes > 0 {
+            let lead = next.sehriEnds.timeIntervalSince(now)
+            let key = "sehri-\(Int(next.sehriEnds.timeIntervalSince1970))"
+            if lead > 0, lead <= Double(library.sehriReminderMinutes) * 60, !notifiedPrayers.contains(key) {
+                notifiedPrayers.insert(key)
+                showPeek(.ramadan(isIftar: false, time: next.sehriEnds))
+                NSSound(named: "Tink")?.play()
+            }
+        }
+        if library.iftarReminder {
+            let since = now.timeIntervalSince(next.iftar)
+            let key = "iftar-\(Int(next.iftar.timeIntervalSince1970))"
+            if since >= 0, since < 120, !notifiedPrayers.contains(key) {
+                notifiedPrayers.insert(key)
+                showPeek(.ramadan(isIftar: true, time: next.iftar))
+                Ramadan.playPrayerSound()
             }
         }
     }

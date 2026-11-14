@@ -791,6 +791,64 @@ enum SelfTest {
             IslandController.shared.dismissPeek()
             library.notificationsEnabled = false
         }
+        step("Smart clipboard")
+        check("Detects a link", SmartClip.detect("https://apple.com/mac")?.kind == .link)
+        check("Detects an email", SmartClip.detect("ammu@example.com")?.kind == .email)
+        check("Detects a phone number", SmartClip.detect("+880 1711-123456")?.kind == .phone, "\(String(describing: SmartClip.detect("+880 1711-123456")?.kind))")
+        check("Detects an address", SmartClip.detect("1 Infinite Loop, Cupertino, CA 95014")?.kind == .address,
+              "\(String(describing: SmartClip.detect("1 Infinite Loop, Cupertino, CA 95014")?.kind))")
+        check("Detects a date", SmartClip.detect("Tomorrow at 5 pm")?.kind == .date, "\(String(describing: SmartClip.detect("Tomorrow at 5 pm")?.kind))")
+        check("Offers Bangla translation for English", SmartClip.detect("Please call me when you reach home tonight")?.kind == .translateToBangla)
+        check("Offers English translation for Bangla", SmartClip.detect("আমি আজ সন্ধ্যায় বাসায় ফিরব ইনশাআল্লাহ")?.kind == .translateToEnglish)
+        check("Ignores a single word", SmartClip.detect("hello") == nil)
+        check("Ignores a paragraph that only mentions a date",
+              SmartClip.detect("We talked about many things today, including the trip that might happen next Friday or maybe later in the month.")?.kind != .date)
+
+        step("Hijri and Ramadan")
+        var greg = Calendar(identifier: .gregorian)
+        greg.timeZone = TimeZone(identifier: "Asia/Dhaka")!
+        let ramadanDay = greg.date(from: DateComponents(year: 2026, month: 3, day: 1, hour: 12))!
+        check("1 March 2026 is in Ramadan 1447", Hijri.isRamadan(ramadanDay, adjust: 0) && Hijri.components(for: ramadanDay, adjust: 0).year == 1447,
+              Hijri.text(for: ramadanDay, adjust: 0, bangla: false))
+        check("Hijri date in Bangla", Hijri.text(for: ramadanDay, adjust: 0, bangla: true).contains("রমজান"), Hijri.text(for: ramadanDay, adjust: 0, bangla: true))
+        check("Hijri adjustment moves the day", Hijri.components(for: ramadanDay, adjust: 1).day != Hijri.components(for: ramadanDay, adjust: 0).day)
+        check("Bangla digits", Hijri.digits(1447) == "১৪৪৭")
+        check("Not Ramadan in November 2026", !Hijri.isRamadan(greg.date(from: DateComponents(year: 2026, month: 11, day: 14))!, adjust: 0))
+        let soon = Date().addingTimeInterval(2 * 3600 + 15 * 60 + 30)
+        let savedLanguage = settings.language
+        settings.language = .english
+        check("Countdown text", Ramadan.countdown(to: soon) == "2 h 15 m", Ramadan.countdown(to: soon))
+        settings.language = savedLanguage
+        check("Prayer sounds exist", Ramadan.systemSounds.allSatisfy { NSSound(named: $0) != nil })
+
+        step("Rain alert")
+        let base = Date(timeIntervalSince1970: 1_790_000_000)
+        let dry = (0..<8).map { (time: base.addingTimeInterval(Double($0) * 900), mm: 0.0) }
+        var wet = dry
+        wet[3].mm = 0.6
+        check("No rain, no alert", WeatherStore.minutesUntilRain(dry, now: base.addingTimeInterval(60), lead: 60) == nil)
+        check("Rain in 44 minutes is announced", WeatherStore.minutesUntilRain(wet, now: base.addingTimeInterval(60), lead: 60) == 44)
+        check("Rain too far ahead waits", WeatherStore.minutesUntilRain(wet, now: base.addingTimeInterval(60), lead: 30) == nil)
+        var raining = wet
+        raining[0].mm = 1.0
+        check("Already raining: no alert", WeatherStore.minutesUntilRain(raining, now: base.addingTimeInterval(60), lead: 60) == nil)
+        let hourJSON: [String: Any] = ["time": ["2026-11-14T10:00", "2026-11-14T11:00"], "temperature_2m": [28.0, 29.5],
+                                       "precipitation_probability": [10, 70], "weather_code": [1, 61]]
+        let hours = WeatherStore.parseHourly(hourJSON, zone: TimeZone(identifier: "Asia/Dhaka")!, now: greg.date(from: DateComponents(year: 2026, month: 11, day: 14, hour: 9))!)
+        check("Hourly forecast parses", hours.count == 2 && hours[1].rainChance == 70 && hours[1].symbol == "cloud.rain.fill")
+
+        step("Notification summary")
+        let n1 = NotificationMirror.Item(id: 1, bundleID: "com.apple.MobileSMS", appName: "Messages", title: "Ammu", subtitle: "", body: "Come home", date: Date())
+        let n2 = NotificationMirror.Item(id: 2, bundleID: "com.apple.MobileSMS", appName: "Messages", title: "Ammu", subtitle: "", body: "Bring milk", date: Date())
+        let n3 = NotificationMirror.Item(id: 3, bundleID: "net.whatsapp.WhatsApp", appName: "WhatsApp", title: "Rahim", subtitle: "", body: "Hi", date: Date())
+        let groups = NotificationDigest.groups([n1, n2, n3])
+        check("Groups by app, busiest first", groups.first?.app == "Messages" && groups.first?.count == 2 && groups.count == 2)
+        check("Plain summary names who wrote", NotificationDigest.plainSummary([n1, n2, n3]).contains("Messages 2 (Ammu)"),
+              NotificationDigest.plainSummary([n1, n2, n3]))
+        check("Private mode hides who wrote", !NotificationDigest.plainSummary([n1, n2, n3], hideSenders: true).contains("Ammu"))
+        info("Apple Intelligence on this Mac", AIService.shared.availability.message)
+        check("AI tab can be hidden", { library.aiEnabled = false; let hidden = !settings.visibleIslandTabs.contains(.assistant); library.aiEnabled = true; return hidden }())
+
         step("Pop-up durations")
         let savedDurations = library.peekDurations
         check("Every pop-up has a duration setting", PeekType.allCases.allSatisfy { library.peekSeconds($0) >= 0.5 })

@@ -124,6 +124,27 @@ final class UserLibrary: ObservableObject {
     @Published var verseIntervalHours: Int { didSet { d.set(verseIntervalHours, forKey: "verseIntervalHours") } }
     /// Show a new ayah/hadith on the island when it arrives.
     @Published var verseNewPeek: Bool { didSet { d.set(verseNewPeek, forKey: "verseNewPeek") } }
+    // AI assistant (on-device, Apple Intelligence)
+    @Published var aiEnabled: Bool { didSet { d.set(aiEnabled, forKey: "aiEnabled") } }
+    @Published var aiAnswerLanguage: String { didSet { d.set(aiAnswerLanguage, forKey: "aiAnswerLanguage") } }
+    // Notification summary
+    @Published var digestEnabled: Bool { didSet { d.set(digestEnabled, forKey: "digestEnabled") } }
+    @Published var digestIntervalHours: Int { didSet { d.set(digestIntervalHours, forKey: "digestIntervalHours") } }
+    @Published var digestUseAI: Bool { didSet { d.set(digestUseAI, forKey: "digestUseAI") } }
+    // Smart clipboard
+    @Published var smartClipEnabled: Bool { didSet { d.set(smartClipEnabled, forKey: "smartClipEnabled") } }
+    @Published var smartClipPeek: Bool { didSet { d.set(smartClipPeek, forKey: "smartClipPeek") } }
+    // Ramadan & Hijri
+    @Published var ramadanMode: String { didSet { d.set(ramadanMode, forKey: "ramadanMode") } }
+    @Published var hijriInHeader: Bool { didSet { d.set(hijriInHeader, forKey: "hijriInHeader") } }
+    @Published var hijriAdjust: Int { didSet { d.set(hijriAdjust, forKey: "hijriAdjust") } }
+    @Published var sehriReminderMinutes: Int { didSet { d.set(sehriReminderMinutes, forKey: "sehriReminderMinutes") } }
+    @Published var iftarReminder: Bool { didSet { d.set(iftarReminder, forKey: "iftarReminder") } }
+    /// "off", a macOS sound name (e.g. "Glass"), or the path of the user's own audio file.
+    @Published var prayerSound: String { didSet { d.set(prayerSound, forKey: "prayerSound") } }
+    // Rain alerts
+    @Published var rainAlerts: Bool { didSet { d.set(rainAlerts, forKey: "rainAlerts") } }
+    @Published var rainLeadMinutes: Int { didSet { d.set(rainLeadMinutes, forKey: "rainLeadMinutes") } }
     /// How long each kind of pop-up stays (seconds); missing = built-in time.
     @Published var peekDurations: [String: Double] { didSet { Persist.save(peekDurations, key: "peekDurations") } }
     /// Keep a pop-up while the mouse is over it (so its buttons can be used).
@@ -192,6 +213,21 @@ final class UserLibrary: ObservableObject {
         verseIntervalHours = DailyVerseStore.intervals.contains(savedInterval) ? savedInterval : 24
         verseNewPeek = d.object(forKey: "verseNewPeek") as? Bool ?? true
         peekDurations = Persist.load([String: Double].self, key: "peekDurations") ?? [:]
+        aiEnabled = d.object(forKey: "aiEnabled") as? Bool ?? true
+        aiAnswerLanguage = d.string(forKey: "aiAnswerLanguage") ?? "auto"
+        digestEnabled = d.object(forKey: "digestEnabled") as? Bool ?? true
+        digestIntervalHours = d.object(forKey: "digestIntervalHours") as? Int ?? 4
+        digestUseAI = d.object(forKey: "digestUseAI") as? Bool ?? true
+        smartClipEnabled = d.object(forKey: "smartClipEnabled") as? Bool ?? true
+        smartClipPeek = d.object(forKey: "smartClipPeek") as? Bool ?? true
+        ramadanMode = d.string(forKey: "ramadanMode") ?? "auto"
+        hijriInHeader = d.object(forKey: "hijriInHeader") as? Bool ?? false
+        hijriAdjust = d.object(forKey: "hijriAdjust") as? Int ?? 0
+        sehriReminderMinutes = d.object(forKey: "sehriReminderMinutes") as? Int ?? 30
+        iftarReminder = d.object(forKey: "iftarReminder") as? Bool ?? true
+        prayerSound = d.string(forKey: "prayerSound") ?? "Glass"
+        rainAlerts = d.object(forKey: "rainAlerts") as? Bool ?? true
+        rainLeadMinutes = d.object(forKey: "rainLeadMinutes") as? Int ?? 60
         peekStayOnHover = d.object(forKey: "peekStayOnHover") as? Bool ?? true
         updateRemindersPerDay = min(max(d.object(forKey: "updateRemindersPerDay") as? Int ?? 3, 0), 3)
         networkEnabled = d.object(forKey: "networkEnabled") as? Bool ?? true

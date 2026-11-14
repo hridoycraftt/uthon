@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum IslandTab: String, CaseIterable, Identifiable {
-    case home, controls, search, shelf, timer, clipboard, notes, mirror
+    case home, controls, search, assistant, shelf, timer, clipboard, notes, mirror
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum IslandTab: String, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .notes: return "Notes"
         case .mirror: return "Mirror"
+        case .assistant: return "AI"
         }
     }
 
@@ -28,6 +29,7 @@ enum IslandTab: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.clipboard.fill"
         case .notes: return "note.text"
         case .mirror: return "person.crop.square.fill"
+        case .assistant: return "sparkles"
         }
     }
 }
@@ -59,6 +61,10 @@ enum PeekKind: Equatable {
     case network(online: Bool)
     case notification(NotificationPeek)
     case verse(reference: String, text: String, isQuran: Bool)
+    case digest(count: Int, text: String)
+    case smartClip(SmartClip)
+    case ramadan(isIftar: Bool, time: Date)
+    case rain(minutes: Int)
 
     /// Peeks of the same category replace each other in place (e.g. volume steps).
     var category: Int {
@@ -80,6 +86,10 @@ enum PeekKind: Equatable {
         case .network: return 14
         case .notification: return 15
         case .verse: return 16
+        case .digest: return 17
+        case .smartClip: return 18
+        case .ramadan: return 19
+        case .rain: return 20
         }
     }
 
@@ -103,6 +113,10 @@ enum PeekKind: Equatable {
         case .network: return .network
         case .notification: return .notification
         case .verse: return .verse
+        case .digest: return .digest
+        case .smartClip: return .smartClip
+        case .ramadan: return .ramadan
+        case .rain: return .rain
         }
     }
 
@@ -278,7 +292,7 @@ final class IslandModel: ObservableObject {
 /// Every kind of island pop-up, with how long it stays unless the user changes it.
 enum PeekType: String, CaseIterable, Identifiable {
     case notification, download, screenshot, track, headphones, volume, brightness, capsLock, charging,
-         lowBattery, meeting, timerDone, prayer, specialDay, network, verse, update
+         lowBattery, meeting, timerDone, prayer, specialDay, network, verse, update, digest, smartClip, ramadan, rain
     var id: String { rawValue }
 
     var title: String {
@@ -300,6 +314,10 @@ enum PeekType: String, CaseIterable, Identifiable {
         case .network: return "Internet on/off"
         case .verse: return "New ayah or hadith"
         case .update: return "New version"
+        case .digest: return "Notification summary"
+        case .smartClip: return "Smart clipboard"
+        case .ramadan: return "Sehri and iftar"
+        case .rain: return "Rain alert"
         }
     }
 
@@ -322,6 +340,10 @@ enum PeekType: String, CaseIterable, Identifiable {
         case .network: return "wifi"
         case .verse: return "book.closed.fill"
         case .update: return "arrow.down.app.fill"
+        case .digest: return "text.bubble.fill"
+        case .smartClip: return "doc.on.clipboard.fill"
+        case .ramadan: return "moon.stars.fill"
+        case .rain: return "cloud.rain.fill"
         }
     }
 
@@ -343,6 +365,10 @@ enum PeekType: String, CaseIterable, Identifiable {
         case .network: return 3
         case .verse: return 10
         case .update: return 15
+        case .digest: return 12
+        case .smartClip: return 5
+        case .ramadan: return 30
+        case .rain: return 8
         }
     }
 }

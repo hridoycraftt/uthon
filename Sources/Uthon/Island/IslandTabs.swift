@@ -209,6 +209,8 @@ struct HomeWidgetView: View {
             case .countdown: CountdownTile()
             case .verse: VerseTile()
             case .network: NetworkTile()
+            case .digest: DigestTile()
+            case .ramadan: RamadanTile()
             }
         } else if let folder = item.folder {
             FolderTile(folder: folder)
@@ -509,7 +511,22 @@ struct WeatherTile: View {
                             .font(.system(size: 20))
                     }
                     Spacer(minLength: 0)
-                    if let high = w.high, let low = w.low {
+                    if AppSettings.shared.slots(of: HomeItem(.weather)) >= 2, !weather.hourly.isEmpty {
+                        // Wider tile: the next hours, with the chance of rain.
+                        HStack(spacing: 0) {
+                            ForEach(weather.hourly.prefix(AppSettings.shared.slots(of: HomeItem(.weather)) >= 3 ? 7 : 5)) { hour in
+                                VStack(spacing: 2) {
+                                    Text(hour.time.formatted(.dateTime.hour().locale(Localization.locale)))
+                                        .font(.system(size: 9)).foregroundStyle(Color.secondary).lineLimit(1)
+                                    Image(systemName: hour.symbol).symbolRenderingMode(.multicolor).font(.system(size: 12))
+                                    Text("\(Int(hour.temperature.rounded()))°").font(.system(size: 10, weight: .semibold))
+                                    Text(hour.rainChance >= 20 ? "\(hour.rainChance)%" : " ")
+                                        .font(.system(size: 8, weight: .semibold)).foregroundStyle(Color.blue)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                    } else if let high = w.high, let low = w.low {
                         Text("H \(Int(high.rounded()))°  L \(Int(low.rounded()))°")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.secondary)

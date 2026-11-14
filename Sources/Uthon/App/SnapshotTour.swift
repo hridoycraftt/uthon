@@ -136,6 +136,23 @@ enum SnapshotTour {
             capture("screen-verse-reader")
             NSApp.windows.first { $0.title == L("Quran & Hadith") }?.orderOut(nil)
         }
+        add("new-widgets-2") {
+            UserLibrary.shared.notificationsEnabled = true
+            for (i, who) in ["Ammu", "Ammu", "Rahim"].enumerated() {
+                NotificationMirror.shared.deliver(.init(id: Int64(100 + i), bundleID: i < 2 ? "com.apple.MobileSMS" : "net.whatsapp.WhatsApp",
+                                                        appName: i < 2 ? "Messages" : "WhatsApp", title: who, subtitle: "", body: "Hello", date: Date()))
+            }
+            IslandController.shared.dismissPeek()
+            UserLibrary.shared.ramadanMode = "on"
+            s.homePages[1] = ["digest", "ramadan", "weather", "notes"]
+            s.setSize(HomeItem(.weather), slots: 2)
+            model.tab = .home
+            model.homePage = 1
+            render(ExpandedIsland(), size: model.baseExpandedSize, shape: true, name: "tab-home-ai-widgets")
+            model.homePage = 0
+            s.widgetSizes = [:]
+            UserLibrary.shared.ramadanMode = "auto"
+        }
         add("bottom-dock-render") {
             let lib = UserLibrary.shared
             lib.bottomDockItems = BottomDockItem.allCases.map(\.rawValue)
@@ -190,6 +207,10 @@ enum SnapshotTour {
                                                             text: "Dinner is ready, come home soon! Bring some sweets on the way."))),
             ("network-offline", .network(online: false)),
             ("update", .update(version: "0.6.15")),
+            ("digest", .digest(count: 5, text: "Messages 3 (Ammu, Rahim) · WhatsApp 2 (Office group)")),
+            ("smartclip", .smartClip(SmartClip(kind: .address, value: "Road 12, Dhanmondi, Dhaka", source: "Road 12, Dhanmondi, Dhaka"))),
+            ("ramadan", .ramadan(isIftar: true, time: Date())),
+            ("rain", .rain(minutes: 30)),
             ("verse", .verse(reference: "Ash-Sharh 94:6", text: "নিশ্চয় কষ্টের সাথে স্বস্তি রয়েছে।", isQuran: true)),
             ("volume", .volume(level: 0.62, muted: false)),
             ("brightness", .brightness(level: 0.4)),
