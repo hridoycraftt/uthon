@@ -215,7 +215,8 @@ final class UserLibrary: ObservableObject {
         verseIntervalHours = DailyVerseStore.intervals.contains(savedInterval) ? savedInterval : 24
         verseNewPeek = d.object(forKey: "verseNewPeek") as? Bool ?? true
         peekDurations = Persist.load([String: Double].self, key: "peekDurations") ?? [:]
-        aiEnabled = d.object(forKey: "aiEnabled") as? Bool ?? true
+        // On by default only where Apple Intelligence can run (macOS 26).
+        aiEnabled = d.object(forKey: "aiEnabled") as? Bool ?? { if #available(macOS 26.0, *) { return true } else { return false } }()
         aiAnswerLanguage = d.string(forKey: "aiAnswerLanguage") ?? "auto"
         digestEnabled = d.object(forKey: "digestEnabled") as? Bool ?? true
         digestIntervalHours = d.object(forKey: "digestIntervalHours") as? Int ?? 4

@@ -493,6 +493,13 @@ struct WidgetTile<Content: View>: View {
 }
 
 struct WeatherTile: View {
+    /// "3 PM" on the city's own clock.
+    static func hourLabel(_ date: Date, zone: TimeZone?) -> String {
+        var style = Date.FormatStyle.dateTime.hour().locale(Localization.locale)
+        style.timeZone = zone ?? .current
+        return date.formatted(style)
+    }
+
     @ObservedObject private var weather = WeatherStore.shared
     @ObservedObject private var library = UserLibrary.shared
 
@@ -517,7 +524,7 @@ struct WeatherTile: View {
                         HStack(spacing: 0) {
                             ForEach(weather.hourly.prefix(AppSettings.shared.slots(of: HomeItem(.weather)) >= 3 ? 7 : 5)) { hour in
                                 VStack(spacing: 2) {
-                                    Text(hour.time.formatted(.dateTime.hour().locale(Localization.locale)))
+                                    Text(WeatherTile.hourLabel(hour.time, zone: weather.place?.timeZone))
                                         .font(.system(size: 9)).foregroundStyle(Color.secondary).lineLimit(1)
                                     Image(systemName: hour.symbol).symbolRenderingMode(.multicolor).font(.system(size: 12))
                                     Text("\(Int(hour.temperature.rounded()))°").font(.system(size: 10, weight: .semibold))
@@ -1758,6 +1765,10 @@ struct IslandClipboard: View {
                             .buttonStyle(.plain)
                             .contextMenu {
                                 MenuButton("Copy") { store.copy(item) }
+                                // Smart clipboard: the next step for this text (open, map, translate…).
+                                if !item.isImage, UserLibrary.shared.smartClipEnabled, let clip = SmartClip.cached(item.text) {
+                                    MenuButton(clip.actionTitle) { clip.perform() }
+                                }
                                 if !item.isImage {
                                     MenuButton(item.pinned ? "Unpin" : "Pin") { store.togglePin(item) }
                                 }

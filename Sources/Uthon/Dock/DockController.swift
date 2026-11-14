@@ -206,7 +206,9 @@ final class DockController {
             case .right: atEdge = mouse.x >= f.maxX - 2
             case .left: atEdge = mouse.x <= f.minX + 1
             }
-            let inBand = mouse.y > scr.visibleFrame.minY && mouse.y < scr.visibleFrame.maxY
+            // Only beside where the dock will be (it may be shorter than the screen).
+            let dockFrame = frame(on: scr, shown: true)
+            let inBand = mouse.y > dockFrame.minY && mouse.y < dockFrame.maxY
             if atEdge && inBand {
                 if let since = edgeSince {
                     if Date().timeIntervalSince(since) >= revealDelay {

@@ -271,7 +271,7 @@ struct NotificationSettings: View {
                     )) {
                         HStack {
                             if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) {
-                                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 18, height: 18)
+                                Image(nsImage: FileIconCache.icon(url.path)).resizable().frame(width: 18, height: 18)
                             }
                             Text(NotificationMirror.appName(for: bundle))
                         }
@@ -501,7 +501,7 @@ struct BottomDockSettings: View {
             Section {
                 ForEach(Array(library.bottomDockApps.enumerated()), id: \.element) { index, path in
                     HStack {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable().frame(width: 20, height: 20)
+                        Image(nsImage: FileIconCache.icon(path)).resizable().frame(width: 20, height: 20)
                         Text(FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))
                         Spacer()
                         Button { library.moveBottomDockApp(path, by: -1) } label: { Image(systemName: "chevron.up") }
@@ -698,6 +698,10 @@ struct RamadanSettings: View {
             }
             .onChange(of: library.prayerSound) { _, _ in Ramadan.stopSound(); playing = false }
             .onDisappear { Ramadan.stopSound(); playing = false }
+            // The button goes back to "play" when the sound ends by itself.
+            .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
+                if playing && !Ramadan.isPlaying { playing = false }
+            }
         }
         .formStyle(.grouped)
     }

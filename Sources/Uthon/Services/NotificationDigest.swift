@@ -129,8 +129,8 @@ struct DigestTile: View {
                     }
                     ForEach(NotificationDigest.groups(mirror.recent).prefix(digest.aiSummary == nil ? 3 : 1)) { group in
                         HStack(spacing: 6) {
-                            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: group.bundleID) {
-                                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 16, height: 16)
+                            if let icon = AppIconCache.icon(bundleID: group.bundleID) {
+                                Image(nsImage: icon).resizable().frame(width: 16, height: 16)
                             }
                             Text(group.app).font(.system(size: 11, weight: .semibold)).lineLimit(1)
                             if !library.notificationHideContent, let first = group.senders.first {
@@ -162,5 +162,18 @@ struct DigestTile: View {
                 }
             }
         }
+    }
+}
+
+/// App icons by bundle ID, looked up once (finding an app and loading its icon is slow).
+enum AppIconCache {
+    private static var icons: [String: NSImage?] = [:]
+
+    static func icon(bundleID: String) -> NSImage? {
+        if let hit = icons[bundleID] { return hit }
+        let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+            .map { NSWorkspace.shared.icon(forFile: $0.path) }
+        icons[bundleID] = icon
+        return icon
     }
 }

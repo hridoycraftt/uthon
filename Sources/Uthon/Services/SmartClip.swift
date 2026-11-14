@@ -161,9 +161,20 @@ struct SmartClip: Equatable {
     }
 
     /// Called for every newly copied text: offers the action on the island if it is useful.
+    /// Detection results by text, so lists can show the action without re-scanning.
+    private static var cache: [String: SmartClip?] = [:]
+
+    static func cached(_ text: String) -> SmartClip? {
+        if let hit = cache[text] { return hit }
+        if cache.count > 300 { cache.removeAll() }
+        let clip = detect(text)
+        cache[text] = clip
+        return clip
+    }
+
     static func didCopy(_ text: String) {
         let library = UserLibrary.shared
-        guard library.smartClipEnabled, library.smartClipPeek, let clip = detect(text) else { return }
+        guard library.smartClipEnabled, library.smartClipPeek, let clip = cached(text) else { return }
         IslandController.shared.showPeek(.smartClip(clip))
     }
 }

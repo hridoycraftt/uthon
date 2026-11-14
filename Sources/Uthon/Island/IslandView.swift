@@ -342,27 +342,31 @@ private struct IslandHeader: View {
 
     private enum HijriStyle { case none, full, short }
     private var hijriOn: Bool { library.hijriInHeader }
+    /// Worked out once per header update, not for every layout tried.
+    @State private var hijriFull = Hijri.text()
+    @State private var hijriShort = Hijri.shortText()
+    private let minuteTick = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     /// The right side, from roomiest to tightest. With the Hijri date on, it stays (in short
     /// form) until only the clock is left; batteries go first, then the weather.
     @ViewBuilder private func rightGroups(dockButton: Bool) -> some View {
         ViewThatFits(in: .horizontal) {
             if hijriOn {
-                rightGroup(hijri: .full, weather: true, batteries: true)
-                rightGroup(hijri: .short, weather: true, batteries: true)
-                rightGroup(hijri: .short, weather: true, batteries: false)
-                rightGroup(hijri: .short, weather: false, batteries: false)
-                rightGroup(hijri: .short, weather: false, batteries: false, clock: false)
+                rightGroup(hijri: .full, weather: true, batteries: true, dockButton: dockButton)
+                rightGroup(hijri: .short, weather: true, batteries: true, dockButton: dockButton)
+                rightGroup(hijri: .short, weather: true, batteries: false, dockButton: dockButton)
+                rightGroup(hijri: .short, weather: false, batteries: false, dockButton: dockButton)
+                rightGroup(hijri: .short, weather: false, batteries: false, clock: false, dockButton: dockButton)
             } else {
-                rightGroup(weather: true, batteries: true)
-                rightGroup(weather: true, batteries: false)
-                rightGroup(weather: false, batteries: false)
+                rightGroup(weather: true, batteries: true, dockButton: dockButton)
+                rightGroup(weather: true, batteries: false, dockButton: dockButton)
+                rightGroup(weather: false, batteries: false, dockButton: dockButton)
             }
-            rightGroup(weather: false, batteries: false, clock: false)
+            rightGroup(weather: false, batteries: false, clock: false, dockButton: dockButton)
             rightGroup(weather: false, batteries: false, clock: false, dockButton: false)
         }
         // A fresh layout whenever the setting flips: no items left half-moved.
-        .id(hijriOn)
+        .id(hijriOn ? hijriFull + hijriShort : "off")
         .transaction { $0.animation = nil }
     }
 
@@ -395,6 +399,17 @@ private struct IslandHeader: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }
+        // The Hijri date turns over at midnight and follows the adjustment and language.
+        .onReceive(minuteTick) { _ in refreshHijri() }
+        .onChange(of: library.hijriAdjust) { _, _ in refreshHijri() }
+        .onChange(of: library.hijriInHeader) { _, _ in refreshHijri() }
+        .onChange(of: settings.lookKey) { _, _ in refreshHijri() }
+    }
+
+    private func refreshHijri() {
+        let full = Hijri.text(), short = Hijri.shortText()
+        if full != hijriFull { hijriFull = full }
+        if short != hijriShort { hijriShort = short }
     }
 
     private func pill(_ tab: IslandTab, compact: Bool) -> some View {
@@ -435,7 +450,7 @@ private struct IslandHeader: View {
                 }
                 .fixedSize()
                 Spacer(minLength: 0)
-                rightGroups(dockButton: false)
+                rightGroups(dockButton: true)
             }
             .frame(width: half, alignment: .trailing)
         }
@@ -478,13 +493,13 @@ private struct IslandHeader: View {
             if hijri != .none {
                 HStack(spacing: 3) {
                     Image(systemName: "moon.stars.fill").font(.system(size: 9)).foregroundStyle(Theme.accent)
-                    Text(hijri == .full ? Hijri.text() : Hijri.shortText())
+                    Text(hijri == .full ? hijriFull : hijriShort)
                         .lineLimit(1)
                 }
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.secondary)
                 .fixedSize()
-                .help(Hijri.text())
+                .help(hijriFull)
             }
             if showWeather, let w = weather.current {
                 HStack(spacing: 3) {

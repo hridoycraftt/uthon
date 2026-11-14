@@ -38,7 +38,9 @@ final class NightDimmer: ObservableObject {
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()
     /// Lets the user turn it off until the next morning from the menu.
-    private var pausedUntil: Date?
+    private var pausedUntil: Date? = UserDefaults.standard.object(forKey: "dimPausedUntil") as? Date {
+        didSet { UserDefaults.standard.set(pausedUntil, forKey: "dimPausedUntil") }
+    }
 
     func start() {
         let t = Timer(timeInterval: 30, repeats: true) { [weak self] _ in self?.update() }
@@ -49,7 +51,13 @@ final class NightDimmer: ObservableObject {
             .store(in: &cancellables)
         // macOS resets display colours after sleep: put the dimming back.
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
-            .sink { [weak self] _ in self?.gamma.forget(); self?.update() }
+            .sink { [weak self] _ in self?.gamma.rebase(); self?.update() }
+            .store(in: &cancellables)
+        // "When macOS is in Dark Mode" follows macOS itself, not Nook's own Look setting.
+        DistributedNotificationCenter.default().publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
+            .receive(on: RunLoop.main)
+            .delay(for: .milliseconds(300), scheduler: RunLoop.main)
+            .sink { [weak self] _ in self?.update() }
             .store(in: &cancellables)
         NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .sink { [weak self] _ in self?.gamma.restore() }
@@ -117,17 +125,16 @@ final class NightDimmer: ObservableObject {
         let screen = library.dimTarget == .screen ? value : 0
         // Like lowering the backlight: the display's own colours are scaled down (blacks stay
         // black, text stays crisp) and warmed a little. Only if that is refused, a dark layer.
-        if gamma.apply(level: screen, warmth: library.dimWarmth) {
-            applyScreenLayer(0)
-        } else {
-            applyScreenLayer(screen)
-        }
+        // Displays that refuse colour tables (rare: some adapters, AirPlay) get the dark layer.
+        let refused = gamma.apply(level: screen, warmth: library.dimWarmth)
+        applyScreenLayer(screen, only: refused)
     }
 
     let gamma = GammaDimmer()
 
+    /// macOS's own Dark Mode (not the look Nook may force on itself).
     static var systemIsDark: Bool {
-        NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        UserDefaults.standard.string(forKey: "AppleInterfaceStyle")?.lowercased() == "dark"
     }
 
     /// Tonight's dark period for the chosen schedule: (start, end).
@@ -193,10 +200,12 @@ final class NightDimmer: ObservableObject {
     private func rebuildWindows() {
         windows.forEach { $0.orderOut(nil) }
         windows = []
+        gamma.rebase()
         update()
     }
 
-    private func applyScreenLayer(_ alpha: Double) {
+    private func applyScreenLayer(_ level: Double, only displays: Set<CGDirectDisplayID>) {
+        let alpha = displays.isEmpty ? 0 : level
         if alpha <= 0.001 {
             windows.forEach { $0.orderOut(nil); $0.alphaValue = 0 }
             return
@@ -206,11 +215,13 @@ final class NightDimmer: ObservableObject {
             windows = NSScreen.screens.map(Self.makeWindow)
         }
         for (window, screen) in zip(windows, NSScreen.screens) {
+            let id = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
+            let target = displays.contains(id) ? alpha : 0
             window.setFrame(screen.frame, display: false)
-            window.orderFrontRegardless()
+            if target > 0 { window.orderFrontRegardless() }
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 1.0
-                window.animator().alphaValue = alpha
+                window.animator().alphaValue = target
             }
         }
     }
@@ -250,16 +261,17 @@ struct NightDimOverlay: View {
 /// built-in and external displays, does not cover the screen with a window, and macOS puts
 /// the colours back by itself if Nook quits.
 final class GammaDimmer {
-    private var originals: [CGDirectDisplayID: (r: [CGGammaValue], g: [CGGammaValue], b: [CGGammaValue])] = [:]
+    typealias Table = (r: [CGGammaValue], g: [CGGammaValue], b: [CGGammaValue])
+    /// Each display's own, undimmed colour table (read only while nothing of ours is applied).
+    private var originals: [CGDirectDisplayID: Table] = [:]
     private(set) var shown: Double = 0
     private var shownWarmth: Double = 0
     private var ramp: Timer?
     private var active = false
+    /// Displays that refused a colour table the last time.
+    private(set) var refused: Set<CGDirectDisplayID> = []
 
-    /// Forget the saved tables (after sleep or a display change macOS may have reset them).
-    func forget() { originals = [:] }
-
-    private static func displays() -> [CGDirectDisplayID] {
+    static func displays() -> [CGDirectDisplayID] {
         var count: UInt32 = 0
         guard CGGetOnlineDisplayList(0, nil, &count) == .success, count > 0 else { return [] }
         var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
@@ -267,15 +279,28 @@ final class GammaDimmer {
         return Array(ids.prefix(Int(count)))
     }
 
-    private func original(_ id: CGDirectDisplayID) -> (r: [CGGammaValue], g: [CGGammaValue], b: [CGGammaValue])? {
+    /// After sleep or a display change: start again from the displays' true colours, so the
+    /// dimming is never applied on top of itself (which would get darker every time).
+    func rebase() {
+        originals = [:]
+        refused = []
+        if active {
+            CGDisplayRestoreColorSyncSettings()
+            set(level: shown, warmth: shownWarmth)
+        }
+    }
+
+    private func original(_ id: CGDirectDisplayID) -> Table? {
         if let saved = originals[id] { return saved }
+        // A display added while dimming: its table is already ours only if we set it, which
+        // we have not, so what it shows now is its own.
         let capacity = CGDisplayGammaTableCapacity(id)
         guard capacity > 1 else { return nil }
         var r = [CGGammaValue](repeating: 0, count: Int(capacity))
         var g = r, b = r
         var count: UInt32 = 0
         guard CGGetDisplayTransferByTable(id, capacity, &r, &g, &b, &count) == .success, count > 1 else { return nil }
-        let table = (Array(r.prefix(Int(count))), Array(g.prefix(Int(count))), Array(b.prefix(Int(count))))
+        let table: Table = (Array(r.prefix(Int(count))), Array(g.prefix(Int(count))), Array(b.prefix(Int(count))))
         originals[id] = table
         return table
     }
@@ -287,43 +312,44 @@ final class GammaDimmer {
         return (k, k * (1 - 0.10 * w), k * (1 - 0.30 * w))
     }
 
-    private func set(level: Double, warmth: Double) -> Bool {
+    @discardableResult
+    private func set(level: Double, warmth: Double) -> Set<CGDirectDisplayID> {
         let f = Self.factors(level: level, warmth: warmth)
-        var ok = true
+        var failed: Set<CGDirectDisplayID> = []
         for id in Self.displays() {
-            guard let t = original(id) else { ok = false; continue }
+            guard let t = original(id) else { failed.insert(id); continue }
             var r = t.r.map { CGGammaValue(Double($0) * f.r) }
             var g = t.g.map { CGGammaValue(Double($0) * f.g) }
             var b = t.b.map { CGGammaValue(Double($0) * f.b) }
-            if CGSetDisplayTransferByTable(id, UInt32(r.count), &r, &g, &b) != .success { ok = false }
+            if CGSetDisplayTransferByTable(id, UInt32(r.count), &r, &g, &b) != .success { failed.insert(id) }
         }
-        return ok
+        refused = failed
+        return failed
     }
 
-    /// Glides to the level over about a second. Returns false if the displays refused.
+    /// Glides to the level over about a second. Returns the displays that refused (they need
+    /// the dark layer instead).
     @discardableResult
-    func apply(level: Double, warmth: Double) -> Bool {
+    func apply(level: Double, warmth: Double) -> Set<CGDirectDisplayID> {
         if level <= 0.001 {
-            ramp?.invalidate()
             if active { glide(to: 0, warmth: warmth) }
-            return true
+            return []
         }
-        // Check once that the displays accept it.
         if !active {
             originals = [:]
             CGDisplayRestoreColorSyncSettings()
-            guard set(level: shown, warmth: warmth) else { return false }
             active = true
+            set(level: shown, warmth: warmth)
         }
         glide(to: level, warmth: warmth)
-        return true
+        return refused
     }
 
     private func glide(to target: Double, warmth: Double) {
         ramp?.invalidate()
         let from = shown, fromWarmth = shownWarmth
         if abs(target - from) < 0.002 && abs(warmth - fromWarmth) < 0.002 {
-            _ = set(level: target, warmth: warmth)   // re-apply (macOS may have reset it)
+            if target <= 0.001 { restore() } else { set(level: target, warmth: warmth) }   // re-apply (macOS may have reset it)
             return
         }
         let steps = 30
@@ -335,7 +361,7 @@ final class GammaDimmer {
             let eased = x * x * (3 - 2 * x)
             self.shown = from + (target - from) * eased
             self.shownWarmth = fromWarmth + (warmth - fromWarmth) * eased
-            _ = self.set(level: self.shown, warmth: self.shownWarmth)
+            self.set(level: self.shown, warmth: self.shownWarmth)
             if step >= steps {
                 timer.invalidate()
                 if target <= 0.001 { self.restore() }
@@ -354,5 +380,6 @@ final class GammaDimmer {
         shown = 0
         shownWarmth = 0
         originals = [:]
+        refused = []
     }
 }

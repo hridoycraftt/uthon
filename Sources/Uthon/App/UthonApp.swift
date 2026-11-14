@@ -73,6 +73,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.start()
         WallpaperChanger.shared.start()
         NightDimmer.shared.start()
+        // Build the Settings window quietly while the user is not waiting for it.
+        if !SelfTest.isActive {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { SettingsWindowController.shared.prepare() }
+        }
         BottomDockController.shared.start()
         AppIcon.apply()
 

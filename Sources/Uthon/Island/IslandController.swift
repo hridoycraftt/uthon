@@ -328,7 +328,9 @@ final class IslandController {
                                               timeZone: place.timeZone, method: library.prayerMethod,
                                               hanafi: library.prayerHanafi) else { return }
         let now = Date()
-        for prayer in times.prayers {
+        // In Ramadan the iftar reminder covers Maghrib (one pop-up, one sound).
+        let iftarCovers = Hijri.ramadanActive && library.iftarReminder
+        for prayer in times.prayers where !(iftarCovers && prayer.name == "Maghrib") {
             let since = now.timeIntervalSince(prayer.time)
             let key = "\(prayer.name)-\(Int(prayer.time.timeIntervalSince1970))"
             if since >= 0, since < 120, !notifiedPrayers.contains(key) {

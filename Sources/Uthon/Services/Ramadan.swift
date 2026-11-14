@@ -111,6 +111,8 @@ enum Ramadan {
 
     static func stopSound() { player?.stop() }
 
+    static var isPlaying: Bool { player?.isPlaying ?? false }
+
     static func pickSoundFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.audio]

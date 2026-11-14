@@ -105,7 +105,21 @@ final class SettingsWindowController {
         CATransaction.flush()
     }
 
+    /// Builds the window in the background (shortly after launch), so the first time the
+    /// user opens Settings it appears at once instead of being built on the spot.
+    func prepare() {
+        guard window == nil else { return }
+        makeWindow()
+        window?.contentView?.layoutSubtreeIfNeeded()
+    }
+
     func show() {
+        makeWindow()
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+    }
+
+    private func makeWindow() {
         if window == nil {
             let hosting = NSHostingController(rootView: SettingsView())
             let w = NSWindow(contentViewController: hosting)
@@ -121,8 +135,6 @@ final class SettingsWindowController {
             w.center()
             window = w
         }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
     }
 }
 
@@ -507,7 +519,7 @@ private struct HomeItemRow: View {
         HStack(spacing: 8) {
             Group {
                 if let url = item.appURL {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 22, height: 22)
+                    Image(nsImage: FileIconCache.icon(url.path)).resizable().frame(width: 22, height: 22)
                 } else {
                     Image(systemName: item.symbol)
                         .frame(width: 26, height: 26)
@@ -629,8 +641,6 @@ private struct WidgetDataSettings: View {
     @ObservedObject private var library = UserLibrary.shared
     @ObservedObject private var todos = TodoStore.shared
     @ObservedObject private var weather = WeatherStore.shared
-    @ObservedObject private var batteries = DeviceBatteryStore.shared
-    @State private var newZone = "Asia/Dhaka"
     @State private var newDayName = ""
     @State private var newDayDate = Date()
 
@@ -639,7 +649,7 @@ private struct WidgetDataSettings: View {
             Section {
                 ForEach(Array(library.homeShortcuts.enumerated()), id: \.element) { index, path in
                     HStack {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable().frame(width: 20, height: 20)
+                        Image(nsImage: FileIconCache.icon(path)).resizable().frame(width: 20, height: 20)
                         Text(FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))
                         Spacer()
                         Button { library.moveHomeShortcut(path, by: -1) } label: { Image(systemName: "chevron.up") }
@@ -683,12 +693,7 @@ private struct WidgetDataSettings: View {
                         .buttonStyle(.borderless)
                     }
                 }
-                HStack {
-                    Picker(L("Add a city"), selection: $newZone) {
-                        ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0).tag($0) }
-                    }
-                    Button(L("Add")) { if !library.worldClocks.contains(newZone) { library.worldClocks.append(newZone) } }
-                }
+                WorldClockSearch()
             }
             Section(L("Prayer times")) {
                 if let place = weather.place {
@@ -725,45 +730,7 @@ private struct WidgetDataSettings: View {
                 }
                 Toggle(L("Show it on the island on the day"), isOn: $library.specialDayAlerts)
             }
-            Section {
-                if batteries.devices.isEmpty {
-                    Text(L("No wireless devices found yet.")).foregroundStyle(.secondary)
-                } else {
-                    ForEach(batteries.devices) { device in
-                        HStack {
-                            Image(systemName: device.symbol).frame(width: 20)
-                            Text(device.name)
-                            Spacer()
-                            Text("\(device.percent)%").monospacedDigit()
-                        }
-                    }
-                }
-                HStack {
-                    Button(L("Look again")) { batteries.refreshDevices() }
-                    if CBManager.authorization != .allowedAlways {
-                        Button(L("Allow Bluetooth")) {
-                            if CBManager.authorization == .notDetermined {
-                                DeviceBatteryStore.requestBluetoothAccess()
-                            } else if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth") {
-                                NSWorkspace.shared.open(url)
-                            }
-                        }
-                    }
-                }
-                DisclosureGroup(L("What each source found")) {
-                    ForEach(batteries.report, id: \.self) { line in
-                        Text(line).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
-                    }
-                    if let date = batteries.lastChecked {
-                        Text(L("Checked") + " " + date.formatted(date: .omitted, time: .standard))
-                            .font(.footnote).foregroundStyle(.secondary)
-                    }
-                }
-            } header: {
-                Text(L("Batteries"))
-            } footer: {
-                Text(L("If your keyboard or mouse is missing, take a screenshot of “What each source found” and send it."))
-            }
+            BatteriesSection()
             Section(L("To-do list")) {
                 Picker(L("Keep to-dos in"), selection: $todos.source) {
                     ForEach(TodoSource.allCases) { Text(L($0.title)).tag($0) }
@@ -788,7 +755,7 @@ private struct WidgetDataSettings: View {
             Section(L("Clipboard")) {
                 Toggle(L("Also keep copied images"), isOn: $library.clipboardImages)
                 Toggle(L("Smart clipboard: offer the next step for what I copy"), isOn: $library.smartClipEnabled)
-                Toggle(L("Show it as a pop-up on the island"), isOn: $library.smartClipPeek)
+                Toggle(L("Show it as a pop-up on the island (otherwise right-click the item in Clipboard)"), isOn: $library.smartClipPeek)
                     .disabled(!library.smartClipEnabled)
                 Text(L("Links open, addresses show on the map, dates go to Calendar, phone numbers call, emails open a new message, and English or Bangla text can be translated. Detected on this Mac."))
                     .font(.footnote).foregroundStyle(.secondary)
@@ -1071,6 +1038,7 @@ enum IslandSizePreset: String, CaseIterable, Identifiable {
 private struct PopupDurationSettings: View {
     @ObservedObject private var library = UserLibrary.shared
     @State private var all: Double = 3
+    @State private var expanded = false
 
     private func format(_ v: Double) -> String {
         (v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : String(format: "%.1f", v)) + " " + L("sec")
@@ -1084,15 +1052,20 @@ private struct PopupDurationSettings: View {
                     for type in PeekType.allCases { library.setPeekSeconds(type, all) }
                 }
             }
-            ForEach(PeekType.allCases) { type in
-                HStack(spacing: 8) {
-                    Image(systemName: type.symbol)
-                        .foregroundStyle(Theme.accent)
-                        .frame(width: 18)
-                    LabeledSlider(title: type.title,
-                                  value: Binding(get: { library.peekSeconds(type) },
-                                                 set: { library.setPeekSeconds(type, $0) }),
-                                  range: 0.5...(type == .notification ? 10 : 30), step: 0.5, format: format)
+            // Folded: about twenty sliders are only built when opened (keeps the page quick).
+            DisclosureGroup(L("Set each kind separately"), isExpanded: $expanded) {
+                if expanded {
+                    ForEach(PeekType.allCases) { type in
+                        HStack(spacing: 8) {
+                            Image(systemName: type.symbol)
+                                .foregroundStyle(Theme.accent)
+                                .frame(width: 18)
+                            LabeledSlider(title: type.title,
+                                          value: Binding(get: { library.peekSeconds(type) },
+                                                         set: { library.setPeekSeconds(type, $0) }),
+                                          range: 0.5...(type == .notification ? 10 : 30), step: 0.5, format: format)
+                        }
+                    }
                 }
             }
             Toggle(L("Keep a pop-up open while the mouse is over it"), isOn: $library.peekStayOnHover)
@@ -1105,5 +1078,103 @@ private struct PopupDurationSettings: View {
         } footer: {
             Text(L("Each kind of pop-up on the island stays as long as you set here, from half a second."))
         }
+    }
+}
+
+/// Wireless device batteries. Its own view, so battery updates redraw only this part.
+private struct BatteriesSection: View {
+    @ObservedObject private var batteries = DeviceBatteryStore.shared
+
+    var body: some View {
+            Section {
+                if batteries.devices.isEmpty {
+                    Text(L("No wireless devices found yet.")).foregroundStyle(.secondary)
+                } else {
+                    ForEach(batteries.devices) { device in
+                        HStack {
+                            Image(systemName: device.symbol).frame(width: 20)
+                            Text(device.name)
+                            Spacer()
+                            Text("\(device.percent)%").monospacedDigit()
+                        }
+                    }
+                }
+                HStack {
+                    Button(L("Look again")) { batteries.refreshDevices() }
+                    if CBManager.authorization != .allowedAlways {
+                        Button(L("Allow Bluetooth")) {
+                            if CBManager.authorization == .notDetermined {
+                                DeviceBatteryStore.requestBluetoothAccess()
+                            } else if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                    }
+                }
+                DisclosureGroup(L("What each source found")) {
+                    ForEach(batteries.report, id: \.self) { line in
+                        Text(line).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                    }
+                    if let date = batteries.lastChecked {
+                        Text(L("Checked") + " " + date.formatted(date: .omitted, time: .standard))
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text(L("Batteries"))
+            } footer: {
+                Text(L("If your keyboard or mouse is missing, take a screenshot of “What each source found” and send it."))
+            }
+    }
+}
+
+/// Add a world clock by typing a city (a menu of all ~600 time zones was slow to open).
+private struct WorldClockSearch: View {
+    @ObservedObject private var library = UserLibrary.shared
+    @State private var query = ""
+
+    private static let all: [(id: String, city: String)] = TimeZone.knownTimeZoneIdentifiers.map { id in
+        (id, id.split(separator: "/").last.map { $0.replacingOccurrences(of: "_", with: " ") } ?? id)
+    }
+
+    private var matches: [(id: String, city: String)] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard q.count >= 2 else { return [] }
+        return Array(Self.all.filter { $0.city.lowercased().contains(q) || $0.id.lowercased().contains(q) }
+            .filter { !library.worldClocks.contains($0.id) }
+            .prefix(6))
+    }
+
+    var body: some View {
+        TextField(L("Add a city (type its name, e.g. London)"), text: $query)
+        ForEach(matches, id: \.id) { zone in
+            HStack {
+                Text(zone.city)
+                Text(zone.id).foregroundStyle(.secondary).font(.footnote)
+                Spacer()
+                Button {
+                    library.worldClocks.append(zone.id)
+                    query = ""
+                } label: {
+                    Image(systemName: "plus.circle.fill").foregroundStyle(.green)
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        if query.trimmingCharacters(in: .whitespaces).count >= 2 && matches.isEmpty {
+            Text(L("No city found")).foregroundStyle(.secondary).font(.footnote)
+        }
+    }
+}
+
+/// File and app icons, loaded once per path.
+enum FileIconCache {
+    private static var icons: [String: NSImage] = [:]
+
+    static func icon(_ path: String) -> NSImage {
+        if let hit = icons[path] { return hit }
+        let icon = NSWorkspace.shared.icon(forFile: path)
+        icons[path] = icon
+        return icon
     }
 }

@@ -39,11 +39,16 @@ final class AppearanceWatcher {
 
 /// The app icon that matches the current appearance (dark icon in Dark Mode, light otherwise).
 enum AppIcon {
+    private static var loaded: [String: NSImage] = [:]
+
+    /// Loaded from disk once per look, then kept (Settings redraws often).
     static var current: NSImage {
         let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let name = dark ? "AppIcon-Dark" : "AppIcon-Light"
+        if let image = loaded[name] { return image }
         if let url = Bundle.main.url(forResource: name, withExtension: "png"),
            let image = NSImage(contentsOf: url) {
+            loaded[name] = image
             return image
         }
         return NSApp.applicationIconImage
