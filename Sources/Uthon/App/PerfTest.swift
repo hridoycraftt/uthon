@@ -119,6 +119,9 @@ enum PerfTest {
 
     /// macOS's own profiler, pointed at this process.
     private static func startSample(_ name: String, seconds: Int) {
+        // The profiler pauses the app to take each sample, so it is run separately from the
+        // frame measurement ("--profile").
+        guard CommandLine.arguments.contains("--profile") else { return }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/sample")
         p.arguments = ["\(getpid())", "\(seconds)", "1", "-mayDie", "-file", folder.appendingPathComponent("sample-\(name).txt").path]
@@ -132,7 +135,8 @@ enum PerfTest {
         UserLibrary.shared.liveEnabled = false
         let text = report.joined(separator: "\n") + "\n"
         print(text)
-        try? text.write(to: folder.appendingPathComponent("perf-report.txt"), atomically: true, encoding: .utf8)
+        let name = CommandLine.arguments.contains("--profile") ? "perf-report-profiled.txt" : "perf-report.txt"
+        try? text.write(to: folder.appendingPathComponent(name), atomically: true, encoding: .utf8)
         // Give the last sample time to be written.
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { exit(0) }
     }
