@@ -83,6 +83,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !SelfTest.isActive {
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) { SettingsWindowController.shared.prepare() }
         }
+        // Check Apple Intelligence in the background, so the AI tab opens at once.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { AIService.shared.warmUp() }
         BottomDockController.shared.start()
         AppIcon.apply()
 

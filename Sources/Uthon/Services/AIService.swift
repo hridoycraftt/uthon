@@ -34,7 +34,31 @@ final class AIService: ObservableObject {
     /// A job handed over from elsewhere (e.g. "translate what I copied"), run by the AI tab.
     @Published var pending: (text: String, action: AIAction)?
 
+    /// Checked once in the background (the first check loads the language model framework,
+    /// which can take a moment), then kept fresh every few minutes.
+    @Published private(set) var cachedAvailability: Availability?
+    private var warmTimer: Timer?
+
+    func warmUp() {
+        guard warmTimer == nil else { return }
+        let check = { [weak self] in
+            DispatchQueue.global(qos: .utility).async {
+                guard let value = self?.checkAvailability() else { return }
+                DispatchQueue.main.async { if self?.cachedAvailability != value { self?.cachedAvailability = value } }
+            }
+        }
+        check()
+        let t = Timer(timeInterval: 300, repeats: true) { _ in check() }
+        RunLoop.main.add(t, forMode: .common)
+        warmTimer = t
+    }
+
     var availability: Availability {
+        // (Never stored from here: this is read while views draw.)
+        cachedAvailability ?? checkAvailability()
+    }
+
+    private func checkAvailability() -> Availability {
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {
             switch SystemLanguageModel.default.availability {

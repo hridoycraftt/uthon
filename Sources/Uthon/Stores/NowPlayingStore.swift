@@ -75,8 +75,8 @@ final class NowPlayingStore: ObservableObject {
     }
 
     private func runningPlayer() -> (name: String, bundleID: String)? {
-        let ids = Set(NSWorkspace.shared.runningApplications.compactMap { $0.bundleIdentifier })
-        return Self.players.first { ids.contains($0.bundleID) }
+        // Ask only about the two players (listing every running app is much slower).
+        Self.players.first { !NSRunningApplication.runningApplications(withBundleIdentifier: $0.bundleID).isEmpty }
     }
 
     /// AppleScript talks to another app and can take a while (or hang if that app is busy),
