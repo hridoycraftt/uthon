@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import QuartzCore
 import EventKit
 
 /// Functional self-test. Launch with `--self-test <report.txt>`: exercises the logic of
@@ -976,7 +977,37 @@ enum SelfTest {
     }
 
     /// Real requests to the Quran and Hadith sources (the CI Mac is online).
+    /// How long the Settings window takes to open and to switch pages.
+    private static func settingsSpeed() {
+        step("Settings speed")
+        let controller = SettingsWindowController.shared
+        func ms(_ block: () -> Void) -> Double {
+            let start = CACurrentMediaTime()
+            block()
+            return (CACurrentMediaTime() - start) * 1000
+        }
+        let first = ms { controller.show(tab: .general); controller.flush() }
+        info("Settings first open", "\(Int(first)) ms")
+        var worst: (tab: SettingsTab, ms: Double) = (.general, 0)
+        var report: [String] = []
+        for round in 0..<2 {
+            for tab in SettingsTab.allCases {
+                let t = ms { SettingsRouter.shared.tab = tab; controller.flush() }
+                if round == 1 { report.append("\(tab.rawValue) \(Int(t))") }
+                if t > worst.ms { worst = (tab, t) }
+            }
+        }
+        info("Settings page switch (ms, second visit)", report.joined(separator: ", "))
+        controller.hide()
+        let again = ms { controller.show(tab: .general); controller.flush() }
+        info("Settings re-open", "\(Int(again)) ms")
+        controller.hide()
+        check("Settings opens and switches pages quickly", worst.ms < 400 && again < 300,
+              "slowest \(worst.tab.rawValue) \(Int(worst.ms)) ms, first open \(Int(first)) ms, re-open \(Int(again)) ms")
+    }
+
     private static func onlineChecks() {
+        settingsSpeed()
         step("Online sources")
         Task {
             let ayah = await DailyVerseStore.fetchAyah(number: 262, translation: .bangla)

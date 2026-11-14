@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import QuartzCore
 import ServiceManagement
 import UniformTypeIdentifiers
 import CoreBluetooth
@@ -95,6 +96,13 @@ final class SettingsWindowController {
 
     func hide() {
         window?.orderOut(nil)
+    }
+
+    /// Finishes any pending layout and drawing now (used to time the window).
+    func flush() {
+        window?.contentView?.layoutSubtreeIfNeeded()
+        window?.displayIfNeeded()
+        CATransaction.flush()
     }
 
     func show() {
