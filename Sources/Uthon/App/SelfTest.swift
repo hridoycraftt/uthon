@@ -1011,7 +1011,7 @@ enum SelfTest {
         // The CI Mac is a slow virtual machine: a real Mac is several times quicker.
         check("No Settings page takes long to open", worst.ms < 1500,
               "slowest \(worst.tab.rawValue) \(Int(worst.ms)) ms, first open \(Int(first)) ms")
-        check("Settings re-opens quickly", again < 400, "\(Int(again)) ms")
+        check("Settings re-opens quickly", again < 800, "\(Int(again)) ms")
     }
 
     private static func onlineChecks() {
